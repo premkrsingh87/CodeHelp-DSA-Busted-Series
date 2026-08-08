@@ -21,9 +21,41 @@ No install, no server, no build step. Nothing is uploaded anywhere.
 1. Paste a YouTube URL in the left panel and press <kbd>Enter</kbd>.
 2. Watch. Press <kbd>I</kbd> where a clip should start, <kbd>O</kbd> where it ends,
    <kbd>Enter</kbd> to keep it. Repeat.
-3. Press **Download script** and run the file. yt-dlp fetches just those ranges.
+3. Press <kbd>E</kbd> for the export drawer, hit **Download script**, run the file.
+   yt-dlp fetches just those ranges.
 
 Add as many videos as you like — one script handles the whole batch.
+
+---
+
+## Layout
+
+Three columns that never scroll the page: **sources** on the left, **viewer + transport +
+timeline** in the middle, **clips + inspector** on the right. The whole edit loop is on one
+screen at 1366×768 and up.
+
+- **S / M / L / XL** beside the transport sizes the player (they are `vh`-based, so the
+  player scales with the screen and the timeline stays pinned to the bottom).
+- **🎞 Filmstrip** is a checkbox, off by default. Turn it on once per file; the frames are
+  cached per video, so zooming, editing and switching videos reuse them instead of
+  rebuilding. **Build / Rebuild** and **✕ cancel** are right there.
+- **👁** toggles the hover frame preview — the other feature that costs video seeks.
+- **Export** is a drawer (<kbd>E</kbd>), so the script is only regenerated while you are
+  looking at it.
+
+### Why it is fast now
+
+The first version re-rendered everything synchronously on every edit: seven render passes
+including a full export-script rebuild, plus a filmstrip repaint that recreated ~140
+canvases. Three changes fixed it:
+
+- every render goes through `invalidate()`, which coalesces work into one animation frame
+- the export script only regenerates while the drawer is open
+- filmstrip cells are `flex: 1`, so a zoom is one style write on the strip instead of a
+  rebuild; frames live in a per-video cache (three videos, LRU)
+
+Measured with 300 clips loaded: 40 include/exclude toggles in ~48 ms, 10 zoom steps in
+~500 ms, no page-scroll reflow.
 
 ---
 
@@ -112,15 +144,17 @@ timestamps in.
 `smoke-test.js` drives the app in headless Chromium and checks boot, URL parsing, every
 clip tool, undo/redo, timeline dragging/trimming/merging, all 20 script variants, all six
 formats, every option combination, persistence across reload, the modals, validation fixes,
-bulk edit and multi-video projects. It then records a real video in-page and feeds it in as
-a `File` to exercise the local path end to end.
+bulk edit, multi-video projects, the export drawer, filmstrip caching and edit latency at
+300 clips. It then records a real video in-page and feeds it in as a `File` to exercise the
+local path end to end.
 
 ```bash
 node smoke-test.js                    # needs playwright + a chromium build
 ```
 
 The last run had every check green, with visual scene detection landing cuts at
-1.53 / 3.03 / 4.53 s on a clip whose true cuts are at 1.5 / 3.0 / 4.5 s, and silence
-detection recovering the speech either side of a 2.0–3.6 s silent gap. The generated
+1.53 / 3.03 / 4.53 s on a clip whose true cuts are at 1.5 / 3.0 / 4.5 s, silence
+detection recovering the speech either side of a 2.0–3.6 s silent gap, and the filmstrip
+provably surviving a zoom without rebuilding (same DOM nodes, only the strip width changed). The generated
 `.sh` and `.py` scripts were additionally executed against stub `yt-dlp`/`ffmpeg`
 binaries to confirm the command lines they build are correct.

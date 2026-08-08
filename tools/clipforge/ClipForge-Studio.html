@@ -11,167 +11,161 @@
            CLIPFORGE STUDIO — self-contained stylesheet
            No external CSS/font dependencies: the app must never break
            because a CDN is unreachable.
+
+           Layout rule: the edit loop (player → transport → timeline →
+           clip list) must all fit on one screen with no page scrolling.
+           Everything else lives in a rail tab or the export drawer.
            ============================================================ */
         :root {
-            --bg: #07070e;
-            --bg-1: #0c0c16;
-            --bg-2: #12121f;
-            --bg-3: #1a1a2c;
-            --bg-4: #23233a;
-            --line: #262640;
-            --line-2: #35355a;
-            --txt: #e9e9f6;
-            --txt-2: #8c8cb4;
-            --txt-3: #5c5c80;
+            --bg: #0a0a12;
+            --bg-1: #111120;
+            --bg-2: #181828;
+            --bg-3: #202034;
+            --bg-4: #2b2b45;
+            --line: #2e2e4c;
+            --line-2: #43436c;
+            --txt: #f0f1fa;
+            --txt-2: #b0b3d4;
+            --txt-3: #8386a8;
             --acc: #7c5cfc;
             --acc-2: #a78bfa;
-            --acc-glow: rgba(124, 92, 252, .28);
-            --ok: #00d4aa;
-            --warn: #fbbf24;
-            --bad: #f87171;
-            --yt: #ff2d55;
-            --info: #38bdf8;
+            --acc-glow: rgba(124, 92, 252, .3);
+            --ok: #12dfb2;
+            --ok-d: #0b8f74;
+            --warn: #ffc53d;
+            --bad: #ff7b7b;
+            --yt: #ff3b5f;
+            --info: #4cc9f0;
             --r: 12px;
-            --r-s: 8px;
-            --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+            --r-s: 9px;
+            --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Menlo, Consolas, monospace;
             --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            --sh: 0 8px 28px rgba(0, 0, 0, .45);
+            --sh: 0 10px 34px rgba(0, 0, 0, .5);
+            --hdr: 50px;
+            --player-h: 38vh;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        html { scrollbar-color: var(--line-2) var(--bg-1); }
+        html, body { height: 100%; }
 
         body {
-            background:
-                radial-gradient(1200px 600px at 12% -8%, rgba(124, 92, 252, .10), transparent 60%),
-                radial-gradient(1000px 500px at 92% 0%, rgba(0, 212, 170, .07), transparent 55%),
-                var(--bg);
+            background: var(--bg);
             color: var(--txt);
             font-family: var(--sans);
-            font-size: 14px;
-            line-height: 1.45;
-            min-height: 100vh;
+            font-size: 13.5px;
+            line-height: 1.5;
             -webkit-font-smoothing: antialiased;
-            overflow-x: hidden;
+            overflow: hidden;              /* the app owns its own scroll regions */
         }
 
         .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
         button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
         button { background: none; border: none; cursor: pointer; }
-        button:disabled { opacity: .4; cursor: not-allowed !important; }
+        button:disabled { opacity: .38; cursor: not-allowed !important; }
         a { color: var(--acc-2); }
+        :focus-visible { outline: 2px solid var(--acc-2); outline-offset: 1px; }
 
-        ::-webkit-scrollbar { width: 9px; height: 9px; }
-        ::-webkit-scrollbar-track { background: var(--bg-1); }
-        ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; border: 2px solid var(--bg-1); }
-        ::-webkit-scrollbar-thumb:hover { background: var(--line-2); }
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #33335a; border-radius: 6px; border: 2px solid var(--bg-1); }
+        ::-webkit-scrollbar-thumb:hover { background: #4a4a7a; }
 
         .hide { display: none !important; }
-        .flex { display: flex; }
-        .col { flex-direction: column; }
-        .ac { align-items: center; }
-        .jb { justify-content: space-between; }
-        .jc { justify-content: center; }
+        .flex { display: flex; } .col { flex-direction: column; }
+        .ac { align-items: center; } .jb { justify-content: space-between; } .jc { justify-content: center; }
         .wrap { flex-wrap: wrap; }
-        .g4 { gap: 4px; } .g6 { gap: 6px; } .g8 { gap: 8px; } .g10 { gap: 10px; } .g14 { gap: 14px; }
+        .g4 { gap: 4px; } .g6 { gap: 6px; } .g8 { gap: 8px; } .g10 { gap: 10px; } .g12 { gap: 12px; }
         .f1 { flex: 1; min-width: 0; }
         .mut { color: var(--txt-2); }
         .dim { color: var(--txt-3); }
-        .tiny { font-size: 10px; }
-        .sm { font-size: 11px; }
-        .md { font-size: 12px; }
+        .tiny { font-size: 11px; }
+        .sm { font-size: 12px; }
+        .md { font-size: 12.5px; }
         .b { font-weight: 700; }
         .center { text-align: center; }
         .trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .nosel { user-select: none; -webkit-user-select: none; }
+        .scroll { overflow-y: auto; overscroll-behavior: contain; }
 
-        /* ---------- shell ---------- */
+        /* ---------------- header ---------------- */
         header.top {
-            position: sticky; top: 0; z-index: 400;
-            background: rgba(7, 7, 14, .88);
-            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-            border-bottom: 1px solid var(--line);
+            height: var(--hdr); flex-shrink: 0;
+            display: flex; align-items: center; gap: 12px; padding: 0 12px;
+            background: var(--bg-1); border-bottom: 1px solid var(--line); position: relative; z-index: 300;
         }
-        .top-in { display: flex; align-items: center; gap: 14px; padding: 9px 16px; flex-wrap: wrap; }
         .logo {
-            width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+            width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
             background: linear-gradient(135deg, var(--yt), var(--acc) 55%, var(--ok));
-            display: flex; align-items: center; justify-content: center;
-            font-size: 17px; box-shadow: 0 4px 14px rgba(124, 92, 252, .35);
+            display: flex; align-items: center; justify-content: center; font-size: 15px;
         }
-        .brand h1 { font-size: 15px; font-weight: 800; letter-spacing: -.2px; }
-        .brand p { font-size: 9.5px; color: var(--txt-3); letter-spacing: 1.4px; text-transform: uppercase; }
+        .brand h1 { font-size: 14px; font-weight: 800; letter-spacing: -.2px; line-height: 1.1; }
+        .brand p { font-size: 9px; color: var(--txt-3); letter-spacing: 1.3px; text-transform: uppercase; }
 
         .chip {
             display: inline-flex; align-items: center; gap: 6px;
             background: var(--bg-2); border: 1px solid var(--line);
-            padding: 5px 10px; border-radius: 9px; font-size: 11px; white-space: nowrap;
+            padding: 4px 10px; border-radius: 8px; font-size: 11.5px; white-space: nowrap; color: var(--txt-2);
         }
-        .chip b { font-size: 12.5px; font-family: var(--mono); }
+        .chip b { font-size: 13px; font-family: var(--mono); color: var(--txt); }
         .chip.ok b { color: var(--ok); } .chip.acc b { color: var(--acc-2); }
         .chip.warn b { color: var(--warn); } .chip.info b { color: var(--info); }
 
-        /* ---------- buttons ---------- */
+        /* ---------------- buttons ---------------- */
         .btn {
             display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-            background: var(--bg-3); border: 1px solid var(--line);
-            padding: 7px 13px; border-radius: var(--r-s); font-size: 12.5px; font-weight: 600;
-            transition: background .16s, border-color .16s, transform .1s, box-shadow .16s;
-            white-space: nowrap;
+            background: var(--bg-3); border: 1px solid var(--line); color: var(--txt);
+            padding: 7px 12px; border-radius: var(--r-s); font-size: 12.5px; font-weight: 600;
+            transition: background .13s, border-color .13s, color .13s; white-space: nowrap;
         }
-        .btn:hover:not(:disabled) { border-color: var(--line-2); background: var(--bg-4); }
+        .btn:hover:not(:disabled) { background: var(--bg-4); border-color: var(--line-2); }
         .btn:active:not(:disabled) { transform: translateY(1px); }
-        .btn.p { background: linear-gradient(135deg, var(--acc), var(--acc-2)); border-color: transparent; color: #fff; }
-        .btn.p:hover:not(:disabled) { box-shadow: 0 5px 18px var(--acc-glow); background: linear-gradient(135deg, #8a6dff, #b69bff); }
-        .btn.g { background: linear-gradient(135deg, #00b894, var(--ok)); border-color: transparent; color: #04241d; }
-        .btn.g:hover:not(:disabled) { box-shadow: 0 5px 18px rgba(0, 212, 170, .3); }
-        .btn.r { background: rgba(248, 113, 113, .12); border-color: rgba(248, 113, 113, .3); color: var(--bad); }
-        .btn.r:hover:not(:disabled) { background: rgba(248, 113, 113, .22); }
-        .btn.y { background: rgba(251, 191, 36, .12); border-color: rgba(251, 191, 36, .3); color: var(--warn); }
-        .btn.y:hover:not(:disabled) { background: rgba(251, 191, 36, .22); }
-        .btn.b2 { background: rgba(56, 189, 248, .1); border-color: rgba(56, 189, 248, .28); color: var(--info); }
-        .btn.b2:hover:not(:disabled) { background: rgba(56, 189, 248, .2); }
-        .btn.xs { padding: 3.5px 8px; font-size: 10.5px; border-radius: 6px; gap: 4px; }
-        .btn.s { padding: 5px 10px; font-size: 11.5px; }
-        .btn.lg { padding: 11px 18px; font-size: 13.5px; }
+        .btn.p { background: linear-gradient(135deg, #7c5cfc, #9a7dff); border-color: transparent; color: #fff; }
+        .btn.p:hover:not(:disabled) { background: linear-gradient(135deg, #8d70ff, #ab93ff); }
+        .btn.g { background: linear-gradient(135deg, #0fbd97, #14e0b4); border-color: transparent; color: #04241d; }
+        .btn.r { background: rgba(255, 123, 123, .13); border-color: rgba(255, 123, 123, .34); color: var(--bad); }
+        .btn.r:hover:not(:disabled) { background: rgba(255, 123, 123, .24); }
+        .btn.xs { padding: 4px 8px; font-size: 11.5px; border-radius: 7px; gap: 4px; }
+        .btn.s { padding: 5.5px 10px; font-size: 12px; }
         .btn.w { width: 100%; }
-        .btn.on { background: rgba(124, 92, 252, .18); border-color: var(--acc); color: var(--acc-2); }
-        .btn.on-g { background: rgba(0, 212, 170, .14); border-color: var(--ok); color: var(--ok); }
+        .btn.on { background: rgba(124, 92, 252, .22); border-color: var(--acc); color: #cbb9ff; }
         .btn.ghost { background: transparent; border-color: transparent; color: var(--txt-2); }
         .btn.ghost:hover:not(:disabled) { background: var(--bg-3); color: var(--txt); }
 
         .kbd {
             display: inline-flex; align-items: center; justify-content: center;
-            min-width: 19px; height: 18px; padding: 0 5px;
-            background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .12);
-            border-bottom-width: 2px; border-radius: 5px;
-            font-family: var(--mono); font-size: 10px; color: var(--txt-2);
+            min-width: 18px; height: 17px; padding: 0 5px;
+            background: rgba(255, 255, 255, .09); border: 1px solid rgba(255, 255, 255, .16);
+            border-radius: 4px; font-family: var(--mono); font-size: 10px; color: var(--txt-2); font-weight: 600;
         }
 
-        /* ---------- inputs ---------- */
+        /* segmented control */
+        .seg { display: inline-flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; padding: 2px; gap: 2px; }
+        .seg button {
+            padding: 3px 9px; border-radius: 6px; font-size: 11.5px; font-weight: 700; color: var(--txt-3);
+            transition: background .12s, color .12s;
+        }
+        .seg button:hover { color: var(--txt); }
+        .seg button.on { background: var(--acc); color: #fff; }
+
+        /* ---------------- inputs ---------------- */
         .in {
-            background: var(--bg-1); border: 1px solid var(--line); color: var(--txt);
-            padding: 8px 11px; border-radius: var(--r-s); font-size: 12.5px; width: 100%;
-            outline: none; transition: border-color .16s, box-shadow .16s;
+            background: var(--bg); border: 1px solid var(--line); color: var(--txt);
+            padding: 7px 10px; border-radius: 8px; font-size: 12.5px; width: 100%;
+            outline: none; transition: border-color .13s, box-shadow .13s;
         }
         .in:focus { border-color: var(--acc); box-shadow: 0 0 0 3px var(--acc-glow); }
         .in::placeholder { color: var(--txt-3); }
-        .in.s { padding: 5px 8px; font-size: 11.5px; }
-        textarea.in { resize: vertical; min-height: 66px; font-family: var(--mono); font-size: 11.5px; line-height: 1.6; }
-        select.in { cursor: pointer; appearance: none; padding-right: 26px;
-            background-image: linear-gradient(45deg, transparent 50%, var(--txt-2) 50%), linear-gradient(135deg, var(--txt-2) 50%, transparent 50%);
-            background-position: calc(100% - 14px) 52%, calc(100% - 9px) 52%;
-            background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
-        label.lb { display: block; font-size: 10.5px; color: var(--txt-2); font-weight: 600; margin-bottom: 4px; letter-spacing: .2px; }
+        .in.s { padding: 5px 8px; font-size: 12px; }
+        textarea.in { resize: vertical; min-height: 62px; font-family: var(--mono); font-size: 12px; line-height: 1.55; }
+        select.in { cursor: pointer; }
+        label.lb { display: block; font-size: 11px; color: var(--txt-2); font-weight: 600; margin-bottom: 4px; }
         .swrap { position: relative; }
         .swrap .sic { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--txt-3); pointer-events: none; }
-        .swrap .in { padding-left: 28px; }
-        input[type=checkbox], input[type=radio] { accent-color: var(--acc); cursor: pointer; width: 14px; height: 14px; }
-        .ck { display: flex; align-items: center; gap: 7px; font-size: 11.5px; cursor: pointer; padding: 3px 0; }
-        .ck:hover { color: #fff; }
-
+        .swrap .in { padding-left: 27px; }
+        input[type=checkbox] { accent-color: var(--acc); cursor: pointer; width: 14px; height: 14px; flex-shrink: 0; }
+        .ck { display: flex; align-items: center; gap: 7px; font-size: 12px; cursor: pointer; padding: 2px 0; color: var(--txt-2); }
+        .ck:hover { color: var(--txt); }
         input[type=range] {
             -webkit-appearance: none; appearance: none; width: 100%; height: 5px;
             background: var(--bg-4); border-radius: 3px; outline: none;
@@ -179,310 +173,286 @@
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%;
             background: var(--acc); border: 2px solid var(--bg); cursor: pointer;
-            box-shadow: 0 0 8px var(--acc-glow);
         }
-        input[type=range]::-moz-range-thumb {
-            width: 13px; height: 13px; border-radius: 50%; background: var(--acc);
-            border: 2px solid var(--bg); cursor: pointer;
-        }
+        input[type=range]::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: var(--acc); border: 2px solid var(--bg); cursor: pointer; }
 
-        /* ---------- layout ---------- */
+        /* ---------------- app frame ---------------- */
         .app {
-            display: grid;
-            grid-template-columns: 292px minmax(0, 1fr) 358px;
-            gap: 12px; padding: 12px; align-items: start;
-            max-width: 2100px; margin: 0 auto;
+            display: grid; grid-template-columns: 264px minmax(560px, 1fr) 376px;
+            gap: 10px; padding: 10px; height: calc(100vh - var(--hdr)); min-height: 0;
         }
-        @media (max-width:1500px) { .app { grid-template-columns: 268px minmax(0, 1fr) 320px; } }
-        @media (max-width:1240px) { .app { grid-template-columns: 260px minmax(0, 1fr); } .app .rail-r { grid-column: 1/-1; } }
-        @media (max-width:900px) { .app { grid-template-columns: 1fr; } }
+        @media (max-width:1460px) { .app { grid-template-columns: 232px minmax(480px, 1fr) 330px; } }
+        @media (max-width:1180px) {
+            body { overflow: auto; }
+            .app { grid-template-columns: 1fr; height: auto; }
+            .rail, .studio { max-height: none !important; }
+        }
 
-        .rail-l, .rail-r { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 62px; }
-        @media (max-width:1240px) { .rail-r { position: static; } }
-        @media (max-width:900px) { .rail-l { position: static; } }
+        .rail { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+        .studio { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
 
-        .card { background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--r); }
+        .card { background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--r); display: flex; flex-direction: column; min-height: 0; }
         .card > .hd {
             display: flex; align-items: center; justify-content: space-between; gap: 8px;
-            padding: 9px 12px; border-bottom: 1px solid var(--line);
+            padding: 8px 11px; border-bottom: 1px solid var(--line); flex-shrink: 0;
         }
         .card > .hd h3 { font-size: 10.5px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase; color: var(--txt-2); }
-        .card > .bd { padding: 12px; }
-        .card > .bd.tight { padding: 9px; }
+        .card > .bd { padding: 10px; min-height: 0; }
+        .card > .bd.tight { padding: 8px; }
 
-        /* ---------- library ---------- */
-        .vlist { max-height: 40vh; overflow-y: auto; padding: 7px; display: flex; flex-direction: column; gap: 6px; }
+        /* ---------------- library ---------------- */
+        .vlist { overflow-y: auto; padding: 6px; display: flex; flex-direction: column; gap: 5px; min-height: 54px; flex: 1 1 auto; }
         .vitem {
-            display: flex; gap: 8px; padding: 7px; border-radius: 10px; cursor: pointer;
-            border: 1px solid transparent; background: var(--bg-2); transition: background .15s, border-color .15s;
-            position: relative;
+            display: flex; gap: 8px; padding: 6px; border-radius: 9px; cursor: pointer;
+            border: 1px solid transparent; background: var(--bg-2); position: relative;
+            transition: background .12s, border-color .12s;
         }
         .vitem:hover { background: var(--bg-3); }
-        .vitem.on { border-color: var(--acc); background: rgba(124, 92, 252, .1); }
-        .vitem .th {
-            width: 62px; height: 35px; border-radius: 6px; object-fit: cover; flex-shrink: 0;
-            background: var(--bg-4); display: block;
-        }
+        .vitem.on { border-color: var(--acc); background: rgba(124, 92, 252, .14); }
+        .vitem .th { width: 58px; height: 33px; border-radius: 5px; object-fit: cover; flex-shrink: 0; background: var(--bg-4); display: block; }
         .vitem .thbox { position: relative; flex-shrink: 0; }
-        .vitem .thbox .dur {
-            position: absolute; right: 2px; bottom: 2px; background: rgba(0, 0, 0, .85);
-            font-size: 8.5px; padding: 0 3px; border-radius: 3px; font-family: var(--mono);
-        }
-        .vitem .x { position: absolute; top: 3px; right: 3px; opacity: 0; font-size: 11px; padding: 2px 5px; border-radius: 5px; color: var(--txt-3); }
+        .vitem .thbox .dur { position: absolute; right: 2px; bottom: 2px; background: rgba(0, 0, 0, .88); font-size: 9px; padding: 0 3px; border-radius: 3px; font-family: var(--mono); }
+        .vitem .x { position: absolute; top: 2px; right: 2px; opacity: 0; font-size: 12px; padding: 1px 5px; border-radius: 5px; color: var(--txt-3); }
         .vitem:hover .x { opacity: 1; }
-        .vitem .x:hover { background: rgba(248, 113, 113, .2); color: var(--bad); }
-        .badge {
-            display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: 5px;
-            font-size: 9px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
-        }
-        .badge.yt { background: rgba(255, 45, 85, .14); color: var(--yt); border: 1px solid rgba(255, 45, 85, .28); }
-        .badge.lo { background: rgba(0, 212, 170, .12); color: var(--ok); border: 1px solid rgba(0, 212, 170, .25); }
-        .badge.n { background: rgba(124, 92, 252, .14); color: var(--acc-2); border: 1px solid rgba(124, 92, 252, .3); }
-        .badge.w { background: rgba(251, 191, 36, .13); color: var(--warn); border: 1px solid rgba(251, 191, 36, .3); }
+        .vitem .x:hover { background: rgba(255, 123, 123, .22); color: var(--bad); }
 
-        .drop {
-            border: 1.5px dashed var(--line-2); border-radius: 10px; padding: 14px 10px; text-align: center;
-            cursor: pointer; transition: border-color .18s, background .18s; background: rgba(255, 255, 255, .015);
-        }
-        .drop:hover, .drop.over { border-color: var(--acc); background: rgba(124, 92, 252, .07); }
+        .badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: 5px; font-size: 9.5px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; }
+        .badge.yt { background: rgba(255, 59, 95, .16); color: #ff8098; border: 1px solid rgba(255, 59, 95, .3); }
+        .badge.lo { background: rgba(18, 223, 178, .14); color: var(--ok); border: 1px solid rgba(18, 223, 178, .28); }
+        .badge.n { background: rgba(124, 92, 252, .18); color: #c0aaff; border: 1px solid rgba(124, 92, 252, .34); }
+        .badge.w { background: rgba(255, 197, 61, .15); color: var(--warn); border: 1px solid rgba(255, 197, 61, .3); }
 
-        /* ---------- player ---------- */
-        .stage { background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
-        .vbox { position: relative; width: 100%; aspect-ratio: 16/9; background: #000; }
+        .drop { border: 1.5px dashed var(--line-2); border-radius: 9px; padding: 10px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
+        .drop:hover, .drop.over { border-color: var(--acc); background: rgba(124, 92, 252, .09); }
+
+        /* ---------------- player ---------------- */
+        .stage {
+            background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--r);
+            overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: 0;
+        }
+        .vstage {
+            display: flex; justify-content: center; align-items: center; flex: 1; min-height: 0;
+            background: radial-gradient(120% 120% at 50% 0%, #14142400, #0b0b13 70%), var(--bg);
+            padding: 8px;
+        }
+        .vbox { box-shadow: 0 6px 26px rgba(0, 0, 0, .6); border-radius: 6px; overflow: hidden; }
+        .vbox { position: relative; height: var(--player-h); aspect-ratio: 16/9; max-width: 100%; max-height: 100%; background: #000; }
+        .vstage[data-size="xl"] .vbox { height: auto; width: 100%; }
+        .tlwrap { flex-shrink: 0; }
+        .tr { flex-shrink: 0; }
         .vbox > iframe, .vbox > video { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
         .vempty {
-            position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
-            justify-content: center; gap: 8px; color: var(--txt-3); text-align: center; padding: 20px;
-            background: repeating-linear-gradient(45deg, #08080f, #08080f 12px, #0b0b14 12px, #0b0b14 24px);
+            position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 7px; color: var(--txt-3); text-align: center; padding: 16px;
+            background: repeating-linear-gradient(45deg, #0b0b14, #0b0b14 11px, #0e0e19 11px, #0e0e19 22px);
         }
-        .ovl {
-            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-            background: rgba(0, 0, 0, .78); z-index: 6; text-align: center; padding: 24px; flex-direction: column; gap: 10px;
-        }
+        .ovl { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, .82); z-index: 6; text-align: center; padding: 18px; flex-direction: column; gap: 9px; }
 
-        /* transport */
-        .tr { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; padding: 8px 10px; border-top: 1px solid var(--line); background: var(--bg-2); }
+        /* transport rows */
+        .tr { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; padding: 6px 9px; border-top: 1px solid var(--line); background: var(--bg-2); }
         .tbtn {
-            background: var(--bg-3); border: 1px solid var(--line); border-radius: 7px;
-            padding: 5px 9px; font-size: 11.5px; font-weight: 600; transition: .14s; white-space: nowrap;
-            display: inline-flex; align-items: center; gap: 4px;
+            background: var(--bg-3); border: 1px solid var(--line); border-radius: 7px; color: var(--txt);
+            padding: 5px 9px; font-size: 12px; font-weight: 600; white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 5px; transition: background .12s, border-color .12s;
         }
-        .tbtn:hover:not(:disabled) { border-color: var(--acc); background: rgba(124, 92, 252, .14); }
-        .tbtn.big { padding: 6px 13px; font-size: 13px; }
-        .tbtn.in-b { background: rgba(0, 212, 170, .12); border-color: rgba(0, 212, 170, .3); color: var(--ok); }
-        .tbtn.out-b { background: rgba(255, 45, 85, .12); border-color: rgba(255, 45, 85, .3); color: var(--yt); }
-        .tbtn.mk { background: linear-gradient(135deg, var(--acc), var(--acc-2)); border-color: transparent; color: #fff; }
-        .tbtn.on { background: rgba(0, 212, 170, .16); border-color: var(--ok); color: var(--ok); }
-        .sep { width: 1px; height: 18px; background: var(--line); margin: 0 2px; }
-        .tdisp {
-            font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: var(--acc-2);
-            background: var(--bg-1); border: 1px solid var(--line); padding: 4px 9px; border-radius: 7px;
-        }
-        .iodisp { font-family: var(--mono); font-size: 10.5px; display: flex; gap: 8px; align-items: center; }
-        .iodisp .i { color: var(--ok); } .iodisp .o { color: var(--yt); } .iodisp .d { color: var(--warn); }
+        .tbtn:hover:not(:disabled) { border-color: var(--acc); background: rgba(124, 92, 252, .17); }
+        .tbtn.big { padding: 6px 14px; font-size: 14px; }
+        .tbtn.in-b { background: rgba(18, 223, 178, .14); border-color: rgba(18, 223, 178, .34); color: var(--ok); }
+        .tbtn.out-b { background: rgba(255, 59, 95, .14); border-color: rgba(255, 59, 95, .34); color: #ff8098; }
+        .tbtn.mk { background: linear-gradient(135deg, #7c5cfc, #9a7dff); border-color: transparent; color: #fff; }
+        .tbtn.on { background: rgba(18, 223, 178, .18); border-color: var(--ok); color: var(--ok); }
+        .sep { width: 1px; height: 17px; background: var(--line); margin: 0 2px; }
+        .tdisp { font-family: var(--mono); font-size: 13px; font-weight: 700; color: #cbb9ff; background: var(--bg); border: 1px solid var(--line); padding: 4px 9px; border-radius: 7px; }
+        .iodisp { font-family: var(--mono); font-size: 11.5px; display: flex; gap: 9px; align-items: center; color: var(--txt-3); }
+        .iodisp b { font-weight: 700; }
+        .iodisp .i { color: var(--ok); } .iodisp .o { color: #ff8098; } .iodisp .d { color: var(--warn); }
 
-        /* ---------- timeline ---------- */
-        .tlwrap { padding: 8px 10px 10px; border-top: 1px solid var(--line); }
+        /* ---------------- timeline ---------------- */
+        .tlwrap { padding: 7px 9px 9px; border-top: 1px solid var(--line); }
         .tlbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
-        .tlouter {
-            border: 1px solid var(--line); border-radius: 10px; background: var(--bg-1);
-            overflow: hidden; box-shadow: inset 0 2px 10px rgba(0, 0, 0, .35);
-        }
+        .tlouter { border: 1px solid var(--line); border-radius: 10px; background: var(--bg); overflow: hidden; }
         .tlscroll { overflow-x: auto; overflow-y: hidden; }
-        .tlscroll::-webkit-scrollbar { height: 9px; }
         .tl { position: relative; min-width: 100%; user-select: none; }
         .lane { position: relative; width: 100%; }
-        .lane-ruler { height: 22px; background: rgba(0, 0, 0, .3); border-bottom: 1px solid var(--line); overflow: hidden; }
-        .tick { position: absolute; bottom: 0; width: 1px; background: rgba(255, 255, 255, .1); }
-        .tick.maj { background: rgba(255, 255, 255, .22); }
-        .tlab { position: absolute; top: 2px; font-size: 8.5px; color: var(--txt-2); font-family: var(--mono); transform: translateX(-50%); white-space: nowrap; pointer-events: none; }
-        .lane-ch { height: 15px; border-bottom: 1px solid var(--line); background: var(--bg-2); overflow: hidden; }
+        .lane-ruler { height: 20px; background: var(--bg-2); border-bottom: 1px solid var(--line); overflow: hidden; }
+        .tick { position: absolute; bottom: 0; width: 1px; background: rgba(255, 255, 255, .14); }
+        .tick.maj { background: rgba(255, 255, 255, .3); }
+        .tlab { position: absolute; top: 2px; font-size: 9.5px; color: var(--txt-2); font-family: var(--mono); transform: translateX(-50%); white-space: nowrap; pointer-events: none; }
+        .lane-ch { height: 16px; border-bottom: 1px solid var(--line); background: var(--bg-2); overflow: hidden; }
         .chseg {
-            position: absolute; top: 1px; height: 13px; border-radius: 3px; overflow: hidden;
-            background: rgba(56, 189, 248, .18); border: 1px solid rgba(56, 189, 248, .35);
-            font-size: 8.5px; line-height: 11px; padding: 0 4px; color: #cdeaff; cursor: pointer; white-space: nowrap;
+            position: absolute; top: 1px; height: 14px; border-radius: 3px; overflow: hidden;
+            background: rgba(76, 201, 240, .2); border: 1px solid rgba(76, 201, 240, .4);
+            font-size: 9.5px; line-height: 12px; padding: 0 4px; color: #bfe9ff; cursor: pointer; white-space: nowrap;
         }
-        .chseg:hover { background: rgba(56, 189, 248, .34); }
-        .lane-clips { height: 92px; cursor: crosshair; background:
-            linear-gradient(rgba(255, 255, 255, .022) 1px, transparent 1px) 0 0/100% 23px; }
+        .chseg:hover { background: rgba(76, 201, 240, .38); }
+        .lane-clips { height: 86px; cursor: crosshair; background: linear-gradient(rgba(255, 255, 255, .028) 1px, transparent 1px) 0 0/100% 21.5px; }
         .lane-clips.draw { cursor: cell; }
-        .wave { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: .5; }
+        .wave { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: .55; }
+
         .cblk {
-            position: absolute; top: 8px; height: 76px; border-radius: 7px; overflow: hidden;
-            border: 1.5px solid transparent; cursor: grab; box-shadow: 0 3px 10px rgba(0, 0, 0, .35);
-            display: flex; align-items: center; justify-content: center; transition: box-shadow .14s, border-color .14s;
+            position: absolute; top: 7px; height: 72px; border-radius: 7px; overflow: hidden;
+            border: 1.5px solid transparent; cursor: grab; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .4); transition: box-shadow .12s, border-color .12s, opacity .12s;
         }
-        .cblk .lbl {
-            font-size: 10.5px; font-weight: 800; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, .95);
-            pointer-events: none; text-align: center; padding: 0 4px; overflow: hidden; white-space: nowrap; line-height: 1.25;
-        }
-        .cblk .lbl small { display: block; font-size: 9px; opacity: .92; font-family: var(--mono); font-weight: 600; }
-        .cblk.sel { border-color: #fff; box-shadow: 0 0 0 2px rgba(255, 255, 255, .25), 0 4px 16px rgba(0, 0, 0, .5); z-index: 30; }
-        .cblk.off { opacity: .3; filter: grayscale(.6); }
-        .cblk.drag { z-index: 60; cursor: grabbing; box-shadow: 0 8px 26px rgba(0, 0, 0, .6); }
-        .hnd { position: absolute; top: 0; bottom: 0; width: 11px; cursor: ew-resize; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .14s; z-index: 5; }
-        .hnd::before { content: ''; width: 3px; height: 26px; background: rgba(255, 255, 255, .92); border-radius: 2px; }
+        .cblk .lbl { font-size: 11px; font-weight: 800; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, .95); pointer-events: none; text-align: center; padding: 0 4px; overflow: hidden; white-space: nowrap; line-height: 1.25; }
+        .cblk .lbl small { display: block; font-size: 9.5px; opacity: .95; font-family: var(--mono); font-weight: 600; }
+        .cblk.sel { border-color: #fff; box-shadow: 0 0 0 2px rgba(255, 255, 255, .3), 0 4px 16px rgba(0, 0, 0, .55); z-index: 30; }
+        .cblk.off { opacity: .26; filter: grayscale(.7); }
+        .cblk.drag { z-index: 60; cursor: grabbing; }
+        .hnd { position: absolute; top: 0; bottom: 0; width: 11px; cursor: ew-resize; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .12s; z-index: 5; }
+        .hnd::before { content: ''; width: 3px; height: 24px; background: rgba(255, 255, 255, .95); border-radius: 2px; }
         .cblk:hover .hnd, .cblk.sel .hnd { opacity: 1; }
         .hnd.l { left: -1px; } .hnd.r { right: -1px; }
 
         .mrk { position: absolute; top: 0; height: 100%; width: 3px; margin-left: -1.5px; background: var(--warn); z-index: 25; cursor: ew-resize; }
-        .mrk::after {
-            content: ''; position: absolute; top: -5px; left: -5px; width: 13px; height: 13px;
-            background: var(--warn); border: 2px solid var(--bg); border-radius: 3px; transform: rotate(45deg);
-            box-shadow: 0 0 8px rgba(251, 191, 36, .6);
-        }
-        .mrk:hover::after { background: #ffd75e; transform: rotate(45deg) scale(1.2); }
+        .mrk::after { content: ''; position: absolute; top: -5px; left: -5px; width: 13px; height: 13px; background: var(--warn); border: 2px solid var(--bg); border-radius: 3px; transform: rotate(45deg); }
+        .mrk:hover::after { background: #ffdb6d; transform: rotate(45deg) scale(1.2); }
 
-        .ph { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--ok); z-index: 50; pointer-events: none; box-shadow: 0 0 10px rgba(0, 212, 170, .8); }
-        .ph::after {
-            content: ''; position: absolute; top: -1px; left: -6px; width: 14px; height: 11px;
-            background: var(--ok); clip-path: polygon(0 0, 100% 0, 50% 100%); pointer-events: none;
-        }
-        .ph .pht {
-            position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
-            background: var(--ok); color: #04241d; padding: 1px 7px; border-radius: 5px;
-            font: 700 10px/1.5 var(--mono); white-space: nowrap; opacity: 0; transition: opacity .15s; pointer-events: none;
-        }
-        .tl:hover .ph .pht, .ph.drag .pht { opacity: 1; }
-        .hcur { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(56, 189, 248, .8); z-index: 40; pointer-events: none; opacity: 0; transition: opacity .12s; }
+        .ph { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--ok); z-index: 50; pointer-events: none; box-shadow: 0 0 9px rgba(18, 223, 178, .85); }
+        .ph::after { content: ''; position: absolute; top: -1px; left: -6px; width: 14px; height: 11px; background: var(--ok); clip-path: polygon(0 0, 100% 0, 50% 100%); pointer-events: none; }
+        .ph .pht { position: absolute; top: -19px; left: 50%; transform: translateX(-50%); background: var(--ok); color: #04241d; padding: 1px 7px; border-radius: 5px; font: 700 10.5px/1.5 var(--mono); white-space: nowrap; opacity: 0; transition: opacity .13s; pointer-events: none; }
+        .tl:hover .ph .pht { opacity: 1; }
+        .hcur { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(76, 201, 240, .85); z-index: 40; pointer-events: none; opacity: 0; transition: opacity .1s; }
         .hcur.on { opacity: 1; }
-        .hcur .ht {
-            position: absolute; top: 2px; left: 4px; background: rgba(56, 189, 248, .95); color: #04202e;
-            padding: 1px 6px; border-radius: 4px; font: 700 9.5px/1.5 var(--mono); white-space: nowrap;
-        }
-        .inout { position: absolute; top: 0; bottom: 0; background: rgba(0, 212, 170, .1); border-left: 2px solid var(--ok); border-right: 2px dashed var(--yt); z-index: 20; pointer-events: none; }
+        .hcur .ht { position: absolute; top: 2px; left: 4px; background: rgba(76, 201, 240, .96); color: #052430; padding: 1px 6px; border-radius: 4px; font: 700 10px/1.5 var(--mono); white-space: nowrap; }
+        .inout { position: absolute; top: 0; bottom: 0; background: rgba(18, 223, 178, .12); border-left: 2px solid var(--ok); border-right: 2px dashed #ff8098; z-index: 20; pointer-events: none; }
 
-        /* filmstrip */
-        .fsouter { border: 1px solid var(--line); border-radius: 10px; background: var(--bg-1); overflow: hidden; margin-bottom: 6px; }
+        /* ---------------- filmstrip ----------------
+           Cells are flex:1, so a zoom change is ONE style write on the strip
+           instead of rebuilding every canvas. Labels thin out by class. */
+        .fsouter { border: 1px solid var(--line); border-radius: 9px; background: var(--bg); overflow: hidden; margin-bottom: 6px; }
         .fsscroll { overflow-x: auto; overflow-y: hidden; }
-        .fsscroll::-webkit-scrollbar { height: 6px; }
-        .fsstrip { display: flex; height: 64px; min-width: 100%; position: relative; }
-        .fsf { flex-shrink: 0; height: 64px; position: relative; cursor: pointer; border-right: 1px solid rgba(255, 255, 255, .05); overflow: hidden; }
+        .fsscroll::-webkit-scrollbar { height: 7px; }
+        .fsstrip { display: flex; height: 58px; min-width: 100%; position: relative; }
+        .fsf { flex: 1 1 0; min-width: 0; height: 58px; position: relative; cursor: pointer; border-right: 1px solid rgba(255, 255, 255, .06); overflow: hidden; }
         .fsf canvas { width: 100%; height: 100%; display: block; object-fit: cover; }
         .fsf:hover { outline: 2px solid var(--acc); outline-offset: -2px; z-index: 2; }
-        .fsf .t { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, .85); font: 700 8.5px var(--mono); padding: 0 4px; border-radius: 3px; pointer-events: none; }
-        .fsph { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ok); z-index: 10; pointer-events: none; box-shadow: 0 0 6px rgba(0, 212, 170, .7); }
-        .fsgen { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 20px; color: var(--txt-2); font-size: 11px; }
+        .fsf .t { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, .9); color: #dfe2ff; font: 700 9.5px var(--mono); padding: 0 4px; border-radius: 3px; pointer-events: none; }
+        .fsstrip.lbl-off .fsf .t { display: none; }
+        .fsstrip.lbl-2 .fsf:not(:nth-child(2n+1)) .t { display: none; }
+        .fsstrip.lbl-3 .fsf:not(:nth-child(3n+1)) .t { display: none; }
+        .fsstrip.lbl-5 .fsf:not(:nth-child(5n+1)) .t { display: none; }
+        .fsph { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ok); z-index: 10; pointer-events: none; box-shadow: 0 0 6px rgba(18, 223, 178, .8); }
+        .fsgen { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; padding: 16px; color: var(--txt-2); font-size: 12px; }
 
-        .spin { width: 13px; height: 13px; border: 2px solid var(--line); border-top-color: var(--acc); border-radius: 50%; animation: sp .8s linear infinite; flex-shrink: 0; }
+        .spin { width: 13px; height: 13px; border: 2px solid var(--line-2); border-top-color: var(--acc); border-radius: 50%; animation: sp .8s linear infinite; flex-shrink: 0; }
         @keyframes sp { to { transform: rotate(360deg); } }
 
         /* frame preview */
-        .fp { display: flex; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-1); overflow: hidden; margin-top: 6px; }
-        .fp .cv { position: relative; width: 224px; height: 126px; flex-shrink: 0; background: #000; border-right: 1px solid var(--line); }
+        .fp { display: flex; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); overflow: hidden; margin-top: 6px; }
+        .fp .cv { position: relative; width: 176px; height: 99px; flex-shrink: 0; background: #000; border-right: 1px solid var(--line); }
         .fp .cv canvas { width: 100%; height: 100%; display: block; object-fit: contain; }
-        .fp .cv .tb { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, var(--acc), var(--acc-2)); padding: 2px 10px; border-radius: 6px; font: 700 11px var(--mono); }
-        .fp .info { flex: 1; min-width: 0; padding: 9px 12px; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
-        @media (max-width:700px) { .fp { flex-direction: column; } .fp .cv { width: 100%; height: 170px; border-right: 0; border-bottom: 1px solid var(--line); } }
+        .fp .cv .tb { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); background: var(--acc); color: #fff; padding: 1px 9px; border-radius: 5px; font: 700 11px var(--mono); }
+        .fp .info { flex: 1; min-width: 0; padding: 8px 11px; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
 
-        /* ---------- tabs ---------- */
-        .tabs { display: flex; gap: 3px; padding: 6px; background: var(--bg-2); border-bottom: 1px solid var(--line); overflow-x: auto; }
-        .tab {
-            padding: 5px 11px; border-radius: 7px; font-size: 11.5px; font-weight: 600; color: var(--txt-2);
-            border: 1px solid transparent; white-space: nowrap; transition: .15s;
-        }
+        /* ---------------- rail tabs ---------------- */
+        .tabs { display: flex; gap: 3px; padding: 5px; background: var(--bg-2); border-bottom: 1px solid var(--line); overflow-x: auto; flex-shrink: 0; }
+        .tabs::-webkit-scrollbar { height: 0; }
+        .tab { padding: 5px 11px; border-radius: 7px; font-size: 12px; font-weight: 700; color: var(--txt-2); border: 1px solid transparent; white-space: nowrap; transition: background .12s, color .12s; }
         .tab:hover { background: var(--bg-3); color: var(--txt); }
-        .tab.on { background: var(--acc); color: #fff; border-color: var(--acc); }
-        .tabpane { display: none; }
+        .tab.on { background: var(--acc); color: #fff; }
+        .tabpane { display: none; min-height: 0; }
         .tabpane.on { display: block; }
-        /* inline styles would beat .tabpane{display:none}, so stacking lives in CSS */
-        .tabpane.stack.on { display: flex; flex-direction: column; gap: 9px; }
+        .tabpane.stack.on { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+        .tabpane.fill.on { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 
-        /* ---------- clip rows ---------- */
-        .clist { display: flex; flex-direction: column; gap: 5px; max-height: 46vh; overflow-y: auto; padding: 2px; }
+        /* ---------------- clip rows ---------------- */
+        .clist { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; padding: 2px 2px 6px; flex: 1; min-height: 0; }
         .crow {
-            display: flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 9px;
-            background: var(--bg-2); border: 1px solid var(--line); cursor: pointer; transition: .13s;
-            content-visibility: auto; contain-intrinsic-size: auto 42px;
+            display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px;
+            background: var(--bg-2); border: 1px solid var(--line); cursor: pointer;
+            transition: background .1s, border-color .1s;
+            content-visibility: auto; contain-intrinsic-size: auto 44px;
         }
         .crow:hover { background: var(--bg-3); border-color: var(--line-2); }
-        .crow.on { border-color: var(--acc); background: rgba(124, 92, 252, .12); }
-        .crow.off { opacity: .48; }
-        .crow .n {
-            width: 24px; height: 24px; border-radius: 7px; display: flex; align-items: center; justify-content: center;
-            font: 800 10px var(--mono); color: #fff; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0, 0, 0, .4);
-        }
-        .crow .tms { font-family: var(--mono); font-size: 11px; display: flex; align-items: center; gap: 5px; }
-        .crow .tms .s { color: var(--ok); } .crow .tms .e { color: var(--yt); } .crow .tms .d { color: var(--warn); font-size: 10px; }
-        .crow .nm { font-size: 11px; color: var(--txt-2); }
-        .crow .acts { display: flex; gap: 3px; opacity: .35; transition: opacity .15s; }
+        .crow.on { border-color: var(--acc); background: rgba(124, 92, 252, .15); }
+        .crow.off { opacity: .45; }
+        .crow .n { width: 23px; height: 23px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font: 800 11px var(--mono); color: #fff; flex-shrink: 0; }
+        .crow .tms { font-family: var(--mono); font-size: 11.5px; display: flex; align-items: center; gap: 5px; }
+        .crow .tms .s { color: var(--ok); } .crow .tms .e { color: #ff8098; } .crow .tms .d { color: var(--warn); font-size: 11px; }
+        .crow .nm { font-size: 11.5px; color: var(--txt-2); }
+        .crow .acts { display: flex; gap: 2px; opacity: .4; transition: opacity .12s; }
         .crow:hover .acts, .crow.on .acts { opacity: 1; }
-        .ib { padding: 3px 6px; border-radius: 5px; font-size: 11px; color: var(--txt-2); transition: .12s; }
+        .ib { padding: 3px 6px; border-radius: 5px; font-size: 12px; color: var(--txt-2); transition: background .12s, color .12s; }
         .ib:hover { background: var(--bg-4); color: #fff; }
-        .ib.r:hover { background: rgba(248, 113, 113, .2); color: var(--bad); }
-        .ib.g:hover { background: rgba(0, 212, 170, .18); color: var(--ok); }
+        .ib.r:hover { background: rgba(255, 123, 123, .22); color: var(--bad); }
+        .ib.g:hover { background: rgba(18, 223, 178, .2); color: var(--ok); }
 
-        /* ---------- code ---------- */
+        /* ---------------- misc ---------------- */
         .code {
-            background: #06060d; border: 1px solid var(--line); border-radius: 10px; padding: 12px;
-            font-family: var(--mono); font-size: 11px; line-height: 1.62; color: #b9b9dd;
-            white-space: pre; overflow: auto; max-height: 340px; tab-size: 4;
+            background: #07070f; border: 1px solid var(--line); border-radius: 9px; padding: 11px;
+            font-family: var(--mono); font-size: 11.5px; line-height: 1.6; color: #c9cbef;
+            white-space: pre; overflow: auto; tab-size: 4;
         }
-        .code.wrapln { white-space: pre-wrap; word-break: break-word; }
-
-        /* ---------- stats ---------- */
-        .sgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); gap: 7px; }
-        .sbox { background: var(--bg-2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 6px; text-align: center; }
-        .sbox .v { font: 800 16px var(--mono); line-height: 1.15; }
-        .sbox .k { font-size: 9px; color: var(--txt-3); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+        .sgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(74px, 1fr)); gap: 6px; }
+        .sbox { background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 5px; text-align: center; }
+        .sbox .v { font: 800 15px var(--mono); line-height: 1.2; }
+        .sbox .k { font-size: 9.5px; color: var(--txt-3); text-transform: uppercase; letter-spacing: .5px; margin-top: 1px; }
         .bar { height: 6px; border-radius: 4px; background: var(--bg-4); overflow: hidden; }
-        .bar > i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--acc), var(--ok)); transition: width .3s; }
-        .histo { display: flex; align-items: flex-end; gap: 2px; height: 46px; }
-        .histo > i { flex: 1; background: linear-gradient(180deg, var(--acc-2), var(--acc)); border-radius: 2px 2px 0 0; min-height: 2px; position: relative; }
+        .bar > i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--acc), var(--ok)); transition: width .25s; }
+        .histo { display: flex; align-items: flex-end; gap: 2px; height: 42px; }
+        .histo > i { flex: 1; background: linear-gradient(180deg, var(--acc-2), var(--acc)); border-radius: 2px 2px 0 0; min-height: 2px; }
 
-        .note { border-radius: 9px; padding: 8px 10px; font-size: 11px; line-height: 1.55; border: 1px solid; }
-        .note.i { background: rgba(56, 189, 248, .07); border-color: rgba(56, 189, 248, .22); color: #b6e3ff; }
-        .note.w { background: rgba(251, 191, 36, .07); border-color: rgba(251, 191, 36, .22); color: #ffe4a3; }
-        .note.e { background: rgba(248, 113, 113, .07); border-color: rgba(248, 113, 113, .22); color: #ffc4c4; }
-        .note.g { background: rgba(0, 212, 170, .07); border-color: rgba(0, 212, 170, .22); color: #a5f3e2; }
+        .note { border-radius: 8px; padding: 7px 10px; font-size: 11.5px; line-height: 1.55; border: 1px solid; }
+        .note.i { background: rgba(76, 201, 240, .09); border-color: rgba(76, 201, 240, .28); color: #b9e8ff; }
+        .note.w { background: rgba(255, 197, 61, .09); border-color: rgba(255, 197, 61, .28); color: #ffe6ab; }
+        .note.e { background: rgba(255, 123, 123, .09); border-color: rgba(255, 123, 123, .28); color: #ffc9c9; }
+        .note.g { background: rgba(18, 223, 178, .09); border-color: rgba(18, 223, 178, .28); color: #a9f6e4; }
 
-        /* ---------- transcript ---------- */
-        .tsl { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
-        .tsr { display: flex; gap: 7px; padding: 4px 7px; border-radius: 6px; cursor: pointer; font-size: 11.5px; line-height: 1.45; }
-        .tsr:hover { background: var(--bg-3); }
-        .tsr.now { background: rgba(124, 92, 252, .16); }
-        .tsr .tt { font-family: var(--mono); font-size: 10px; color: var(--acc-2); flex-shrink: 0; padding-top: 1px; }
-        .tsr mark { background: rgba(251, 191, 36, .3); color: var(--warn); border-radius: 2px; padding: 0 1px; }
+        .tsl { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+        .tsr { display: flex; gap: 7px; padding: 4px 7px; border-radius: 6px; cursor: pointer; font-size: 12px; line-height: 1.45; color: var(--txt-2); }
+        .tsr:hover { background: var(--bg-3); color: var(--txt); }
+        .tsr.now { background: rgba(124, 92, 252, .2); color: var(--txt); }
+        .tsr .tt { font-family: var(--mono); font-size: 10.5px; color: #c0aaff; flex-shrink: 0; padding-top: 1px; }
+        .tsr mark { background: rgba(255, 197, 61, .32); color: var(--warn); border-radius: 2px; padding: 0 1px; }
 
-        /* ---------- toast / modal ---------- */
-        #toasts { position: fixed; top: 62px; right: 14px; z-index: 900; display: flex; flex-direction: column; gap: 7px; pointer-events: none; max-width: 340px; }
-        .toast {
-            padding: 9px 14px; border-radius: 10px; font-size: 12px; font-weight: 600;
-            backdrop-filter: blur(10px); border: 1px solid; animation: tin .25s ease; box-shadow: var(--sh);
-        }
-        .toast.out { animation: tout .25s ease forwards; }
-        @keyframes tin { from { transform: translateX(110%); opacity: 0; } }
-        @keyframes tout { to { transform: translateX(110%); opacity: 0; } }
-        .toast.s { background: rgba(0, 212, 170, .16); border-color: rgba(0, 212, 170, .35); color: #7ff5dd; }
-        .toast.e { background: rgba(248, 113, 113, .16); border-color: rgba(248, 113, 113, .35); color: #ffb0b0; }
-        .toast.w { background: rgba(251, 191, 36, .16); border-color: rgba(251, 191, 36, .35); color: #ffdc8a; }
-        .toast.i { background: rgba(56, 189, 248, .16); border-color: rgba(56, 189, 248, .35); color: #a5ddff; }
-
-        .mback { position: fixed; inset: 0; background: rgba(0, 0, 0, .75); backdrop-filter: blur(6px); z-index: 950; display: flex; align-items: center; justify-content: center; padding: 18px; }
-        .modal { background: var(--bg-1); border: 1px solid var(--line-2); border-radius: 14px; box-shadow: var(--sh); width: 100%; max-width: 560px; max-height: 86vh; display: flex; flex-direction: column; }
-        .modal.wide { max-width: 880px; }
-        .modal .mh { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid var(--line); }
-        .modal .mb { padding: 16px; overflow-y: auto; }
-        .modal .mf { padding: 12px 16px; border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; }
-
-        .busy { position: fixed; right: 14px; bottom: 14px; z-index: 700; background: var(--bg-1); border: 1px solid var(--acc); border-radius: 11px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; box-shadow: var(--sh); }
-
-        details.acc { border: 1px solid var(--line); border-radius: 10px; background: var(--bg-2); overflow: hidden; }
-        details.acc > summary { padding: 8px 11px; cursor: pointer; font-size: 11.5px; font-weight: 700; list-style: none; display: flex; align-items: center; gap: 6px; }
+        details.acc { border: 1px solid var(--line); border-radius: 9px; background: var(--bg-2); overflow: hidden; flex-shrink: 0; }
+        details.acc > summary { padding: 7px 10px; cursor: pointer; font-size: 12px; font-weight: 700; list-style: none; display: flex; align-items: center; gap: 6px; color: var(--txt); }
         details.acc > summary::-webkit-details-marker { display: none; }
-        details.acc > summary::before { content: '▸'; color: var(--txt-3); transition: transform .18s; }
+        details.acc > summary::before { content: '▸'; color: var(--txt-3); transition: transform .16s; }
         details.acc[open] > summary::before { transform: rotate(90deg); }
         details.acc > summary:hover { background: var(--bg-3); }
-        details.acc .ab { padding: 10px 11px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 9px; }
+        details.acc .ab { padding: 9px 10px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
 
         .rowg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .rowg3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+        .kbdgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px 14px; }
+        .kbdrow { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--txt-2); }
 
-        .kbdgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 6px 14px; }
-        .kbdrow { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--txt-2); }
-        .kbdrow .kbd { flex-shrink: 0; }
+        /* ---------------- toast / modal / drawer ---------------- */
+        #toasts { position: fixed; top: 58px; right: 14px; z-index: 900; display: flex; flex-direction: column; gap: 6px; pointer-events: none; max-width: 330px; }
+        .toast { padding: 8px 13px; border-radius: 9px; font-size: 12px; font-weight: 600; border: 1px solid; animation: tin .2s ease; box-shadow: var(--sh); background: var(--bg-1); }
+        .toast.out { animation: tout .2s ease forwards; }
+        @keyframes tin { from { transform: translateX(110%); opacity: 0; } }
+        @keyframes tout { to { transform: translateX(110%); opacity: 0; } }
+        .toast.s { border-color: rgba(18, 223, 178, .45); color: #8df3dc; }
+        .toast.e { border-color: rgba(255, 123, 123, .45); color: #ffb3b3; }
+        .toast.w { border-color: rgba(255, 197, 61, .45); color: #ffe09a; }
+        .toast.i { border-color: rgba(76, 201, 240, .45); color: #aee1ff; }
 
-        footer { text-align: center; padding: 20px 14px 30px; color: var(--txt-3); font-size: 10.5px; }
+        .mback { position: fixed; inset: 0; background: rgba(0, 0, 0, .74); z-index: 950; display: flex; align-items: center; justify-content: center; padding: 18px; }
+        .modal { background: var(--bg-1); border: 1px solid var(--line-2); border-radius: 13px; box-shadow: var(--sh); width: 100%; max-width: 560px; max-height: 86vh; display: flex; flex-direction: column; }
+        .modal.wide { max-width: 900px; }
+        .modal .mh { display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; border-bottom: 1px solid var(--line); }
+        .modal .mb { padding: 15px; overflow-y: auto; }
+        .modal .mf { padding: 11px 15px; border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; }
+
+        .dback { position: fixed; inset: 0; background: rgba(0, 0, 0, .6); z-index: 840; opacity: 0; pointer-events: none; transition: opacity .2s; }
+        .dback.open { opacity: 1; pointer-events: auto; }
+        .drawer {
+            position: fixed; top: 0; right: 0; height: 100vh; width: min(940px, 96vw); z-index: 860;
+            background: var(--bg-1); border-left: 1px solid var(--line-2); box-shadow: -14px 0 40px rgba(0, 0, 0, .55);
+            transform: translateX(101%); transition: transform .22s cubic-bezier(.4, 0, .2, 1);
+            display: flex; flex-direction: column;
+        }
+        .drawer.open { transform: none; }
+        .drawer .dh { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+        .drawer .db { flex: 1; min-height: 0; overflow: hidden; display: grid; grid-template-columns: 320px minmax(0, 1fr); }
+        .drawer .dl { border-right: 1px solid var(--line); overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 9px; }
+        .drawer .dr { overflow: hidden; display: flex; flex-direction: column; padding: 12px; gap: 8px; min-height: 0; }
+        @media (max-width:900px) { .drawer .db { grid-template-columns: 1fr; overflow-y: auto; } .drawer .dr { overflow: visible; } }
+
+        .busy { position: fixed; right: 14px; bottom: 14px; z-index: 700; background: var(--bg-1); border: 1px solid var(--acc); border-radius: 10px; padding: 9px 13px; display: flex; align-items: center; gap: 10px; box-shadow: var(--sh); }
     </style>
 </head>
 
@@ -492,92 +462,92 @@
 
     <!-- ============ HEADER ============ -->
     <header class="top">
-        <div class="top-in">
-            <div class="logo">🎬</div>
-            <div class="brand">
-                <h1>ClipForge Studio</h1>
-                <p>Watch · Segment · Extract</p>
-            </div>
-            <div class="flex ac g6 wrap f1" id="hdrStats">
-                <span class="chip acc" title="Videos in project">🎞 <b id="stVideos">0</b> videos</span>
-                <span class="chip ok" title="Total clips across all videos">✂ <b id="stClips">0</b> clips</span>
-                <span class="chip warn" title="Total runtime of all clips">⏱ <b id="stDur">0:00</b></span>
-                <span class="chip info" title="Estimated download size at current quality">💾 <b id="stSize">0 MB</b></span>
-                <span class="chip" id="stSaveChip" title="Autosave status"><span id="stSave" class="dim">saved</span></span>
-            </div>
-            <div class="flex ac g6">
-                <button class="btn s" data-act="openApiKey" title="Add a YouTube Data API key for titles, durations, chapters and stats">🔑 <span id="apiKeyLabel">API</span></button>
-                <button class="btn s" data-act="openProject" title="Save / load / import / export project">💾 Project</button>
-                <button class="btn s" data-act="openHelp" title="Keyboard shortcuts and full guide">❔ Help</button>
-            </div>
+        <div class="logo">🎬</div>
+        <div class="brand">
+            <h1>ClipForge Studio</h1>
+            <p>Watch · Segment · Extract</p>
+        </div>
+        <div class="flex ac g6 wrap f1">
+            <span class="chip acc" title="Videos in project">🎞 <b id="stVideos">0</b></span>
+            <span class="chip ok" title="Clips included in the export">✂ <b id="stClips">0</b></span>
+            <span class="chip warn" title="Total runtime of all included clips">⏱ <b id="stDur">0:00</b></span>
+            <span class="chip info" title="Estimated download size at the current quality">💾 <b id="stSize">0 MB</b></span>
+            <span class="chip" title="Autosave status"><span id="stSave" class="dim">saved</span></span>
+        </div>
+        <div class="flex ac g6">
+            <button class="btn s" data-act="openApiKey" title="YouTube Data API key — exact durations, chapters, stats, playlists">🔑 <span id="apiKeyLabel">API</span></button>
+            <button class="btn s" data-act="openProject" title="Save / load / export the project">💾</button>
+            <button class="btn s" data-act="openHelp" title="Shortcuts and guide">❔</button>
+            <button class="btn p" data-act="openExport" title="Build the download script (E)">⬇ Export <span class="kbd" style="background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.3);color:#fff">E</span></button>
         </div>
     </header>
 
-    <!-- ============ MAIN GRID ============ -->
+    <!-- ============ APP ============ -->
     <div class="app">
 
-        <!-- ============ LEFT RAIL: LIBRARY ============ -->
-        <div class="rail-l">
-            <section class="card">
+        <!-- ---------- LEFT RAIL ---------- -->
+        <div class="rail">
+            <section class="card" style="flex:0 1 auto;min-height:0;max-height:56%">
                 <div class="hd">
                     <h3>Sources</h3>
-                    <span class="sm dim" id="libCount">0</span>
+                    <span class="tiny dim" id="libCount">0</span>
                 </div>
-                <div class="bd tight">
+                <div class="bd tight" style="flex-shrink:0">
                     <div class="flex g6">
-                        <input class="in s f1" id="urlInput" placeholder="YouTube URL, ID, or playlist…" spellcheck="false" autocomplete="off">
-                        <button class="btn p s" data-act="addUrl" title="Add video (Enter)">＋</button>
+                        <input class="in s f1" id="urlInput" placeholder="YouTube URL, ID or playlist…" spellcheck="false" autocomplete="off">
+                        <button class="btn p s" data-act="addUrl" title="Add (Enter)">＋</button>
                     </div>
                     <div class="flex g6" style="margin-top:6px">
-                        <button class="btn xs f1" data-act="openBulk" title="Paste many URLs at once">📋 Bulk add</button>
-                        <button class="btn xs f1" data-act="pickLocal" title="Use a local video file — unlocks frame-accurate auto scene detection">📁 Local file</button>
+                        <button class="btn xs f1" data-act="openBulk" title="Paste many URLs at once">📋 Bulk</button>
+                        <button class="btn xs f1" data-act="pickLocal" title="Local file — unlocks scene detection">📁 Local file</button>
                     </div>
                     <input type="file" id="fileInput" accept="video/*" class="hide">
                     <div class="drop" id="dropZone" style="margin-top:6px">
-                        <div style="font-size:18px">⬇</div>
-                        <div class="sm mut">Drop a video file or a link here</div>
-                        <div class="tiny dim">Local files unlock auto scene detection</div>
+                        <div class="sm mut">⬇ Drop a video file or link</div>
+                        <div class="tiny dim">local files unlock scene detection</div>
                     </div>
                 </div>
                 <div class="vlist" id="videoList"></div>
-                <div class="bd tight" style="border-top:1px solid var(--line)">
+                <div class="bd tight" style="border-top:1px solid var(--line);flex-shrink:0">
                     <div class="flex g6">
-                        <button class="btn xs f1" data-act="clearVideos">🗑 Clear all</button>
-                        <button class="btn xs f1" data-act="refreshMeta" title="Re-fetch metadata for all YouTube videos">↻ Refresh meta</button>
+                        <button class="btn xs f1" data-act="clearVideos">🗑 Clear</button>
+                        <button class="btn xs f1" data-act="refreshMeta" title="Re-fetch metadata">↻ Refresh</button>
                     </div>
                 </div>
             </section>
 
-            <section class="card" id="metaCard">
+            <section class="card" style="flex:1 1 auto;overflow:hidden">
                 <div class="hd">
                     <h3>Video Intelligence</h3>
-                    <button class="btn xs ghost" data-act="openDesc" title="Show full description">📄</button>
+                    <button class="btn xs ghost" data-act="openDesc" title="Description and tags">📄</button>
                 </div>
-                <div class="bd tight" id="metaBody">
-                    <p class="sm dim center" style="padding:12px 0">No video selected</p>
+                <div class="bd tight scroll" id="metaBody" style="flex:1;min-height:0">
+                    <p class="sm dim center" style="padding:10px 0">No video selected</p>
                 </div>
             </section>
         </div>
 
-        <!-- ============ CENTER: STUDIO ============ -->
-        <div class="col" style="display:flex;flex-direction:column;gap:12px;min-width:0">
+        <!-- ---------- CENTER: STUDIO ---------- -->
+        <div class="studio">
             <section class="stage">
-                <div class="vbox" id="videoBox">
-                    <div id="ytHost"></div>
-                    <video id="localVideo" class="hide" playsinline preload="auto"></video>
-                    <div class="vempty" id="videoEmpty">
-                        <div style="font-size:40px">🎬</div>
-                        <div class="b">Add a YouTube link to begin</div>
-                        <div class="sm dim" style="max-width:380px">Paste a URL on the left, watch the video, and mark clips with
-                            <span class="kbd">I</span> <span class="kbd">O</span> — then export a script that downloads
-                            just those sections.</div>
+                <div class="vstage" id="vStage" data-size="m">
+                    <div class="vbox" id="videoBox">
+                        <div id="ytHost"></div>
+                        <video id="localVideo" class="hide" playsinline preload="auto"></video>
+                        <div class="vempty" id="videoEmpty">
+                            <div style="font-size:30px">🎬</div>
+                            <div class="b">Add a YouTube link to begin</div>
+                            <div class="sm dim" style="max-width:360px">Watch, then mark clips with
+                                <span class="kbd">I</span> <span class="kbd">O</span> <span class="kbd">⏎</span> —
+                                the script downloads only those sections.</div>
+                        </div>
+                        <div class="ovl hide" id="videoOverlay"></div>
                     </div>
-                    <div class="ovl hide" id="videoOverlay"></div>
                 </div>
 
                 <!-- transport -->
                 <div class="tr">
-                    <button class="tbtn big" data-act="play" title="Play / Pause (Space)" id="playBtn">▶</button>
+                    <button class="tbtn big" data-act="play" title="Play / pause (Space)" id="playBtn">▶</button>
                     <div class="sep"></div>
                     <button class="tbtn" data-act="seek" data-v="-30" title="Back 30s">«30</button>
                     <button class="tbtn" data-act="seek" data-v="-5" title="Back 5s (Ctrl+←)">«5</button>
@@ -589,8 +559,8 @@
                     <button class="tbtn" data-act="seek" data-v="30" title="Forward 30s">30»</button>
                     <div class="sep"></div>
                     <span class="tdisp" id="curTime">0:00.000</span>
-                    <span class="sm dim">/</span>
-                    <span class="mono sm mut" id="totTime">0:00</span>
+                    <span class="tiny dim">/</span>
+                    <span class="mono tiny mut" id="totTime">0:00</span>
                     <div class="sep"></div>
                     <select class="in s" id="rateSel" style="width:auto" title="Playback speed">
                         <option value="0.25">0.25×</option>
@@ -601,7 +571,7 @@
                         <option value="1.5">1.5×</option>
                         <option value="2">2×</option>
                     </select>
-                    <select class="in s" id="fpsSel" style="width:auto" title="Frame rate used for frame stepping">
+                    <select class="in s" id="fpsSel" style="width:auto" title="Frame rate for frame stepping">
                         <option value="23.976">23.98</option>
                         <option value="24">24</option>
                         <option value="25">25</option>
@@ -609,24 +579,29 @@
                         <option value="50">50</option>
                         <option value="60">60</option>
                     </select>
+                    <button class="tbtn" data-act="prevClip" title="Previous edge (↓)">⏮</button>
+                    <button class="tbtn" data-act="nextClip" title="Next edge (↑)">⏭</button>
                     <div class="sep"></div>
-                    <button class="tbtn" data-act="prevClip" title="Previous clip / boundary (↓)">⏮</button>
-                    <button class="tbtn" data-act="nextClip" title="Next clip / boundary (↑)">⏭</button>
+                    <span class="tiny dim">Player</span>
+                    <div class="seg" id="sizeSeg">
+                        <button data-act="psize" data-v="s" title="Small player">S</button>
+                        <button data-act="psize" data-v="m" class="on" title="Medium player">M</button>
+                        <button data-act="psize" data-v="l" title="Large player">L</button>
+                        <button data-act="psize" data-v="xl" title="Full width">XL</button>
+                    </div>
                 </div>
 
-                <!-- marking bar -->
-                <div class="tr" style="border-top-color:var(--line)">
-                    <button class="tbtn in-b" data-act="setIn" title="Set IN point at playhead (I)">[ IN <span class="kbd">I</span></button>
-                    <button class="tbtn out-b" data-act="setOut" title="Set OUT point at playhead (O)">OUT ] <span class="kbd">O</span></button>
-                    <button class="tbtn mk" data-act="commitClip" title="Create clip from IN/OUT (Enter)">＋ Add clip <span class="kbd">⏎</span></button>
-                    <span class="iodisp mut" id="ioDisp">
-                        <span>in <b class="i">—</b></span><span>out <b class="o">—</b></span><span>len <b class="d">—</b></span>
-                    </span>
+                <!-- marking -->
+                <div class="tr">
+                    <button class="tbtn in-b" data-act="setIn" title="Set IN at the playhead">[ IN <span class="kbd">I</span></button>
+                    <button class="tbtn out-b" data-act="setOut" title="Set OUT at the playhead">OUT ] <span class="kbd">O</span></button>
+                    <button class="tbtn mk" data-act="commitClip" title="Turn IN→OUT into a clip">＋ Add clip <span class="kbd">⏎</span></button>
+                    <span class="iodisp" id="ioDisp"><span>in <b class="i">—</b></span><span>out <b class="o">—</b></span><span>len <b class="d">—</b></span></span>
                     <div class="sep"></div>
-                    <button class="tbtn" data-act="splitHere" title="Split the clip under the playhead into two (M)">✂ Split <span class="kbd">M</span></button>
-                    <button class="tbtn" data-act="quickClip" title="Create a clip of the default length starting at the playhead (Q)">⚡ Quick <span class="kbd">Q</span></button>
-                    <button class="tbtn" id="loopBtn" data-act="toggleLoop" title="Loop the selected clip while previewing (L)">🔁 Loop</button>
-                    <button class="tbtn" id="selBtn" data-act="toggleSelHere" title="Include / exclude the clip under the playhead (S / D)">● —</button>
+                    <button class="tbtn" data-act="splitHere" title="Split the clip at the playhead">✂ Split <span class="kbd">M</span></button>
+                    <button class="tbtn" data-act="quickClip" title="Clip of the default length from here">⚡ Quick <span class="kbd">Q</span></button>
+                    <button class="tbtn" id="loopBtn" data-act="toggleLoop" title="Loop the previewed clip">🔁 Loop</button>
+                    <button class="tbtn" id="selBtn" data-act="toggleSelHere" title="Include / exclude the clip here (S / D)">● —</button>
                     <div class="sep"></div>
                     <button class="tbtn" data-act="undo" title="Undo (Ctrl+Z)">↩</button>
                     <button class="tbtn" data-act="redo" title="Redo (Ctrl+Y)">↪</button>
@@ -637,18 +612,27 @@
                     <div class="tlbar">
                         <div class="flex ac g6 wrap">
                             <span class="tiny b mut" style="letter-spacing:1px">TIMELINE</span>
-                            <button class="btn xs" id="toolScrub" data-act="tool" data-v="scrub" title="Drag on empty track to scrub">🖱 Scrub</button>
-                            <button class="btn xs" id="toolDraw" data-act="tool" data-v="draw" title="Drag on empty track to draw a new clip">✏ Draw</button>
-                            <button class="btn xs" id="snapBtn" data-act="toggleSnap" title="Snap edges to clips, chapters, playhead and whole seconds">🧲 Snap</button>
+                            <div class="seg">
+                                <button id="toolScrub" data-act="tool" data-v="scrub" title="Drag empty track to scrub">🖱 Scrub</button>
+                                <button id="toolDraw" data-act="tool" data-v="draw" title="Drag empty track to draw a clip">✏ Draw</button>
+                            </div>
+                            <button class="btn xs" id="snapBtn" data-act="toggleSnap" title="Snap to clips, chapters, playhead, seconds">🧲 Snap</button>
                             <span class="tiny dim" id="tlHint"></span>
                         </div>
                         <div class="flex ac g4">
-                            <button class="btn xs" data-act="fsToggle" id="fsToggleBtn" title="Filmstrip (local files only)">🎞</button>
+                            <label class="ck tiny" title="Build thumbnails under the timeline (local files only)">
+                                <input type="checkbox" id="fsEnable"> 🎞 Filmstrip
+                            </label>
+                            <span class="tiny dim" id="fsState"></span>
+                            <button class="btn xs hide" id="fsBuildBtn" data-act="fsBuild" title="Build / rebuild the filmstrip">Build</button>
+                            <button class="btn xs hide" id="fsCancelBtn" data-act="fsCancel">✕</button>
+                            <div class="sep"></div>
+                            <button class="btn xs" id="fpToggleBtn" data-act="toggleFp" title="Frame preview under the timeline">👁</button>
                             <span class="tiny dim">Zoom</span>
                             <button class="btn xs" data-act="zoom" data-v="-1">−</button>
-                            <span class="mono tiny b" style="width:38px;text-align:center;color:var(--acc-2)" id="zoomLbl">1×</span>
+                            <span class="mono tiny b" style="width:36px;text-align:center;color:#c0aaff" id="zoomLbl">1×</span>
                             <button class="btn xs" data-act="zoom" data-v="1">＋</button>
-                            <button class="btn xs" data-act="zoom" data-v="0" title="Fit whole video">Fit</button>
+                            <button class="btn xs" data-act="zoom" data-v="0" title="Fit the whole video">Fit</button>
                         </div>
                     </div>
 
@@ -673,7 +657,7 @@
                     </div>
 
                     <div class="fp hide" id="framePrev">
-                        <div class="cv"><canvas id="fpCanvas" width="480" height="270"></canvas>
+                        <div class="cv"><canvas id="fpCanvas" width="352" height="198"></canvas>
                             <span class="tb" id="fpTime">0:00</span>
                         </div>
                         <div class="info">
@@ -685,50 +669,46 @@
                     </div>
                 </div>
             </section>
+        </div>
 
-            <!-- CLIPS TABLE -->
-            <section class="card">
-                <div class="hd">
-                    <h3>Clips — <span id="clipsForTitle" class="mut" style="text-transform:none;letter-spacing:0">no video</span></h3>
-                    <div class="flex g4 ac">
+        <!-- ---------- RIGHT RAIL ---------- -->
+        <div class="rail">
+            <section class="card" style="flex:1 1 auto">
+                <div class="tabs" id="toolTabs">
+                    <button class="tab on" data-act="tab" data-v="clip">✂ Clips</button>
+                    <button class="tab" data-act="tab" data-v="auto">⚡ Auto</button>
+                    <button class="tab" data-act="tab" data-v="text">📝 Text</button>
+                    <button class="tab" data-act="tab" data-v="stats">📊 Stats</button>
+                </div>
+
+                <!-- ===== CLIPS ===== -->
+                <div class="bd tight tabpane fill on" id="paneClip">
+                    <div class="flex ac jb g6" style="margin-bottom:6px;flex-shrink:0">
+                        <span class="tiny b mut trunc" id="clipsForTitle" style="letter-spacing:.4px">no video</span>
                         <span class="badge n" id="clipCountBadge">0</span>
                     </div>
-                </div>
-                <div class="bd tight">
-                    <div class="flex g6 wrap" style="margin-bottom:8px">
-                        <div class="swrap f1" style="min-width:160px"><span class="sic">🔍</span>
-                            <input class="in s" id="clipSearch" placeholder="Filter clips by number, name, time or note…">
-                        </div>
+                    <div class="swrap" style="margin-bottom:6px;flex-shrink:0"><span class="sic">🔍</span>
+                        <input class="in s" id="clipSearch" placeholder="Filter by number, name, time or note…">
+                    </div>
+                    <div class="flex g4 wrap" style="margin-bottom:6px;flex-shrink:0">
                         <button class="btn xs" data-act="selAll">☑ All</button>
                         <button class="btn xs" data-act="selNone">☐ None</button>
                         <button class="btn xs" data-act="selInvert">⇄ Invert</button>
-                        <button class="btn xs" data-act="sortClips" title="Sort clips by start time">↕ Sort</button>
-                        <button class="btn xs" data-act="openBulkEdit" title="Bulk edit: shift, pad, rename, split, merge…">🛠 Bulk</button>
-                        <button class="btn xs r" data-act="delSelected" title="Delete selected clips">🗑 Delete</button>
+                        <button class="btn xs" data-act="sortClips" title="Sort by start time">↕ Sort</button>
+                        <button class="btn xs" data-act="openBulkEdit" title="Shift, pad, rename, merge, split…">🛠 Bulk</button>
+                        <button class="btn xs r" data-act="delSelected" title="Delete the selected clips">🗑</button>
                     </div>
+                    <div id="inspBody" style="flex-shrink:0"></div>
+                    <div id="validBox" style="flex-shrink:0"></div>
                     <div class="clist" id="clipList"></div>
-                    <div id="validBox" style="margin-top:8px"></div>
-                </div>
-            </section>
-        </div>
-
-        <!-- ============ RIGHT RAIL: TOOLS ============ -->
-        <div class="rail-r">
-            <section class="card">
-                <div class="tabs" id="toolTabs">
-                    <button class="tab on" data-act="tab" data-v="auto">⚡ Auto</button>
-                    <button class="tab" data-act="tab" data-v="text">📝 Text</button>
-                    <button class="tab" data-act="tab" data-v="stats">📊 Stats</button>
-                    <button class="tab" data-act="tab" data-v="clip">🎚 Inspector</button>
                 </div>
 
-                <!-- AUTO TOOLS -->
-                <div class="bd tabpane stack on" id="paneAuto">
+                <!-- ===== AUTO ===== -->
+                <div class="bd tight tabpane stack scroll" id="paneAuto">
                     <details class="acc" open>
                         <summary>📑 YouTube chapters</summary>
                         <div class="ab">
-                            <div id="chapBox" class="sm dim">No chapters found. Add an API key, or paste the description in
-                                the Text tab.</div>
+                            <div id="chapBox" class="sm dim">No chapters. Add an API key, or paste the description in the Text tab.</div>
                             <div class="flex g6">
                                 <button class="btn s f1 p" data-act="chaptersToClips">Chapters → clips</button>
                                 <button class="btn s" data-act="chaptersMarkers" title="Add split markers only">Markers</button>
@@ -770,23 +750,20 @@
                                 <div><label class="lb">How many</label><input type="number" class="in s" id="shCount" value="8" min="1" max="200"></div>
                             </div>
                             <label class="ck"><input type="checkbox" id="shChapters" checked> Anchor to chapter starts when available</label>
-                            <label class="ck"><input type="checkbox" id="shSkipIntro" checked> Skip the first 30s (intro)</label>
+                            <label class="ck"><input type="checkbox" id="shSkipIntro" checked> Skip the first 30s</label>
                             <button class="btn s p w" data-act="genShorts">Build shorts candidates</button>
-                            <div class="note i">Spreads evenly across the video (or snaps to chapters) so you get a batch of
-                                short, self-contained clips to review.</div>
                         </div>
                     </details>
 
-                    <details class="acc" id="localToolsAcc">
+                    <details class="acc">
                         <summary>🤖 Auto scene detection <span class="badge lo" style="margin-left:auto">local file</span></summary>
                         <div class="ab" id="detectBox">
-                            <div class="note w" id="detectNeedLocal">Visual scene detection needs the actual video frames, which a
-                                YouTube embed will not hand to the browser. Load a <b>local file</b> (or download the video
-                                first with the generated script) to unlock it.</div>
-                            <div id="detectCtrls" class="hide" style="display:flex;flex-direction:column;gap:9px">
+                            <div class="note w" id="detectNeedLocal">Visual detection needs the real frames, which a YouTube embed will not
+                                hand to the browser. Load a <b>local file</b> (or download the video first) to unlock it.</div>
+                            <div id="detectCtrls" class="hide" style="display:flex;flex-direction:column;gap:8px">
                                 <div>
                                     <div class="flex jb ac"><label class="lb" style="margin:0">Sensitivity</label>
-                                        <span class="mono b" style="color:var(--acc)" id="sensVal">50</span>
+                                        <span class="mono b" style="color:#c0aaff" id="sensVal">50</span>
                                     </div>
                                     <input type="range" id="sens" min="1" max="100" value="50">
                                     <div class="flex jb tiny dim"><span>fewer cuts</span><span>more cuts</span></div>
@@ -808,7 +785,7 @@
                                 </div>
                                 <div class="hide" id="detectProg">
                                     <div class="flex g8 ac">
-                                        <canvas id="detectPrev" width="128" height="72" style="border-radius:6px;background:#000;border:1px solid var(--line)"></canvas>
+                                        <canvas id="detectPrev" width="112" height="63" style="border-radius:5px;background:#000;border:1px solid var(--line)"></canvas>
                                         <div class="f1">
                                             <div class="sm b" id="detectStatus">Analysing…</div>
                                             <div class="tiny mono dim" id="detectDetail">—</div>
@@ -816,7 +793,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <canvas id="diffGraph" style="width:100%;height:70px;border-radius:8px;border:1px solid var(--line);background:var(--bg-2)" class="hide"></canvas>
+                                <canvas id="diffGraph" style="width:100%;height:64px;border-radius:7px;border:1px solid var(--line);background:var(--bg-2)" class="hide"></canvas>
                             </div>
                         </div>
                     </details>
@@ -825,12 +802,12 @@
                         <summary>🔇 Silence / audio cuts <span class="badge lo" style="margin-left:auto">local file</span></summary>
                         <div class="ab" id="silenceBox">
                             <div class="note w" id="silNeedLocal">Waveform analysis needs a local file.</div>
-                            <div id="silCtrls" class="hide" style="display:flex;flex-direction:column;gap:9px">
+                            <div id="silCtrls" class="hide" style="display:flex;flex-direction:column;gap:8px">
                                 <div class="rowg">
                                     <div><label class="lb">Silence below (dB)</label><input type="number" class="in s" id="silDb" value="-38" min="-80" max="-5"></div>
                                     <div><label class="lb">Min silence (s)</label><input type="number" class="in s" id="silLen" value="0.7" min="0.1" step="0.1"></div>
                                 </div>
-                                <label class="ck"><input type="checkbox" id="silKeepSpeech" checked> Make clips of the speech (not the silence)</label>
+                                <label class="ck"><input type="checkbox" id="silKeepSpeech" checked> Make clips of the speech, not the silence</label>
                                 <div class="rowg">
                                     <div><label class="lb">Pad in (s)</label><input type="number" class="in s" id="silPadIn" value="0.15" step="0.05"></div>
                                     <div><label class="lb">Pad out (s)</label><input type="number" class="in s" id="silPadOut" value="0.25" step="0.05"></div>
@@ -841,12 +818,12 @@
                     </details>
                 </div>
 
-                <!-- TEXT TOOLS -->
-                <div class="bd tabpane stack" id="paneText">
+                <!-- ===== TEXT ===== -->
+                <div class="bd tight tabpane stack scroll" id="paneText">
                     <details class="acc" open>
                         <summary>📋 Paste timestamps</summary>
                         <div class="ab">
-                            <textarea class="in" id="tsInput" rows="7" spellcheck="false" placeholder="Ranges, one per line:
+                            <textarea class="in" id="tsInput" rows="6" spellcheck="false" placeholder="Ranges, one per line:
 0:00-0:41
 1:11 - 1:18   Best bit
 1:30:00-1:35:20
@@ -859,14 +836,14 @@
                                 <button class="btn s f1" data-act="parsePoints">Points → splits</button>
                             </div>
                             <label class="ck"><input type="checkbox" id="tsReplace" checked> Replace existing clips</label>
-                            <button class="btn xs w" data-act="syncTs" title="Write current clips back into the box">↻ Pull current clips into the box</button>
+                            <button class="btn xs w" data-act="syncTs">↻ Pull current clips into the box</button>
                         </div>
                     </details>
 
                     <details class="acc">
                         <summary>📄 Description → chapters</summary>
                         <div class="ab">
-                            <textarea class="in" id="descInput" rows="6" spellcheck="false" placeholder="Paste the video description here — any lines like &quot;0:00 Intro&quot; become chapters."></textarea>
+                            <textarea class="in" id="descInput" rows="5" spellcheck="false" placeholder="Paste the description — lines like &quot;0:00 Intro&quot; become chapters."></textarea>
                             <button class="btn s p w" data-act="parseDesc">Extract chapters</button>
                         </div>
                     </details>
@@ -874,12 +851,12 @@
                     <details class="acc">
                         <summary>💬 Transcript search</summary>
                         <div class="ab">
-                            <div class="note i">Open the video on YouTube → <b>…more</b> → <b>Show transcript</b> → select all →
-                                copy → paste here. Then search a phrase and turn every hit into a clip.</div>
-                            <textarea class="in" id="trInput" rows="5" spellcheck="false" placeholder="0:03 welcome back everyone
+                            <div class="note i">On YouTube: <b>…more</b> → <b>Show transcript</b> → select all → copy → paste here.
+                                Then search a phrase and turn every hit into a clip.</div>
+                            <textarea class="in" id="trInput" rows="4" spellcheck="false" placeholder="0:03 welcome back everyone
 0:07 today we are going to talk about…"></textarea>
                             <button class="btn s w" data-act="loadTranscript">Load transcript</button>
-                            <div class="swrap"><span class="sic">🔎</span><input class="in s" id="trSearch" placeholder="Search words in transcript…"></div>
+                            <div class="swrap"><span class="sic">🔎</span><input class="in s" id="trSearch" placeholder="Search words in the transcript…"></div>
                             <div class="rowg3">
                                 <div><label class="lb">Pre (s)</label><input type="number" class="in s" id="trPre" value="2" step="0.5"></div>
                                 <div><label class="lb">Post (s)</label><input type="number" class="in s" id="trPost" value="8" step="0.5"></div>
@@ -891,155 +868,132 @@
                     </details>
                 </div>
 
-                <!-- STATS -->
-                <div class="bd tabpane stack" id="paneStats">
-                    <div id="statsBody"><p class="sm dim center" style="padding:14px 0">No video selected</p></div>
-                </div>
-
-                <!-- CLIP INSPECTOR -->
-                <div class="bd tabpane" id="paneClip">
-                    <div id="inspBody"><p class="sm dim center" style="padding:14px 0">Select a clip to edit it</p></div>
-                </div>
-            </section>
-
-            <section class="card">
-                <div class="hd"><h3>Naming</h3></div>
-                <div class="bd tight" style="display:flex;flex-direction:column;gap:8px">
-                    <div>
-                        <label class="lb">Output file name template</label>
-                        <input class="in s mono" id="nameTpl" value="{vi}_{i}_{name}" spellcheck="false">
-                        <div class="tiny dim" style="margin-top:4px">
-                            {i} clip no · {vi} video no · {name} clip name · {title} video title · {id} video id ·
-                            {start} {end} {dur} · {ch} channel · {date}
-                        </div>
-                    </div>
-                    <div class="mono tiny" style="background:var(--bg-2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;color:var(--ok)"
-                        id="namePreview">—</div>
+                <!-- ===== STATS ===== -->
+                <div class="bd tight tabpane stack scroll" id="paneStats">
+                    <div id="statsBody"><p class="sm dim center" style="padding:12px 0">No video selected</p></div>
                 </div>
             </section>
         </div>
     </div>
 
-    <!-- ============ EXPORT ============ -->
-    <section class="card" style="margin:0 12px 12px" id="exportCard">
-        <div class="hd">
-            <h3>Export — download scripts</h3>
-            <div class="flex g6 ac">
+    <!-- ============ EXPORT DRAWER ============ -->
+    <div class="dback" id="drawerBack" data-act="closeExport"></div>
+    <aside class="drawer" id="exportDrawer">
+        <div class="dh">
+            <div class="flex ac g8">
+                <b style="font-size:14px">⬇ Export — download scripts</b>
                 <span class="badge n" id="expScope">0 clips</span>
                 <span class="badge w" id="expEta">—</span>
             </div>
-        </div>
-        <div class="bd">
-            <div class="rowg" style="grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:14px;align-items:start">
-                <!-- settings -->
-                <div style="display:flex;flex-direction:column;gap:10px">
-                    <div>
-                        <label class="lb">Strategy</label>
-                        <select class="in s" id="expStrategy">
-                            <option value="sections">Per-clip sections — download only what you need (default)</option>
-                            <option value="batched">Batched sections — one yt-dlp call per video (fastest)</option>
-                            <option value="full">Download once, cut locally with FFmpeg (best for many clips)</option>
-                            <option value="ffmpeg">FFmpeg only — I already have the video files</option>
-                        </select>
-                        <div class="tiny dim" id="strategyHint" style="margin-top:4px"></div>
-                    </div>
-                    <div class="rowg">
-                        <div><label class="lb">Quality</label>
-                            <select class="in s" id="expQuality">
-                                <option value="best">Best available</option>
-                                <option value="2160">4K 2160p</option>
-                                <option value="1440">1440p</option>
-                                <option value="1080" selected>1080p</option>
-                                <option value="720">720p</option>
-                                <option value="480">480p</option>
-                                <option value="360">360p</option>
-                            </select>
-                        </div>
-                        <div><label class="lb">Format</label>
-                            <select class="in s" id="expFormat">
-                                <option value="mp4" selected>MP4</option>
-                                <option value="mkv">MKV</option>
-                                <option value="webm">WebM</option>
-                                <option value="mp3">MP3 (audio)</option>
-                                <option value="m4a">M4A (audio)</option>
-                                <option value="wav">WAV (audio)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="rowg">
-                        <div><label class="lb">Output folder</label><input class="in s" id="expFolder" value="Clips" spellcheck="false"></div>
-                        <div><label class="lb">Parallel jobs</label><input type="number" class="in s" id="expJobs" value="2" min="1" max="8"></div>
-                    </div>
-                    <details class="acc">
-                        <summary>⚙ Advanced options</summary>
-                        <div class="ab">
-                            <label class="ck"><input type="checkbox" id="optKeyframes" checked> Force keyframes at cuts (exact boundaries, re-encodes edges)</label>
-                            <label class="ck"><input type="checkbox" id="optSkipExisting" checked> Skip clips that already exist</label>
-                            <label class="ck"><input type="checkbox" id="optAutoInstall" checked> Auto-download yt-dlp if it is missing (Windows)</label>
-                            <label class="ck"><input type="checkbox" id="optLog" checked> Write a run log + summary</label>
-                            <label class="ck"><input type="checkbox" id="optOpenFolder" checked> Open the output folder when finished</label>
-                            <label class="ck"><input type="checkbox" id="optCookies"> Use browser cookies (age-restricted / members-only)</label>
-                            <div id="cookieRow" class="hide"><label class="lb">Browser</label>
-                                <select class="in s" id="optCookieBrowser">
-                                    <option>chrome</option><option>edge</option><option>brave</option>
-                                    <option>firefox</option><option>opera</option><option>vivaldi</option><option>safari</option>
-                                </select>
-                            </div>
-                            <label class="ck"><input type="checkbox" id="optSponsor"> Remove sponsor segments (SponsorBlock)</label>
-                            <label class="ck"><input type="checkbox" id="optSubs"> Download &amp; embed subtitles</label>
-                            <label class="ck"><input type="checkbox" id="optThumb"> Embed thumbnail + metadata</label>
-                            <label class="ck"><input type="checkbox" id="optVertical"> Re-frame to vertical 9:16 for Shorts (needs FFmpeg)</label>
-                            <label class="ck"><input type="checkbox" id="optProxyOn"> Use a proxy</label>
-                            <div id="proxyRow" class="hide"><input class="in s mono" id="optProxy" placeholder="http://127.0.0.1:8080"></div>
-                            <div class="rowg">
-                                <div><label class="lb">Retries</label><input type="number" class="in s" id="optRetries" value="3" min="0" max="20"></div>
-                                <div><label class="lb">Frag threads</label><input type="number" class="in s" id="optFrags" value="8" min="1" max="16"></div>
-                            </div>
-                            <div><label class="lb">Extra yt-dlp arguments</label><input class="in s mono" id="optExtra" placeholder="--limit-rate 5M" spellcheck="false"></div>
-                        </div>
-                    </details>
-                    <div class="flex g6 wrap">
-                        <button class="btn p f1" data-act="dlMain">⬇ Download script</button>
-                        <button class="btn g" data-act="dlZip" title="Every format + CSV + JSON + README">📦 ZIP</button>
-                    </div>
-                    <div class="flex g6 wrap">
-                        <button class="btn s f1" data-act="copyScript">📋 Copy</button>
-                        <button class="btn s f1" data-act="dlCsv">📊 CSV</button>
-                        <button class="btn s f1" data-act="dlJson">🧾 JSON</button>
-                    </div>
-                    <label class="ck"><input type="checkbox" id="expSelectedOnly" checked> Only include selected clips</label>
-                    <label class="ck"><input type="checkbox" id="expAllVideos" checked> Include every video in the project</label>
-                </div>
-
-                <!-- script preview -->
-                <div style="min-width:0">
-                    <div class="tabs" style="border-radius:9px 9px 0 0;border:1px solid var(--line);border-bottom:0" id="scriptTabs">
-                        <button class="tab on" data-act="stab" data-v="bat">🪟 Windows .bat</button>
-                        <button class="tab" data-act="stab" data-v="sh">🐧 macOS / Linux .sh</button>
-                        <button class="tab" data-act="stab" data-v="ps1">💠 PowerShell</button>
-                        <button class="tab" data-act="stab" data-v="py">🐍 Python</button>
-                        <button class="tab" data-act="stab" data-v="txt">📋 Raw commands</button>
-                    </div>
-                    <div style="position:relative">
-                        <pre class="code" id="scriptOut" style="border-radius:0 0 9px 9px;max-height:430px">Add clips to generate a script.</pre>
-                        <button class="btn xs" data-act="copyScript" style="position:absolute;top:8px;right:14px">📋 Copy</button>
-                    </div>
-                    <div class="note i" style="margin-top:8px" id="runHint"></div>
-                </div>
+            <div class="flex ac g6">
+                <button class="btn p" data-act="dlMain">⬇ Download script</button>
+                <button class="btn g" data-act="dlZip" title="Every format + CSV + JSON + README">📦 ZIP</button>
+                <button class="btn ghost" data-act="closeExport" title="Close (Esc)">✕</button>
             </div>
         </div>
-    </section>
+        <div class="db">
+            <!-- settings -->
+            <div class="dl">
+                <div>
+                    <label class="lb">Strategy</label>
+                    <select class="in s" id="expStrategy">
+                        <option value="sections">Per-clip sections — only what you need</option>
+                        <option value="batched">Batched sections — one call per video</option>
+                        <option value="full">Download once, cut locally (FFmpeg)</option>
+                        <option value="ffmpeg">FFmpeg only — I have the files</option>
+                    </select>
+                    <div class="tiny dim" id="strategyHint" style="margin-top:4px"></div>
+                </div>
+                <div class="rowg">
+                    <div><label class="lb">Quality</label>
+                        <select class="in s" id="expQuality">
+                            <option value="best">Best available</option>
+                            <option value="2160">4K 2160p</option>
+                            <option value="1440">1440p</option>
+                            <option value="1080" selected>1080p</option>
+                            <option value="720">720p</option>
+                            <option value="480">480p</option>
+                            <option value="360">360p</option>
+                        </select>
+                    </div>
+                    <div><label class="lb">Format</label>
+                        <select class="in s" id="expFormat">
+                            <option value="mp4" selected>MP4</option>
+                            <option value="mkv">MKV</option>
+                            <option value="webm">WebM</option>
+                            <option value="mp3">MP3 (audio)</option>
+                            <option value="m4a">M4A (audio)</option>
+                            <option value="wav">WAV (audio)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="rowg">
+                    <div><label class="lb">Output folder</label><input class="in s" id="expFolder" value="Clips" spellcheck="false"></div>
+                    <div><label class="lb">Parallel jobs</label><input type="number" class="in s" id="expJobs" value="2" min="1" max="8"></div>
+                </div>
+                <div>
+                    <label class="lb">Output file name template</label>
+                    <input class="in s mono" id="nameTpl" value="{vi}_{i}_{name}" spellcheck="false">
+                    <div class="tiny dim" style="margin-top:4px">{i} clip · {vi} video · {name} · {title} · {id} · {start} {end} {dur} · {ch} · {date}</div>
+                    <div class="mono tiny" style="background:var(--bg-2);border:1px solid var(--line);border-radius:7px;padding:5px 8px;color:var(--ok);margin-top:5px" id="namePreview">—</div>
+                </div>
+                <label class="ck"><input type="checkbox" id="expSelectedOnly" checked> Only include selected clips</label>
+                <label class="ck"><input type="checkbox" id="expAllVideos" checked> Include every video in the project</label>
+                <details class="acc">
+                    <summary>⚙ Advanced options</summary>
+                    <div class="ab">
+                        <label class="ck"><input type="checkbox" id="optKeyframes" checked> Force keyframes at cuts (exact boundaries)</label>
+                        <label class="ck"><input type="checkbox" id="optSkipExisting" checked> Skip clips that already exist</label>
+                        <label class="ck"><input type="checkbox" id="optAutoInstall" checked> Auto-download yt-dlp if missing (Windows)</label>
+                        <label class="ck"><input type="checkbox" id="optLog" checked> Write a run log</label>
+                        <label class="ck"><input type="checkbox" id="optOpenFolder" checked> Open the folder when finished</label>
+                        <label class="ck"><input type="checkbox" id="optCookies"> Use browser cookies (age-restricted)</label>
+                        <div id="cookieRow" class="hide"><label class="lb">Browser</label>
+                            <select class="in s" id="optCookieBrowser">
+                                <option>chrome</option><option>edge</option><option>brave</option>
+                                <option>firefox</option><option>opera</option><option>vivaldi</option><option>safari</option>
+                            </select>
+                        </div>
+                        <label class="ck"><input type="checkbox" id="optSponsor"> Remove sponsor segments (SponsorBlock)</label>
+                        <label class="ck"><input type="checkbox" id="optSubs"> Download &amp; embed subtitles</label>
+                        <label class="ck"><input type="checkbox" id="optThumb"> Embed thumbnail + metadata</label>
+                        <label class="ck"><input type="checkbox" id="optVertical"> Re-frame to vertical 9:16 (needs FFmpeg)</label>
+                        <label class="ck"><input type="checkbox" id="optProxyOn"> Use a proxy</label>
+                        <div id="proxyRow" class="hide"><input class="in s mono" id="optProxy" placeholder="http://127.0.0.1:8080"></div>
+                        <div class="rowg">
+                            <div><label class="lb">Retries</label><input type="number" class="in s" id="optRetries" value="3" min="0" max="20"></div>
+                            <div><label class="lb">Frag threads</label><input type="number" class="in s" id="optFrags" value="8" min="1" max="16"></div>
+                        </div>
+                        <div><label class="lb">Extra yt-dlp arguments</label><input class="in s mono" id="optExtra" placeholder="--limit-rate 5M" spellcheck="false"></div>
+                    </div>
+                </details>
+                <div class="flex g6 wrap">
+                    <button class="btn s f1" data-act="copyScript">📋 Copy</button>
+                    <button class="btn s f1" data-act="dlCsv">📊 CSV</button>
+                    <button class="btn s f1" data-act="dlJson">🧾 JSON</button>
+                </div>
+            </div>
+
+            <!-- script preview -->
+            <div class="dr">
+                <div class="tabs" style="border-radius:9px;border:1px solid var(--line);flex-shrink:0" id="scriptTabs">
+                    <button class="tab on" data-act="stab" data-v="bat">🪟 .bat</button>
+                    <button class="tab" data-act="stab" data-v="sh">🐧 .sh</button>
+                    <button class="tab" data-act="stab" data-v="ps1">💠 .ps1</button>
+                    <button class="tab" data-act="stab" data-v="py">🐍 .py</button>
+                    <button class="tab" data-act="stab" data-v="txt">📋 commands</button>
+                </div>
+                <pre class="code f1" id="scriptOut" style="min-height:0">Add clips to generate a script.</pre>
+                <div class="note i" style="flex-shrink:0" id="runHint"></div>
+            </div>
+        </div>
+    </aside>
 
     <div class="busy hide" id="busy">
         <div class="spin"></div>
         <div><div class="sm b" id="busyTitle">Working…</div><div class="tiny dim" id="busyText">—</div></div>
         <button class="btn xs r" data-act="busyCancel" id="busyCancel">✕</button>
     </div>
-
-    <footer>
-        ClipForge Studio · everything runs in your browser — no uploads, no server, no tracking ·
-        clips are extracted by the script you download (needs <b>yt-dlp</b>, and <b>FFmpeg</b> for local cutting)
-    </footer>
 
     <script>
         /* ==========================================================================
@@ -1187,10 +1141,12 @@
                 loop: false,
                 loopClipId: null,
                 scriptTab: 'bat',
-                toolTab: 'auto',
+                toolTab: 'clip',
                 apiKey: '',
                 filter: '',
                 fpsDefault: 30,
+                playerSize: 'm',
+                fpOn: true,
                 ready: false
             };
             var HIST = {};             // videoUid -> {undo:[], redo:[]}
@@ -1382,6 +1338,7 @@
                 out.apiKey = S.apiKey;
                 out.zoom = S.zoom; out.snap = S.snap; out.tool = S.tool;
                 out.scriptTab = S.scriptTab;
+                out.playerSize = S.playerSize; out.fpOn = S.fpOn; out.toolTab = S.toolTab;
                 return out;
             }
             function applySettings() {
@@ -1400,6 +1357,9 @@
                 S.snap = d.snap !== false;
                 S.tool = d.tool === 'draw' ? 'draw' : 'scrub';
                 S.scriptTab = d.scriptTab || 'bat';
+                S.playerSize = d.playerSize || 'm';
+                S.fpOn = d.fpOn !== false;
+                S.toolTab = d.toolTab || 'clip';
             }
             var SETTING_IDS = [
                 'expStrategy', 'expQuality', 'expFormat', 'expFolder', 'expJobs', 'nameTpl',
@@ -2036,8 +1996,8 @@
             function afterClipChange(v, keepSel) {
                 normalizeClips(v);
                 if (!keepSel) S.selClips = S.selClips.filter(function (id) { return !!findClip(v, id); });
-                renderClips(); renderTimeline(); renderStats(); renderInspector();
-                updateHeader(); regenScript(); renderLibrary();
+                CLIP_INDEX = null;
+                invalidate('clips', 'timeline', 'stats', 'inspector', 'header', 'script', 'library');
                 scheduleSave();
             }
 
@@ -2052,17 +2012,25 @@
                 return c;
             }
 
-            function clipAt(v, t) {
-                for (var i = 0; i < v.clips.length; i++) {
-                    if (t >= v.clips[i].start && t < v.clips[i].end) return v.clips[i];
-                }
-                return null;
-            }
+            var CLIP_INDEX = null;
             function clipIndexAt(v, t) {
-                for (var i = 0; i < v.clips.length; i++) {
-                    if (t >= v.clips[i].start && t < v.clips[i].end) return i;
+                var a = v.clips, n = a.length;
+                if (!n) return -1;
+                // Clips are sorted by start, but may overlap in freeform mode, so walk
+                // back a little from the binary-search landing point.
+                var lo = 0, hi = n - 1, best = -1;
+                while (lo <= hi) {
+                    var mid = (lo + hi) >> 1;
+                    if (a[mid].start <= t) { best = mid; lo = mid + 1; } else hi = mid - 1;
+                }
+                for (var i = best; i >= 0 && i > best - 12; i--) {
+                    if (t >= a[i].start && t < a[i].end) return i;
                 }
                 return -1;
+            }
+            function clipAt(v, t) {
+                var i = clipIndexAt(v, t);
+                return i < 0 ? null : v.clips[i];
             }
 
             /* M — split the clip under the playhead, or start a new scene here. */
@@ -2167,7 +2135,9 @@
                 var c = clipAt(v, Player.time());
                 if (!c) return toast('No clip under the playhead', 'w');
                 c.on = !c.on;
-                renderClips(); renderTimeline(); updateHeader(); regenScript(); updateSelBtn(); scheduleSave();
+                if (!renderClipRowState(v, c)) invalidate('clips', 'timeline');
+                invalidate('header', 'script', 'stats', 'library');
+                updateSelBtn(true); scheduleSave();
                 toast('Clip ' + (v.clips.indexOf(c) + 1) + (c.on ? ' included' : ' excluded'), c.on ? 's' : 'w', 1400);
             }
 
@@ -2210,29 +2180,24 @@
                 $('totTime').textContent = d ? fmt(d) : '0:00';
 
                 // ---- ruler ----
-                ruler.innerHTML = '';
                 if (d > 0) {
                     var pps = w / d;
                     var want = 74 / pps;
                     var nice = [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200];
                     var step = nice[nice.length - 1];
                     for (var i = 0; i < nice.length; i++) { if (nice[i] >= want) { step = nice[i]; break; } }
-                    var frag = document.createDocumentFragment();
-                    var count = 0;
+                    var rh = [], count = 0;
                     for (var t = 0; t <= d + 1e-6 && count < 1200; t += step, count++) {
                         var pct = t2pct(t, d);
                         var maj = Math.abs((t / step) % 5) < 1e-6;
-                        var tick = el('div', 'tick' + (maj ? ' maj' : ''));
-                        tick.style.cssText = 'left:' + pct + '%;height:' + (maj ? 9 : 5) + 'px';
-                        frag.appendChild(tick);
+                        rh.push('<div class="tick' + (maj ? ' maj' : '') + '" style="left:' + pct + '%;height:' + (maj ? 9 : 5) + 'px"></div>');
                         if (maj || pps * step > 58) {
-                            var lab = el('div', 'tlab', step < 1 ? fmtMs(t).replace(/(\.\d)\d\d$/, '$1') : fmt(t));
-                            lab.style.left = pct + '%';
-                            frag.appendChild(lab);
+                            rh.push('<div class="tlab" style="left:' + pct + '%">' +
+                                (step < 1 ? fmtMs(t).replace(/(\.\d)\d\d$/, '$1') : fmt(t)) + '</div>');
                         }
                     }
-                    ruler.appendChild(frag);
-                }
+                    ruler.innerHTML = rh.join('');
+                } else ruler.innerHTML = '';
 
                 // ---- chapters ----
                 var chaps = v && v.chapters && v.chapters.length ? v.chapters : [];
@@ -2259,47 +2224,39 @@
                 }
 
                 // ---- clips + markers ----
+                // String building beats createElement here: a 300-clip timeline is ~1200
+                // nodes, and this runs on every zoom step.
                 var layer = $('clipLayer'), mlayer = $('markerLayer');
-                layer.innerHTML = ''; mlayer.innerHTML = '';
                 if (v && d > 0 && v.clips.length) {
-                    var lf = document.createDocumentFragment();
                     var selSet = {}; S.selClips.forEach(function (id) { selSet[id] = 1; });
-                    v.clips.forEach(function (c, i) {
-                        var b = el('div', 'cblk' + (selSet[c.id] ? ' sel' : '') + (c.on ? '' : ' off'));
-                        var col = colorOf(i);
+                    var ch = [], mh = [];
+                    for (var ci = 0; ci < v.clips.length; ci++) {
+                        var c = v.clips[ci];
+                        var col = colorOf(ci);
                         var wpct = t2pct(c.end - c.start, d);
-                        b.style.cssText = 'left:' + t2pct(c.start, d) + '%;width:' + Math.max(0.08, wpct) + '%;' +
-                            'background:linear-gradient(160deg,' + col + 'ee,' + col + 'aa)';
-                        b.dataset.clip = c.id;
-                        b.title = '#' + (i + 1) + (c.name ? ' · ' + c.name : '') + '\n' +
-                            fmtMs(c.start) + ' → ' + fmtMs(c.end) + '  (' + fmtDurWords(c.end - c.start) + ')' +
-                            '\nDrag to move · drag the edges to trim · double-click to preview';
                         var wpx = wpct / 100 * w;
-                        if (wpx > 34) {
-                            var lbl = el('div', 'lbl');
-                            lbl.innerHTML = (i + 1) + (wpx > 88 && c.name ? ' ' + esc(c.name.slice(0, 16)) : '') +
-                                (wpx > 60 ? '<small>' + fmtDurWords(c.end - c.start) + '</small>' : '');
-                            b.appendChild(lbl);
-                        }
-                        var hl = el('div', 'hnd l'); hl.dataset.hnd = 'l';
-                        var hr = el('div', 'hnd r'); hr.dataset.hnd = 'r';
-                        b.appendChild(hl); b.appendChild(hr);
-                        lf.appendChild(b);
-                    });
-                    layer.appendChild(lf);
-
-                    // shared boundaries become draggable markers
-                    var mf = document.createDocumentFragment();
-                    for (var k = 0; k < v.clips.length - 1; k++) {
-                        if (Math.abs(v.clips[k].end - v.clips[k + 1].start) < 0.02) {
-                            var m = el('div', 'mrk');
-                            m.style.left = t2pct(v.clips[k].end, d) + '%';
-                            m.dataset.bnd = String(k);
-                            m.title = 'Cut at ' + fmtMs(v.clips[k].end) + '\nDrag to move · double-click to merge the two clips';
-                            mf.appendChild(m);
+                        var tip = '#' + (ci + 1) + (c.name ? ' · ' + c.name : '') + '&#10;' +
+                            fmtMs(c.start) + ' → ' + fmtMs(c.end) + '  (' + fmtDurWords(c.end - c.start) + ')&#10;' +
+                            'Drag to move · edges to trim · double-click to preview';
+                        ch.push('<div class="cblk' + (selSet[c.id] ? ' sel' : '') + (c.on ? '' : ' off') +
+                            '" data-clip="' + c.id + '" title="' + esc(c.name ? tip : tip) + '" style="left:' +
+                            t2pct(c.start, d) + '%;width:' + Math.max(0.08, wpct) + '%;background:linear-gradient(160deg,' +
+                            col + 'ee,' + col + 'aa)">' +
+                            (wpx > 34
+                                ? '<div class="lbl">' + (ci + 1) +
+                                  (wpx > 88 && c.name ? ' ' + esc(c.name.slice(0, 16)) : '') +
+                                  (wpx > 60 ? '<small>' + fmtDurWords(c.end - c.start) + '</small>' : '') + '</div>'
+                                : '') +
+                            '<div class="hnd l" data-hnd="l"></div><div class="hnd r" data-hnd="r"></div></div>');
+                        if (ci < v.clips.length - 1 && Math.abs(c.end - v.clips[ci + 1].start) < 0.02) {
+                            mh.push('<div class="mrk" data-bnd="' + ci + '" style="left:' + t2pct(c.end, d) +
+                                '%" title="Cut at ' + fmtMs(c.end) + '&#10;Drag to move · double-click to merge"></div>');
                         }
                     }
-                    mlayer.appendChild(mf);
+                    layer.innerHTML = ch.join('');
+                    mlayer.innerHTML = mh.join('');
+                } else {
+                    layer.innerHTML = ''; mlayer.innerHTML = '';
                 }
 
                 // ---- in / out region ----
@@ -2313,7 +2270,7 @@
                 } else io.classList.add('hide');
 
                 paintPlayhead(Player.time());
-                LocalTools.syncStripWidth();
+                LocalTools.fitStrip();
                 $('tlHint').textContent = d ? (v.clips.length + ' clips · ' + fmt(d) + ' total') : '';
             }
 
@@ -2597,7 +2554,37 @@
 
             /* ==========================================================================
                RENDERING
+
+               Everything goes through invalidate(), which coalesces work into one
+               animation frame. Before this, a single clip edit fired seven synchronous
+               renders — including regenerating the whole export script — which is what
+               made large projects crawl.
                ========================================================================== */
+            var DIRTY = {}, flushQueued = false;
+            function invalidate() {
+                for (var i = 0; i < arguments.length; i++) DIRTY[arguments[i]] = true;
+                if (flushQueued) return;
+                flushQueued = true;
+                requestAnimationFrame(flushRender);
+            }
+            function flushRender() {
+                flushQueued = false;
+                var d = DIRTY; DIRTY = {};
+                try {
+                    if (d.library) renderLibrary();
+                    if (d.meta) renderMeta();
+                    if (d.chapters) renderChapterBox();
+                    if (d.timeline) renderTimeline();
+                    if (d.clips) renderClips();
+                    if (d.inspector && S.toolTab === 'clip') renderInspector();
+                    if (d.stats && S.toolTab === 'stats') renderStats();
+                    if (d.header) updateHeader();
+                    if (d.script) regenScript();          // no-ops unless the drawer is open
+                } catch (e) {
+                    console.error('render', e);
+                }
+            }
+
             function renderAll() {
                 renderLibrary(); renderMeta(); renderClips(); renderTimeline();
                 renderStats(); renderInspector(); renderIO(); renderTranscript(); renderChapterBox();
@@ -2786,7 +2773,8 @@
                 }
                 var i = v.clips.indexOf(c);
                 box.innerHTML =
-                    '<div class="flex ac g8" style="margin-bottom:9px">' +
+                    '<div style="border:1px solid var(--line);border-radius:9px;padding:8px;margin-bottom:7px;background:var(--bg-2)">' +
+                    '<div class="flex ac g8" style="margin-bottom:7px">' +
                     '<span class="n" style="width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;background:' + colorOf(i) + '">' + (i + 1) + '</span>' +
                     '<div class="f1"><input class="in s" id="inspName" placeholder="Clip name (optional)" value="' + esc(c.name) + '"></div>' +
                     '</div>' +
@@ -2794,32 +2782,26 @@
                     '<div><label class="lb">Start</label><input class="in s mono" id="inspStart" value="' + fmtMs(c.start) + '"></div>' +
                     '<div><label class="lb">End</label><input class="in s mono" id="inspEnd" value="' + fmtMs(c.end) + '"></div>' +
                     '</div>' +
-                    '<div class="flex g4 wrap" style="margin-bottom:8px">' +
-                    nudge(c.id, 'start', -1) + nudge(c.id, 'start', -1 / 30) + '<span class="tiny dim" style="align-self:center">start</span>' +
-                    nudge(c.id, 'start', 1 / 30) + nudge(c.id, 'start', 1) +
+                    '<div class="flex g4 wrap ac" style="margin-bottom:6px">' +
+                    '<span class="tiny dim" style="width:26px">start</span>' +
+                    nudge(c.id, 'start', -1) + nudge(c.id, 'start', -1 / 30) + nudge(c.id, 'start', 1 / 30) + nudge(c.id, 'start', 1) +
+                    '<button class="btn xs" data-act="setClipIn" data-v="' + c.id + '" title="Set the start to the playhead">= ▶</button>' +
                     '</div>' +
-                    '<div class="flex g4 wrap" style="margin-bottom:9px">' +
-                    nudge(c.id, 'end', -1) + nudge(c.id, 'end', -1 / 30) + '<span class="tiny dim" style="align-self:center">end</span>' +
-                    nudge(c.id, 'end', 1 / 30) + nudge(c.id, 'end', 1) +
+                    '<div class="flex g4 wrap ac" style="margin-bottom:8px">' +
+                    '<span class="tiny dim" style="width:26px">end</span>' +
+                    nudge(c.id, 'end', -1) + nudge(c.id, 'end', -1 / 30) + nudge(c.id, 'end', 1 / 30) + nudge(c.id, 'end', 1) +
+                    '<button class="btn xs" data-act="setClipOut" data-v="' + c.id + '" title="Set the end to the playhead">= ▶</button>' +
+                    '<span class="tiny mono" style="margin-left:auto;color:var(--warn)">' + fmtDurWords(c.end - c.start) + '</span>' +
                     '</div>' +
-                    '<div class="flex g4 wrap" style="margin-bottom:9px">' +
-                    '<button class="btn xs" data-act="setClipIn" data-v="' + c.id + '">[ start = playhead</button>' +
-                    '<button class="btn xs" data-act="setClipOut" data-v="' + c.id + '">end = playhead ]</button>' +
-                    '</div>' +
-                    '<label class="lb">Note</label><input class="in s" id="inspNote" placeholder="Why this clip matters…" value="' + esc(c.note) + '" style="margin-bottom:9px">' +
-                    '<div class="sgrid" style="margin-bottom:9px">' +
-                    sbox(fmtDurWords(c.end - c.start), 'length', 'var(--warn)') +
-                    sbox(fmt(c.start), 'in', 'var(--ok)') +
-                    sbox(fmt(c.end), 'out', 'var(--yt)') +
-                    '</div>' +
-                    '<div class="mono tiny" style="background:var(--bg-2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;color:var(--ok);word-break:break-all;margin-bottom:9px">' +
+                    '<input class="in s" id="inspNote" placeholder="Note — why this clip matters…" value="' + esc(c.note) + '" style="margin-bottom:7px">' +
+                    '<div class="mono tiny trunc" style="background:var(--bg-2);border:1px solid var(--line);border-radius:6px;padding:5px 7px;color:var(--ok);margin-bottom:7px" title="' + esc(nameFor(v, c, i)) + '.' + outExt() + '">' +
                     esc(nameFor(v, c, i)) + '.' + outExt() + '</div>' +
                     '<div class="flex g6 wrap">' +
                     '<button class="btn s f1 g" data-act="previewClip" data-v="' + c.id + '">▶ Preview</button>' +
                     '<button class="btn s" data-act="splitClipHere" data-v="' + c.id + '" title="Split at the playhead">✂</button>' +
                     '<button class="btn s" data-act="mergeNext" data-v="' + c.id + '" title="Merge with the next clip">⇥⇤</button>' +
                     '<button class="btn s r" data-act="delClip" data-v="' + c.id + '">✕</button>' +
-                    '</div>';
+                    '</div></div>';
 
                 bindInspector(v, c);
             }
@@ -2953,7 +2935,11 @@
             function updatePlayBtn() {
                 var b = $('playBtn'); if (b) b.textContent = Player.playing() ? '⏸' : '▶';
             }
-            function updateSelBtn() {
+            var _selBtnAt = 0;
+            function updateSelBtn(force) {
+                var now = performance.now();
+                if (!force && now - _selBtnAt < 120) return;
+                _selBtnAt = now;
                 var b = $('selBtn'); if (!b) return;
                 var v = active();
                 var c = v ? clipAt(v, Player.time()) : null;
@@ -2988,6 +2974,19 @@
                     .replace(/\{date\}/g, (v.published || '').slice(0, 10) || new Date().toISOString().slice(0, 10));
                 out = safeName(out.replace(/_{2,}/g, '_').replace(/^_|_$/g, ''), 110);
                 return out || fallback;
+            }
+
+            /* Update one row in place — used by include/exclude so a click never
+               rebuilds the whole list. */
+            function renderClipRowState(v, c) {
+                var row = $('clipList').querySelector('[data-row="' + c.id + '"]');
+                if (!row) return false;
+                row.classList.toggle('off', !c.on);
+                var cb = row.querySelector('input[type=checkbox]');
+                if (cb) cb.checked = !!c.on;
+                var blk = $('clipLayer') && $('clipLayer').querySelector('[data-clip="' + c.id + '"]');
+                if (blk) blk.classList.toggle('off', !c.on);
+                return true;
             }
 
             /* ---- clip list selection ---- */
@@ -3430,7 +3429,13 @@
                the page access to its pixels or audio.
                ========================================================================== */
             var LocalTools = (function () {
-                var strip = [], stripReady = false, cancelStrip = false;
+                /* Frames are cached per video and the DOM is built once. A zoom change
+                   only writes the strip width — cells are flex:1 so they resize themselves.
+                   Nothing here ever rebuilds because of a clip edit. */
+                var stripCache = {};        // uid -> { frames:[{t,bmp|url}], built:true }
+                var stripDomUid = null;     // which video the strip DOM currently shows
+                var stripLastW = -1;
+                var building = false, buildAbort = false, buildPct = 0;
                 var hoverVid = null, hoverBusy = false, hoverUrl = null;
                 var detectAbort = false, detecting = false;
                 var curFile = null, curUid = null;
@@ -3447,24 +3452,84 @@
                     toggle($('detectCtrls'), ok);
                     toggle($('silNeedLocal'), !ok);
                     toggle($('silCtrls'), ok);
-                    var fb = $('fsToggleBtn');
-                    if (fb) fb.style.opacity = ok ? '1' : '.4';
                     if (!ok) {
-                        $('fsOuter').classList.add('hide');
                         $('framePrev').classList.add('hide');
                         $('waveCanvas').classList.add('hide');
+                    } else if (S.fpOn) {
+                        $('framePrev').classList.remove('hide');
                     }
+                    var fp = $('fpToggleBtn');
+                    if (fp) { fp.classList.toggle('on', !!S.fpOn && ok); fp.disabled = !ok; }
+                    updateStripUI();
                 }
                 function toggle(node, show) { if (node) node.classList.toggle('hide', !show); }
 
+                function stripEnabled() { var n = $('fsEnable'); return !!(n && n.checked); }
+
+                function updateStripUI() {
+                    var st = $('fsState'), buildBtn = $('fsBuildBtn'), cancelBtn = $('fsCancelBtn');
+                    var outer = $('fsOuter'), en = $('fsEnable');
+                    if (!st || !en) return;
+                    var local = isLocal();
+                    en.disabled = !local;
+                    var show = function (n, yes) { if (n) n.classList.toggle('hide', !yes); };
+                    if (!local) {
+                        st.textContent = 'local files only';
+                        show(outer, false); show(buildBtn, false); show(cancelBtn, false);
+                        return;
+                    }
+                    if (!stripEnabled()) {
+                        st.textContent = 'off';
+                        show(outer, false); show(buildBtn, false); show(cancelBtn, false);
+                        return;
+                    }
+                    var c = stripCache[curUid];
+                    if (building) {
+                        st.textContent = 'building ' + buildPct + '%';
+                        show(outer, true); show(buildBtn, false); show(cancelBtn, true);
+                    } else if (c && c.built) {
+                        st.textContent = c.frames.length + ' frames';
+                        buildBtn.textContent = 'Rebuild';
+                        show(outer, true); show(buildBtn, true); show(cancelBtn, false);
+                    } else {
+                        st.textContent = 'not built';
+                        buildBtn.textContent = 'Build';
+                        show(outer, false); show(buildBtn, true); show(cancelBtn, false);
+                    }
+                }
+
+                /* Called when the checkbox flips or the Build button is pressed. */
+                function stripToggle() {
+                    if (!isLocal()) { $('fsEnable').checked = false; updateStripUI(); return toast('The filmstrip needs a local video file', 'w'); }
+                    if (stripEnabled()) {
+                        var c = stripCache[curUid];
+                        if (c && c.built) { showStrip(); }
+                        else build(false);
+                    } else {
+                        buildAbort = true;
+                        $('fsOuter').classList.add('hide');
+                    }
+                    updateStripUI();
+                    scheduleSave();
+                }
+                function stripBuild() {
+                    if (!isLocal()) return toast('The filmstrip needs a local video file', 'w');
+                    if (!stripEnabled()) { $('fsEnable').checked = true; }
+                    build(true);
+                }
+                function stripCancel() { buildAbort = true; }
+
                 function onVideoReady(v, file) {
+                    var switched = curUid !== v.uid;
                     curFile = file; curUid = v.uid;
-                    strip = []; stripReady = false; cancelStrip = true;
-                    audioPeaks = null;
-                    refreshAvailability();
+                    if (switched) { buildAbort = true; audioPeaks = null; stripLastW = -1; }
                     setupHoverVideo(file);
-                    $('framePrev').classList.remove('hide');
-                    setTimeout(function () { cancelStrip = false; buildStrip(v, file); }, 150);
+                    if (S.fpOn) $('framePrev').classList.remove('hide');
+                    refreshAvailability();
+                    if (!stripEnabled()) return;
+                    var cached = stripCache[v.uid];
+                    if (cached && cached.built) { showStrip(); return; }   // reuse — never rebuild
+                    setTimeout(function () { build(false); }, 120);
                 }
 
                 function setupHoverVideo(file) {
@@ -3482,15 +3547,27 @@
                 }
 
                 /* ---------- filmstrip ---------- */
-                async function buildStrip(v, file) {
+                async function build(force) {
+                    var v = active();
+                    if (!v || !isLocal()) return;
+                    var file = localFiles[v.uid];
                     var d = duration(v);
                     if (!d) return;
-                    var target = clamp(Math.round(d / 6), 24, 140);      // aim for a readable number of frames
-                    var step = Math.max(0.5, d / target);
+                    if (building) { buildAbort = true; await yieldUI(); }
+                    if (stripCache[v.uid] && stripCache[v.uid].built && !force) { showStrip(); return; }
+
+                    building = true; buildAbort = false; buildPct = 0;
+                    var uidAtStart = v.uid;
                     var outer = $('fsOuter'), host = $('fsStrip');
                     outer.classList.remove('hide');
+                    host.style.width = '';
                     host.innerHTML = '<div class="fsgen"><div class="spin"></div><span>Building filmstrip…</span>' +
-                        '<span class="mono" id="fsPct" style="color:var(--acc-2)">0%</span></div>';
+                        '<span class="mono" id="fsPct" style="color:#c0aaff">0%</span></div>';
+                    updateStripUI();
+
+                    // Aim for a readable number of frames regardless of length.
+                    var target = clamp(Math.round(d / 8), 20, 120);
+                    var step = Math.max(0.5, d / target);
                     var vid = document.createElement('video');
                     vid.muted = true; vid.playsInline = true; vid.preload = 'auto';
                     var url = URL.createObjectURL(file);
@@ -3503,70 +3580,113 @@
                         });
                     } catch (e) {
                         host.innerHTML = '<div class="fsgen">Filmstrip unavailable for this file</div>';
-                        URL.revokeObjectURL(url); return;
+                        URL.revokeObjectURL(url); building = false; updateStripUI(); return;
                     }
+
                     var cv = document.createElement('canvas');
                     cv.width = 128; cv.height = 72;
-                    var cx = cv.getContext('2d', { willReadFrequently: false });
-                    strip = [];
+                    var cx = cv.getContext('2d');
+                    var frames = [];
                     var total = Math.ceil(d / step);
                     for (var i = 0; i < total; i++) {
-                        if (cancelStrip || curUid !== v.uid) break;
-                        var t = i * step;
+                        if (buildAbort || curUid !== uidAtStart) break;
                         try {
-                            await seekTo(vid, t);
+                            await seekTo(vid, i * step);
                             cx.drawImage(vid, 0, 0, 128, 72);
-                            var bmp = null;
-                            if (typeof createImageBitmap === 'function') { bmp = await createImageBitmap(cv); }
-                            strip.push({ t: t, bmp: bmp, url: bmp ? null : cv.toDataURL('image/jpeg', 0.6) });
+                            var bmp = (typeof createImageBitmap === 'function') ? await createImageBitmap(cv) : null;
+                            frames.push({ t: i * step, bmp: bmp, url: bmp ? null : cv.toDataURL('image/jpeg', 0.6) });
                         } catch (e) { }
-                        if (i % 4 === 0) {
-                            var pe = $('fsPct'); if (pe) pe.textContent = Math.round((i / total) * 100) + '%';
+                        if (i % 3 === 0) {
+                            buildPct = Math.round((i / total) * 100);
+                            var pe = $('fsPct'); if (pe) pe.textContent = buildPct + '%';
+                            var se = $('fsState'); if (se) se.textContent = 'building ' + buildPct + '%';
                             await yieldUI();
                         }
                     }
                     URL.revokeObjectURL(url);
-                    if (cancelStrip || curUid !== v.uid) return;
-                    stripReady = true;
+                    building = false;
+                    if (buildAbort || curUid !== uidAtStart || !frames.length) {
+                        if (buildAbort) { host.innerHTML = ''; $('fsOuter').classList.add('hide'); }
+                        updateStripUI(); return;
+                    }
+                    evictStripCache(uidAtStart);
+                    stripCache[uidAtStart] = { frames: frames, built: true };
+                    paintStrip();
+                    updateStripUI();
+                }
+
+                /* Keep at most three videos' frames alive. */
+                function evictStripCache(keepUid) {
+                    var keys = Object.keys(stripCache);
+                    while (keys.length >= 3) {
+                        var k = keys.shift();
+                        if (k === keepUid || k === curUid) continue;
+                        (stripCache[k].frames || []).forEach(function (f) {
+                            if (f.bmp && f.bmp.close) { try { f.bmp.close(); } catch (e) { } }
+                        });
+                        delete stripCache[k];
+                    }
+                }
+
+                function showStrip() {
+                    if (!stripEnabled()) return;
+                    var c = stripCache[curUid];
+                    if (!c || !c.built) return;
+                    $('fsOuter').classList.remove('hide');
                     paintStrip();
                 }
 
+                /* Builds the cells once per video. */
                 function paintStrip() {
+                    var c = stripCache[curUid];
                     var host = $('fsStrip');
-                    if (!host || !strip.length) return;
-                    var w = tlWidth();
-                    host.style.width = w + 'px';
-                    var fw = Math.max(26, w / strip.length);
-                    var every = Math.max(1, Math.round(58 / fw));
+                    if (!host || !c || !c.frames.length) return;
+                    if (stripDomUid === curUid && host.children.length > 1) { fitStrip(true); return; }
                     var frag = document.createDocumentFragment();
-                    strip.forEach(function (f, i) {
+                    c.frames.forEach(function (f) {
                         var cell = el('div', 'fsf');
-                        cell.style.width = fw + 'px';
                         cell.dataset.act = 'gotoTime';
                         cell.dataset.v = String(f.t);
-                        var c = el('canvas'); c.width = 128; c.height = 72;
-                        var g = c.getContext('2d', { alpha: false });
+                        var cvs = el('canvas'); cvs.width = 128; cvs.height = 72;
+                        var g = cvs.getContext('2d', { alpha: false });
                         if (f.bmp) { try { g.drawImage(f.bmp, 0, 0, 128, 72); } catch (e) { } }
                         else if (f.url) { var im = new Image(); im.onload = function () { try { g.drawImage(im, 0, 0, 128, 72); } catch (e) { } }; im.src = f.url; }
-                        cell.appendChild(c);
-                        if (i % every === 0) { var lb = el('span', 't', fmt(f.t)); cell.appendChild(lb); }
+                        cell.appendChild(cvs);
+                        cell.appendChild(el('span', 't', fmt(f.t)));
                         frag.appendChild(cell);
                     });
                     var ph = el('div', 'fsph'); ph.id = 'fsPh';
                     host.innerHTML = '';
                     host.appendChild(frag);
                     host.appendChild(ph);
+                    stripDomUid = curUid;
+                    stripLastW = -1;
+                    fitStrip(true);
                 }
-                function syncStripWidth() { if (stripReady) paintStrip(); }
+
+                /* O(1): one style write on the strip plus a label-density class. */
+                function fitStrip(force) {
+                    var c = stripCache[curUid];
+                    var host = $('fsStrip');
+                    if (!host || !c || !c.built || stripDomUid !== curUid) return;
+                    var w = tlWidth();
+                    if (!force && w === stripLastW) return;
+                    stripLastW = w;
+                    host.style.width = w + 'px';
+                    var cell = w / c.frames.length;
+                    host.className = 'fsstrip ' + (cell < 26 ? 'lbl-off' : cell < 44 ? 'lbl-5' : cell < 70 ? 'lbl-3' : cell < 104 ? 'lbl-2' : '');
+                }
+
                 function paintStripPlayhead(pct) {
                     var p = $('fsPh'); if (p) p.style.left = pct + '%';
                 }
                 function frameNear(t) {
-                    if (!strip.length) return null;
-                    var lo = 0, hi = strip.length - 1;
-                    while (lo < hi) { var mid = (lo + hi) >> 1; if (strip[mid].t < t) lo = mid + 1; else hi = mid; }
-                    if (lo > 0 && Math.abs(strip[lo - 1].t - t) < Math.abs(strip[lo].t - t)) lo--;
-                    return strip[lo];
+                    var c = stripCache[curUid];
+                    if (!c || !c.frames.length) return null;
+                    var a = c.frames, lo = 0, hi = a.length - 1;
+                    while (lo < hi) { var mid = (lo + hi) >> 1; if (a[mid].t < t) lo = mid + 1; else hi = mid; }
+                    if (lo > 0 && Math.abs(a[lo - 1].t - t) < Math.abs(a[lo].t - t)) lo--;
+                    return a[lo];
                 }
 
                 /* ---------- hover frame preview ---------- */
@@ -3583,7 +3703,7 @@
                         '<span class="badge n">' + pct + '% in</span>' +
                         (c ? '<span class="badge ' + (c.on ? 'lo' : 'w') + '">' + (c.on ? 'included' : 'excluded') + '</span>' : '') +
                         (v.chapters && v.chapters.length ? chapBadge(v, t) : '');
-                    if (!isLocal()) return;
+                    if (!isLocal() || !S.fpOn) return;
                     var cv = $('fpCanvas');
                     var near = frameNear(t);
                     if (near) {
@@ -3889,14 +4009,10 @@
                     refreshAvailability: refreshAvailability,
                     onVideoReady: onVideoReady,
                     hoverAt: hoverAt, hoverEnd: hoverEnd,
-                    syncStripWidth: syncStripWidth, paintStripPlayhead: paintStripPlayhead,
+                    fitStrip: fitStrip, paintStripPlayhead: paintStripPlayhead,
+                    stripToggle: stripToggle, stripBuild: stripBuild, stripCancel: stripCancel,
+                    updateStripUI: updateStripUI,
                     detect: detect, cancelDetect: cancelDetect, analyzeAudio: analyzeAudio,
-                    toggleStrip: function () {
-                        var o = $('fsOuter');
-                        if (!isLocal()) return toast('The filmstrip needs a local video file', 'w');
-                        o.classList.toggle('hide');
-                        if (!o.classList.contains('hide')) syncStripWidth();
-                    },
                     redrawWave: drawWave
                 };
             })();
@@ -4728,8 +4844,15 @@
             }
 
             /* ---------------- preview + downloads ---------------- */
-            var _lastScript = '', _lastName = 'clipforge.bat';
-            function regenScript() {
+            var _lastScript = '', _lastName = 'clipforge.bat', _scriptStale = true;
+            var exportOpen = false;
+
+            /* Generating a script means walking every clip and building tens of kilobytes
+               of text. Doing that on every checkbox click was the single biggest source of
+               lag, so it now only runs while the export drawer is actually visible. */
+            function regenScript(force) {
+                if (!exportOpen && !force) { _scriptStale = true; return; }
+                _scriptStale = false;
                 var out = $('scriptOut');
                 if (!out) return;
                 var o = exportOpts();
@@ -4794,6 +4917,7 @@
             }
 
             function dlMain() {
+                if (_scriptStale) regenScript(true);
                 if (!_lastScript) return toast('Nothing to export yet', 'w');
                 download(_lastName, _lastScript, 'text/plain;charset=utf-8');
                 toast('Saved ' + _lastName, 's');
@@ -5013,7 +5137,17 @@
                     kb('← →', 'nudge 1 second') + kb('Shift + ← →', 'one frame') + kb('Ctrl + ← →', '5 seconds') +
                     kb('↑ ↓', 'jump to the next / previous edge') + kb('Ctrl + Z', 'undo') + kb('Ctrl + Y', 'redo') +
                     kb('Del', 'delete the selected clips') + kb('Ctrl + + / −', 'zoom the timeline') +
-                    kb('Ctrl + wheel', 'zoom at the cursor') + kb('Esc', 'close / clear IN-OUT') +
+                    kb('Ctrl + wheel', 'zoom at the cursor') + kb('E', 'open / close the export drawer') +
+                    kb('F', 'jump to the clip filter') + kb('Esc', 'close / clear IN-OUT') +
+                    '</div>' +
+                    '<div class="tiny b mut" style="letter-spacing:1px;margin:16px 0 7px">LAYOUT &amp; SPEED</div>' +
+                    '<div class="sm mut" style="line-height:1.7">' +
+                    '• <b>S / M / L / XL</b> next to the transport resizes the player. Medium keeps the player, ' +
+                    'transport, timeline and clip list all on screen at once — nothing scrolls out of reach.<br>' +
+                    '• The <b>🎞 Filmstrip</b> checkbox is off by default. Turn it on once per file and the frames are ' +
+                    'cached: zooming, editing and switching videos reuse them instead of rebuilding.<br>' +
+                    '• <b>👁</b> toggles the hover frame preview, which is the other thing that costs seeks.<br>' +
+                    '• Export lives in a drawer, so the script is only rebuilt while you are looking at it.' +
                     '</div>' +
                     '<div class="tiny b mut" style="letter-spacing:1px;margin:16px 0 7px">TIMELINE</div>' +
                     '<div class="sm mut" style="line-height:1.7">' +
@@ -5064,6 +5198,37 @@
                 openProject: openProject, projExport: projExport, projClear: projClear,
                 projImportPick: function () { var f = $('projFile'); if (f) f.click(); },
                 openHelp: openHelp, openDesc: openDesc,
+
+                openExport: function () {
+                    exportOpen = true;
+                    $('exportDrawer').classList.add('open');
+                    $('drawerBack').classList.add('open');
+                    regenScript(true);
+                },
+                closeExport: function () {
+                    exportOpen = false;
+                    $('exportDrawer').classList.remove('open');
+                    $('drawerBack').classList.remove('open');
+                },
+                psize: function (sz) {
+                    S.playerSize = sz;
+                    var h = { s: '25vh', m: '38vh', l: '52vh', xl: '38vh' }[sz] || '38vh';
+                    document.documentElement.style.setProperty('--player-h', h);
+                    $('vStage').dataset.size = sz;
+                    document.querySelectorAll('#sizeSeg button').forEach(function (b) {
+                        b.classList.toggle('on', b.dataset.v === sz);
+                    });
+                    invalidate('timeline');
+                    scheduleSave();
+                },
+                fsBuild: function () { LocalTools.stripBuild(); },
+                fsCancel: function () { LocalTools.stripCancel(); },
+                toggleFp: function () {
+                    S.fpOn = !S.fpOn;
+                    $('fpToggleBtn').classList.toggle('on', S.fpOn);
+                    $('framePrev').classList.toggle('hide', !S.fpOn);
+                    scheduleSave();
+                },
                 manualDur: openManualDur, saveDur: saveDur,
                 relink: function () { var i = $('fileInput'); if (i) { i.dataset.relink = '1'; i.click(); } },
 
@@ -5132,10 +5297,9 @@
                     else setZoom(S.zoom * (dir > 0 ? 1.6 : 1 / 1.6), Player.time());
                     scheduleSave();
                 },
-                fsToggle: function () { LocalTools.toggleStrip(); },
-
                 tab: function (t) {
                     S.toolTab = t;
+                    scheduleSave();
                     ['auto', 'text', 'stats', 'clip'].forEach(function (k) {
                         $('pane' + k.charAt(0).toUpperCase() + k.slice(1)).classList.toggle('on', k === t);
                     });
@@ -5202,7 +5366,9 @@
                     var v = active(); if (!v) return;
                     var c = findClip(v, id); if (!c) return;
                     c.on = !c.on;
-                    renderClips(); renderTimeline(); updateHeader(); regenScript(); updateSelBtn(); scheduleSave();
+                    if (!renderClipRowState(v, c)) invalidate('clips', 'timeline');
+                    invalidate('header', 'script', 'stats', 'library');
+                    updateSelBtn(true); scheduleSave();
                 },
                 previewClip: function (id, e) { if (e) e.stopPropagation(); previewClip(id); },
                 setClipIn: function (id, e) {
@@ -5284,6 +5450,7 @@
                 document.addEventListener('keydown', function (e) {
                     if (e.key === 'Escape') {
                         if (modalOpen()) { closeModal(); return; }
+                        if (exportOpen) { ACTIONS.closeExport(); return; }
                         if (S.inPoint != null || S.outPoint != null) {
                             S.inPoint = S.outPoint = null; renderIO(); renderTimeline();
                             toast('IN / OUT cleared', 'i', 1200); return;
@@ -5309,6 +5476,8 @@
                         case 'enter': e.preventDefault(); commitClip(); break;
                         case 'm': e.preventDefault(); splitHere(); break;
                         case 'q': e.preventDefault(); quickClip(); break;
+                        case 'e': e.preventDefault(); exportOpen ? ACTIONS.closeExport() : ACTIONS.openExport(); break;
+                        case 'f': e.preventDefault(); ACTIONS.tab('clip'); var cs = $('clipSearch'); if (cs) cs.focus(); break;
                         case 'l': e.preventDefault(); ACTIONS.toggleLoop(); break;
                         case 's': e.preventDefault(); setClipOn(true); break;
                         case 'd': e.preventDefault(); setClipOn(false); break;
@@ -5336,7 +5505,9 @@
                 if (!c) return toast('No clip under the playhead', 'w', 1400);
                 if (c.on === on) return toast('Clip ' + clipNumber(v, c) + ' is already ' + (on ? 'included' : 'excluded'), 'w', 1400);
                 c.on = on;
-                renderClips(); renderTimeline(); updateHeader(); regenScript(); updateSelBtn(); scheduleSave();
+                if (!renderClipRowState(v, c)) invalidate('clips', 'timeline');
+                invalidate('header', 'script', 'stats', 'library');
+                updateSelBtn(true); scheduleSave();
                 toast('Clip ' + clipNumber(v, c) + (on ? ' included' : ' excluded'), on ? 's' : 'w', 1400);
             }
 
@@ -5458,6 +5629,7 @@
                 }, 140));
                 $('trSearch').addEventListener('input', debounce(function () { renderTranscript(); }, 180));
                 $('sens').addEventListener('input', function () { $('sensVal').textContent = this.value; });
+                $('fsEnable').addEventListener('change', function () { LocalTools.stripToggle(); });
                 $('nameTpl').addEventListener('input', debounce(function () {
                     updateHeader(); renderClips(); regenScript(); scheduleSave();
                 }, 200));
@@ -5502,7 +5674,10 @@
 
                 $('apiKeyLabel').textContent = S.apiKey ? 'API ✓' : 'API';
                 ACTIONS.tool(S.tool);
+                ACTIONS.psize(S.playerSize || 'm');
+                ACTIONS.tab(S.toolTab || 'clip');
                 $('snapBtn').classList.toggle('on', S.snap);
+                $('fpToggleBtn').classList.toggle('on', !!S.fpOn);
                 ACTIONS.stab(S.scriptTab);
 
                 var restored = loadSaved();
@@ -5546,7 +5721,8 @@
             // expose a tiny surface for debugging / automation
             window.ClipForge = {
                 state: S, active: active, addYouTube: addYouTube, addLocalFile: addLocalFile,
-                script: function () { return _lastScript; }, jobs: buildJobs, save: saveNow,
+                script: function () { if (_scriptStale) regenScript(true); return _lastScript; },
+                jobs: buildJobs, save: saveNow,
                 render: renderAll, version: '1.0.0'
             };
         })();

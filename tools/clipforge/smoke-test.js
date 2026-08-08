@@ -3,11 +3,10 @@
  *
  *   node smoke-test.js
  *
- * Needs playwright and a chromium build. Override the defaults if yours live elsewhere:
+ * Needs playwright and a chromium build. Override if yours live elsewhere:
  *   CF_PLAYWRIGHT=/path/to/playwright  CF_CHROMIUM=/path/to/chrome  node smoke-test.js
  */
-const PW = process.env.CF_PLAYWRIGHT || 'playwright';
-const { chromium } = require(PW);
+const { chromium } = require(process.env.CF_PLAYWRIGHT || 'playwright');
 const path = require('node:path').join(__dirname, 'ClipForge-Studio.html');
 
 (async () => {
@@ -78,6 +77,7 @@ const path = require('node:path').join(__dirname, 'ClipForge-Studio.html');
     });
     await step('interval generator', async () => {
         await page.click('[data-act="tab"][data-v="auto"]');
+        await openAll();
         await page.fill('#ivLen', '45'); await page.fill('#ivGap', '15');
         await page.click('[data-act="genInterval"]');
         return page.evaluate(() => window.ClipForge.active().clips.length);
@@ -101,6 +101,7 @@ const path = require('node:path').join(__dirname, 'ClipForge-Studio.html');
 
     console.log('\n== selection + split/merge ==');
     await step('exclude all / include all', async () => {
+        await page.click('[data-act="tab"][data-v="clip"]');
         await page.click('[data-act="selNone"]');
         const off = await page.evaluate(() => window.ClipForge.active().clips.filter(c => c.on).length);
         await page.click('[data-act="selAll"]');
@@ -127,6 +128,14 @@ const path = require('node:path').join(__dirname, 'ClipForge-Studio.html');
         const after = await page.evaluate(() => window.ClipForge.active().clips.length);
         return { before, after };
     });
+
+    console.log('\n== export drawer ==');
+    await step('drawer opens', async () => {
+        await page.click('[data-act="openExport"]');
+        await page.waitForTimeout(300);
+        return page.evaluate(() => document.getElementById('exportDrawer').classList.contains('open'));
+    });
+    await openAll();
 
     console.log('\n== script generation (all 5 tabs x 4 strategies) ==');
     for (const strat of ['sections', 'batched', 'full', 'ffmpeg']) {
@@ -222,8 +231,9 @@ const path = require('node:path').join(__dirname, 'ClipForge-Studio.html');
     });
 
     console.log('\n== modals ==');
+    await page.click('[data-act="tab"][data-v="clip"]');
     for (const act of ['openHelp', 'openApiKey', 'openProject', 'openBulk', 'openBulkEdit', 'openDesc', 'manualDur']) {
-        await page.click(`[data-act="${act}"]`).catch(() => { });
+        await page.click(`[data-act="${act}"]`).catch(e => console.log('    (click failed:', act, ')'));
         await page.waitForTimeout(120);
         const open = await page.evaluate(() => document.querySelectorAll('.mback').length);
         await page.keyboard.press('Escape');
@@ -234,6 +244,7 @@ const path = require('node:path').join(__dirname, 'ClipForge-Studio.html');
 
     console.log('\n== validation panel ==');
     await step('overlaps detected + fixed', async () => {
+        await page.click('[data-act="tab"][data-v="clip"]');
         await page.evaluate(() => {
             const v = window.ClipForge.active();
             v.clips = [{ id: 'a', start: 0, end: 50, name: '', note: '', on: true },
@@ -251,6 +262,7 @@ const path = require('node:path').join(__dirname, 'ClipForge-Studio.html');
 
     console.log('\n== bulk edit ==');
     await step('shift + pad', async () => {
+        await page.click('[data-act="tab"][data-v="clip"]');
         await page.click('[data-act="openBulkEdit"]');
         await page.waitForTimeout(120);
         await page.fill('#bkShift', '5');
@@ -328,10 +340,34 @@ const path = require('node:path').join(__dirname, 'ClipForge-Studio.html');
         silence: !document.getElementById('silCtrls').classList.contains('hide'),
         framePrev: !document.getElementById('framePrev').classList.contains('hide')
     })));
-    await page.waitForTimeout(3500);
-    await step('filmstrip frames built', () => page.evaluate(() => document.querySelectorAll('#fsStrip .fsf').length));
+    await step('filmstrip is off until enabled', () => page.evaluate(() => ({
+        cells: document.querySelectorAll('#fsStrip .fsf').length,
+        state: document.getElementById('fsState').textContent
+    })));
+    await step('filmstrip builds once when enabled', async () => {
+        await page.check('#fsEnable');
+        await page.waitForFunction(() => /frames/.test(document.getElementById('fsState').textContent), { timeout: 90000 });
+        return page.evaluate(() => ({ cells: document.querySelectorAll('#fsStrip .fsf').length, state: document.getElementById('fsState').textContent }));
+    });
+    await step('zoom does NOT rebuild the strip', async () => {
+        const before = await page.evaluate(() => {
+            const c = document.querySelector('#fsStrip .fsf canvas');
+            c.__mark = 1; return document.querySelectorAll('#fsStrip .fsf').length;
+        });
+        await page.click('[data-act="zoom"][data-v="1"]');
+        await page.click('[data-act="zoom"][data-v="1"]');
+        await page.waitForTimeout(250);
+        const after = await page.evaluate(() => ({
+            n: document.querySelectorAll('#fsStrip .fsf').length,
+            sameNodes: !!document.querySelector('#fsStrip .fsf canvas').__mark,
+            width: document.getElementById('fsStrip').style.width
+        }));
+        await page.click('[data-act="zoom"][data-v="0"]');
+        return { before, ...after };
+    });
 
     await step('visual scene detection', async () => {
+        await page.click('[data-act="tab"][data-v="auto"]');
         await openAll();
         await page.fill('#minGap', '0.5');
         await page.click('[data-act="startDetect"]');
@@ -344,6 +380,8 @@ const path = require('node:path').join(__dirname, 'ClipForge-Studio.html');
     });
 
     await step('audio silence detection', async () => {
+        await page.click('[data-act="tab"][data-v="auto"]');
+        await openAll();
         await page.click('[data-act="analyzeAudio"]');
         await page.waitForFunction(() => document.getElementById('audioBtn').disabled === false, { timeout: 120000 });
         return page.evaluate(() => ({
@@ -353,6 +391,8 @@ const path = require('node:path').join(__dirname, 'ClipForge-Studio.html');
     });
 
     await step('local file exports ffmpeg commands', async () => {
+        await page.click('[data-act="openExport"]');
+        await page.waitForTimeout(200);
         await page.selectOption('#expStrategy', 'ffmpeg');
         await page.click('[data-act="stab"][data-v="sh"]');
         await page.waitForTimeout(150);
@@ -362,6 +402,30 @@ const path = require('node:path').join(__dirname, 'ClipForge-Studio.html');
         });
     });
 
+    console.log('\n== performance ==');
+    await step('300 clips: edit latency', async () => {
+        await page.evaluate(() => {
+            const v = window.ClipForge.active();
+            v.clips = [];
+            for (let i = 0; i < 300; i++) v.clips.push({ id: 'p' + i, start: i * 0.019, end: i * 0.019 + 0.015, name: 'c' + i, note: '', on: true });
+            v.duration = 20;
+            window.ClipForge.render();
+        });
+        await page.waitForTimeout(400);
+        return page.evaluate(async () => {
+            const wait = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            const rows = [...document.querySelectorAll('#clipList .crow input[type=checkbox]')].slice(0, 40);
+            const t0 = performance.now();
+            for (const r of rows) { r.click(); }
+            await wait();
+            const toggle = performance.now() - t0;
+            const t1 = performance.now();
+            for (let i = 0; i < 10; i++) document.querySelector('[data-act="zoom"][data-v="1"]').click();
+            await wait();
+            const zoom = performance.now() - t1;
+            return { toggle40ms: Math.round(toggle), zoom10ms: Math.round(zoom) };
+        });
+    });
 
     console.log('\n== console errors ==');
     const real = errors.filter(e => !/ERR_TUNNEL_CONNECTION_FAILED|ERR_NAME_NOT_RESOLVED|ERR_INTERNET_DISCONNECTED|Failed to load resource/.test(e));
