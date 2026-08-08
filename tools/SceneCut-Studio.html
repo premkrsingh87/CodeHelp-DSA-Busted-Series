@@ -1,0 +1,3538 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SceneCut Studio — Batch Scene Splitter</title>
+<meta name="description" content="Offline, zero-dependency batch video scene splitter. Detect, trim and export FFmpeg cut scripts for many videos at once.">
+<style>
+/* ============================================================
+   SceneCut Studio — design system
+   Zero external dependencies: no CDN, no webfonts, no frameworks.
+   Everything below runs offline from a single file.
+   ============================================================ */
+:root {
+  --bg-0:#07080c; --bg-1:#0c0e14; --bg-2:#12141d; --bg-3:#181b26; --bg-4:#20242f;
+  --line:#242836; --line-2:#333849; --line-3:#454b60;
+  --tx:#e8eaf2; --tx-2:#9aa0b8; --tx-3:#666c85;
+  --ac:#7c5cfc; --ac-2:#a78bfa; --ac-soft:rgba(124,92,252,.14); --ac-glow:rgba(124,92,252,.32);
+  --ok:#00d4aa; --ok-soft:rgba(0,212,170,.13);
+  --wr:#fbbf24; --wr-soft:rgba(251,191,36,.13);
+  --dg:#f87171; --dg-soft:rgba(248,113,113,.13);
+  --nf:#60a5fa; --nf-soft:rgba(96,165,250,.13);
+  --ff:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,"Helvetica Neue",Arial,sans-serif;
+  --fm:ui-monospace,SFMono-Regular,"SF Mono","JetBrains Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --r:8px; --r-lg:12px;
+  --rail:236px; --insp:352px; --head:46px;
+  --sh-1:0 1px 2px rgba(0,0,0,.4);
+  --sh-2:0 8px 28px rgba(0,0,0,.5);
+  --sh-3:0 20px 60px rgba(0,0,0,.65);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg-0);color:var(--tx);
+  font-family:var(--ff);font-size:13px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  overflow:hidden;
+}
+.mono{font-family:var(--fm);font-variant-numeric:tabular-nums}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none;padding:0}
+button:disabled{cursor:not-allowed;opacity:.4}
+:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+::selection{background:var(--ac-glow);color:#fff}
+h1,h2,h3,h4,p{margin:0}
+ul{margin:0;padding:0;list-style:none}
+
+/* scrollbars */
+.sb::-webkit-scrollbar{width:9px;height:9px}
+.sb::-webkit-scrollbar-track{background:transparent}
+.sb::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:6px;border:2px solid transparent;background-clip:content-box}
+.sb::-webkit-scrollbar-thumb:hover{background:var(--line-3);background-clip:content-box;border:2px solid transparent}
+.sb{scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+
+/* ---------- primitives ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:30px;padding:0 12px;border-radius:var(--r);
+  background:var(--bg-3);border:1px solid var(--line);color:var(--tx);
+  font-size:12px;font-weight:550;white-space:nowrap;
+  transition:background .13s,border-color .13s,color .13s,transform .13s;
+}
+.btn:hover:not(:disabled){background:var(--bg-4);border-color:var(--line-2)}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn.sm{height:25px;padding:0 9px;font-size:11px;border-radius:7px}
+.btn.xs{height:21px;padding:0 7px;font-size:10.5px;border-radius:6px;gap:4px}
+.btn.wide{width:100%}
+.btn.pri{background:linear-gradient(180deg,#8a6cff,#6f4cf5);border-color:#6f4cf5;color:#fff;box-shadow:var(--sh-1)}
+.btn.pri:hover:not(:disabled){background:linear-gradient(180deg,#9a80ff,#7c5cfc);border-color:#7c5cfc}
+.btn.ok{background:var(--ok-soft);border-color:rgba(0,212,170,.3);color:var(--ok)}
+.btn.ok:hover:not(:disabled){background:rgba(0,212,170,.22)}
+.btn.dg{background:var(--dg-soft);border-color:rgba(248,113,113,.3);color:var(--dg)}
+.btn.dg:hover:not(:disabled){background:rgba(248,113,113,.22)}
+.btn.nf{background:var(--nf-soft);border-color:rgba(96,165,250,.3);color:var(--nf)}
+.btn.nf:hover:not(:disabled){background:rgba(96,165,250,.22)}
+.btn.wr{background:var(--wr-soft);border-color:rgba(251,191,36,.3);color:var(--wr)}
+.btn.wr:hover:not(:disabled){background:rgba(251,191,36,.22)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--tx-2)}
+.btn.ghost:hover:not(:disabled){background:var(--bg-3);color:var(--tx)}
+.btn.on{background:var(--ac-soft);border-color:rgba(124,92,252,.42);color:var(--ac-2)}
+.btn.icon{width:30px;padding:0}
+.btn.icon.sm{width:25px}
+.btn.icon.xs{width:21px}
+
+.inp{
+  width:100%;height:30px;padding:0 10px;border-radius:var(--r);
+  background:var(--bg-1);border:1px solid var(--line);color:var(--tx);
+  font-size:12px;transition:border-color .13s,box-shadow .13s;
+}
+.inp:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
+.inp::placeholder{color:var(--tx-3)}
+.inp.sm{height:25px;font-size:11px;padding:0 8px}
+textarea.inp{height:auto;padding:8px 10px;resize:vertical;line-height:1.5;font-family:var(--fm);font-size:11.5px}
+select.inp{appearance:none;cursor:pointer;padding-right:26px;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='%239aa0b8' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>");
+  background-repeat:no-repeat;background-position:right 9px center}
+.lbl{display:block;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--tx-3);margin-bottom:5px}
+.hint{font-size:10.5px;color:var(--tx-3);line-height:1.4}
+
+.chip{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 8px;border-radius:20px;font-size:10.5px;font-weight:650;background:var(--bg-3);color:var(--tx-2);border:1px solid var(--line);white-space:nowrap}
+.chip.ac{background:var(--ac-soft);color:var(--ac-2);border-color:rgba(124,92,252,.3)}
+.chip.ok{background:var(--ok-soft);color:var(--ok);border-color:rgba(0,212,170,.28)}
+.chip.wr{background:var(--wr-soft);color:var(--wr);border-color:rgba(251,191,36,.28)}
+.chip.dg{background:var(--dg-soft);color:var(--dg);border-color:rgba(248,113,113,.28)}
+.chip.nf{background:var(--nf-soft);color:var(--nf);border-color:rgba(96,165,250,.28)}
+
+kbd{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;
+  background:var(--bg-4);border:1px solid var(--line-2);border-bottom-width:2px;border-radius:5px;
+  font-family:var(--fm);font-size:10px;color:var(--tx-2);font-weight:600}
+
+.sw{position:relative;display:inline-block;width:32px;height:18px;flex:none}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sw i{position:absolute;inset:0;background:var(--bg-4);border:1px solid var(--line-2);border-radius:20px;transition:.16s;cursor:pointer}
+.sw i::after{content:'';position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:var(--tx-3);transition:.16s}
+.sw input:checked+i{background:var(--ac-soft);border-color:var(--ac)}
+.sw input:checked+i::after{transform:translateX(14px);background:var(--ac-2)}
+
+.rng{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:3px;background:var(--bg-4);outline:none}
+.rng::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--ac);cursor:pointer;border:2px solid var(--bg-1);box-shadow:0 0 0 1px var(--ac)}
+.rng::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--ac);cursor:pointer;border:2px solid var(--bg-1)}
+
+.row{display:flex;align-items:center;gap:8px}
+.row.wrap{flex-wrap:wrap}
+.sep{width:1px;height:16px;background:var(--line);flex:none}
+.grow{flex:1;min-width:0}
+.trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hide{display:none !important}
+
+/* ---------- app frame ---------- */
+#app{display:grid;grid-template-rows:var(--head) 1fr;height:100vh;height:100dvh}
+
+header#top{
+  display:flex;align-items:center;gap:10px;padding:0 10px;
+  background:var(--bg-1);border-bottom:1px solid var(--line);z-index:40;
+}
+.brand{display:flex;align-items:center;gap:8px;padding-right:4px}
+.brand .mk{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--ac),var(--ok));color:#fff;font-size:13px;box-shadow:var(--sh-1)}
+.brand b{font-size:13px;font-weight:700;letter-spacing:-.01em}
+.brand span{font-size:9px;color:var(--tx-3);letter-spacing:.11em;text-transform:uppercase;display:block;margin-top:-3px}
+
+#workArea{display:grid;grid-template-columns:var(--rail) minmax(0,1fr) var(--insp);min-height:0}
+#workArea.no-rail{grid-template-columns:0 minmax(0,1fr) var(--insp)}
+#workArea.no-insp{grid-template-columns:var(--rail) minmax(0,1fr) 0}
+#workArea.no-rail.no-insp{grid-template-columns:0 minmax(0,1fr) 0}
+
+#rail,#inspector{background:var(--bg-1);display:flex;flex-direction:column;min-height:0;overflow:hidden;transition:opacity .12s}
+#rail{border-right:1px solid var(--line)}
+#inspector{border-left:1px solid var(--line)}
+#workArea.no-rail #rail,#workArea.no-insp #inspector{opacity:0;pointer-events:none}
+
+#stage{display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--bg-0)}
+
+.pane-head{display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;flex:none;
+  border-bottom:1px solid var(--line);background:var(--bg-1)}
+.pane-head h3{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--tx-3)}
+
+/* ---------- rail: video queue ---------- */
+#railList{flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:5px;min-height:0}
+.vcard{
+  position:relative;display:flex;gap:8px;padding:6px;border-radius:9px;cursor:pointer;
+  background:var(--bg-2);border:1px solid var(--line);transition:background .12s,border-color .12s;
+}
+.vcard:hover{background:var(--bg-3);border-color:var(--line-2)}
+.vcard.on{border-color:var(--ac);background:var(--ac-soft);box-shadow:0 0 0 1px var(--ac-glow)}
+.vcard .vt{width:56px;height:32px;flex:none;border-radius:5px;background:#000;object-fit:cover;border:1px solid var(--line)}
+.vcard .vt canvas{width:100%;height:100%;display:block;border-radius:4px}
+.vcard .vi{min-width:0;flex:1}
+.vcard .vn{font-size:11.5px;font-weight:600;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vcard .vm{font-size:9.5px;color:var(--tx-3);font-family:var(--fm);margin-top:2px;display:flex;gap:5px;align-items:center}
+.vcard .vx{position:absolute;top:3px;right:3px;width:17px;height:17px;border-radius:5px;display:grid;place-items:center;
+  background:rgba(0,0,0,.55);color:var(--tx-2);font-size:11px;opacity:0;transition:.12s}
+.vcard:hover .vx{opacity:1}
+.vcard .vx:hover{background:var(--dg);color:#fff}
+.vcard .vbar{position:absolute;left:0;bottom:0;height:2px;background:linear-gradient(90deg,var(--ac),var(--ok));
+  border-radius:0 2px 2px 0;transition:width .2s}
+.vdot{width:5px;height:5px;border-radius:50%;flex:none}
+.vdot.idle{background:var(--tx-3)}.vdot.busy{background:var(--wr);animation:pulse 1.1s infinite}
+.vdot.done{background:var(--ok)}.vdot.err{background:var(--dg)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ---------- drop zone ---------- */
+.drop{
+  margin:8px;padding:20px 12px;border:1.5px dashed var(--line-2);border-radius:var(--r-lg);
+  text-align:center;cursor:pointer;transition:.15s;background:var(--bg-2);flex:none;
+}
+.drop:hover,.drop.over{border-color:var(--ac);background:var(--ac-soft)}
+.drop .di{font-size:20px;margin-bottom:4px;display:block}
+.drop .dt{font-size:11.5px;font-weight:600}
+.drop .ds{font-size:10px;color:var(--tx-3);margin-top:2px}
+
+#emptyStage{flex:1;display:grid;place-items:center;padding:24px}
+#emptyStage .inner{max-width:520px;width:100%;text-align:center}
+#emptyStage .bigdrop{padding:52px 28px;border:2px dashed var(--line-2);border-radius:18px;cursor:pointer;
+  background:linear-gradient(180deg,var(--bg-1),var(--bg-0));transition:.18s}
+#emptyStage .bigdrop:hover,#emptyStage .bigdrop.over{border-color:var(--ac);background:linear-gradient(180deg,var(--ac-soft),var(--bg-0));
+  box-shadow:0 0 50px rgba(124,92,252,.1)}
+#emptyStage h2{font-size:19px;font-weight:700;letter-spacing:-.02em;margin-bottom:5px}
+#emptyStage p{color:var(--tx-2);font-size:12.5px}
+.feat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:22px;text-align:left}
+.feat div{background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:10px}
+.feat b{display:block;font-size:11.5px;margin-bottom:2px}
+.feat span{font-size:10.5px;color:var(--tx-3);line-height:1.4}
+
+/* ---------- stage: player ---------- */
+#playerWrap{flex:none;height:34vh;min-height:150px;max-height:440px;background:#000;position:relative;
+  display:grid;place-items:center;overflow:hidden;border-bottom:1px solid var(--line)}
+#playerWrap video{max-width:100%;max-height:100%;width:auto;height:100%;display:block;background:#000}
+#pOverlay{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;
+  padding:8px 10px;opacity:0;transition:opacity .18s;background:linear-gradient(180deg,rgba(0,0,0,.5),transparent 22%,transparent 70%,rgba(0,0,0,.55))}
+#playerWrap:hover #pOverlay,#pOverlay.show{opacity:1}
+.ovl-tag{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:6px;background:rgba(0,0,0,.62);
+  backdrop-filter:blur(6px);font-size:10.5px;font-weight:650;align-self:flex-start;font-family:var(--fm)}
+#loopTag{color:var(--ok);border:1px solid rgba(0,212,170,.4)}
+
+/* transport */
+#transport{display:flex;align-items:center;gap:5px;padding:6px 10px;background:var(--bg-1);
+  border-bottom:1px solid var(--line);flex:none;flex-wrap:wrap}
+.tbtn{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:27px;min-width:27px;padding:0 8px;
+  border-radius:7px;background:var(--bg-3);border:1px solid var(--line);font-size:11.5px;font-weight:600;
+  color:var(--tx);transition:.12s;white-space:nowrap}
+.tbtn:hover:not(:disabled){background:var(--bg-4);border-color:var(--line-2)}
+.tbtn.mark{background:linear-gradient(180deg,#8a6cff,#6f4cf5);border-color:#6f4cf5;color:#fff;padding:0 11px}
+.tbtn.mark:hover{background:linear-gradient(180deg,#9a80ff,#7c5cfc)}
+.tbtn.play{width:32px;height:29px;background:var(--bg-4)}
+#tcode{font-family:var(--fm);font-size:13px;font-weight:700;color:var(--ac-2);letter-spacing:-.02em}
+#tcodeTot{font-family:var(--fm);font-size:11px;color:var(--tx-3)}
+
+/* ---------- timeline ---------- */
+#tlZone{flex:none;background:var(--bg-1);border-bottom:1px solid var(--line);padding:6px 10px 8px}
+.tl-bar{display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap}
+.tl-bar .t{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--tx-3)}
+/* The canvases are always exactly the size of the visible area — zooming
+   moves a time window instead of stretching a huge element, so 5000 cuts at
+   400x cost the same as five. */
+#tlScroll{position:relative;overflow:hidden;border-radius:9px;border:1px solid var(--line);background:var(--bg-0)}
+#tlInner{position:relative;height:118px;cursor:crosshair;touch-action:none}
+#tlBase,#tlOver{position:absolute;inset:0;display:block}
+#tlOver{pointer-events:none}
+#tlInner.grabbing{cursor:grabbing}
+
+/* filmstrip — doubles as the navigator/minimap for the zoomed timeline */
+#fsZone{margin-top:6px}
+#fsScroll{overflow:hidden;border-radius:8px;border:1px solid var(--line);background:var(--bg-0)}
+#fsStrip{display:flex;height:54px;position:relative;width:100%;touch-action:none}
+.fsf{flex:none;height:54px;position:relative;border-right:1px solid rgba(255,255,255,.05);cursor:pointer;overflow:hidden}
+.fsf canvas{width:100%;height:100%;display:block;object-fit:cover}
+.fsf:hover{box-shadow:inset 0 0 0 2px var(--ac)}
+.fsf i{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.82);
+  color:#dfe3f0;padding:0 4px;border-radius:3px;font-size:8.5px;font-family:var(--fm);font-style:normal;pointer-events:none}
+#fsHead{position:absolute;top:0;width:2px;height:100%;background:var(--ok);box-shadow:0 0 7px rgba(0,212,170,.8);
+  z-index:3;pointer-events:none}
+.fs-empty{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:54px;color:var(--tx-3);font-size:11px}
+
+/* scrub preview */
+#scrubPop{position:fixed;z-index:60;display:none;pointer-events:none;border-radius:9px;overflow:hidden;
+  border:1px solid var(--line-2);background:#000;box-shadow:var(--sh-3)}
+#scrubPop canvas{display:block;width:256px;height:144px}
+#scrubPop .cap{position:absolute;left:0;right:0;bottom:0;padding:3px 6px;background:rgba(0,0,0,.8);
+  font-family:var(--fm);font-size:10.5px;text-align:center;font-weight:650;letter-spacing:.02em}
+
+/* ---------- scene table ---------- */
+#sceneZone{flex:1;display:flex;flex-direction:column;min-height:0;background:var(--bg-0)}
+#sceneBar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--line);
+  background:var(--bg-1);flex:none;flex-wrap:wrap}
+#sceneScroll{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;position:relative;contain:layout paint}
+#sceneSpacer{position:relative;width:100%}
+.srow{
+  position:absolute;left:0;right:0;display:flex;align-items:center;gap:9px;padding:0 10px;
+  border-bottom:1px solid var(--line);background:var(--bg-1);contain:layout style paint;
+}
+.srow:hover{background:var(--bg-2)}
+.srow.off{opacity:.42}
+.srow.off .sthumb{filter:grayscale(1)}
+.srow.cur{background:var(--ac-soft);box-shadow:inset 2px 0 0 var(--ac)}
+.srow.pick{background:rgba(96,165,250,.09);box-shadow:inset 2px 0 0 var(--nf)}
+.scb{width:15px;height:15px;flex:none;accent-color:var(--ok);cursor:pointer}
+.snum{width:34px;flex:none;height:22px;border-radius:6px;display:grid;place-items:center;color:#fff;
+  font-size:10.5px;font-weight:800;font-family:var(--fm);box-shadow:var(--sh-1)}
+.sthumb{width:82px;height:46px;flex:none;border-radius:5px;background:#000;border:1px solid var(--line);
+  position:relative;overflow:hidden;cursor:pointer}
+.sthumb canvas{width:100%;height:100%;display:block}
+.sthumb .pl{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.42);
+  color:#fff;font-size:15px;opacity:0;transition:.13s}
+.sthumb:hover .pl{opacity:1}
+.stimes{display:flex;align-items:center;gap:5px;flex:none;font-family:var(--fm);font-size:11px}
+.tpill{padding:1px 6px;border-radius:5px;background:var(--bg-3);border:1px solid var(--line);color:var(--tx-2)}
+.tpill.g{background:var(--ok-soft);border-color:rgba(0,212,170,.24);color:var(--ok);font-weight:650}
+.sname{flex:1;min-width:70px}
+.sname input{width:100%;height:24px;padding:0 7px;border-radius:6px;background:transparent;border:1px solid transparent;
+  color:var(--tx-2);font-size:11px;font-family:var(--fm)}
+.sname input:hover{border-color:var(--line);background:var(--bg-2)}
+.sname input:focus{outline:none;border-color:var(--ac);background:var(--bg-1);color:var(--tx)}
+.sacts{display:flex;gap:3px;flex:none}
+.sempty{display:grid;place-items:center;padding:38px 16px;text-align:center;color:var(--tx-3)}
+.sempty .e{font-size:26px;margin-bottom:6px}
+
+/* ---------- inspector ---------- */
+#inspTabs{display:flex;gap:2px;padding:5px 6px;border-bottom:1px solid var(--line);flex:none;background:var(--bg-1)}
+.itab{flex:1;height:26px;border-radius:7px;font-size:11px;font-weight:650;color:var(--tx-3);transition:.12s;
+  display:flex;align-items:center;justify-content:center;gap:4px}
+.itab:hover{background:var(--bg-3);color:var(--tx-2)}
+.itab.on{background:var(--ac-soft);color:var(--ac-2);box-shadow:inset 0 0 0 1px rgba(124,92,252,.32)}
+#inspBody{flex:1;overflow-y:auto;min-height:0;padding:10px}
+.ipanel{display:none;flex-direction:column;gap:12px}
+.ipanel.on{display:flex}
+.box{background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:10px}
+.box>.bt{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--tx-3);margin-bottom:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stat{background:var(--bg-2);border:1px solid var(--line);border-radius:9px;padding:7px 4px;text-align:center}
+.stat b{display:block;font-size:16px;font-weight:750;font-family:var(--fm);letter-spacing:-.02em}
+.stat span{font-size:9px;color:var(--tx-3);text-transform:uppercase;letter-spacing:.06em}
+
+.mtd{display:flex;gap:8px;align-items:flex-start;padding:8px;border-radius:9px;cursor:pointer;
+  background:var(--bg-2);border:1px solid var(--line);transition:.13s}
+.mtd:hover{border-color:var(--line-2);background:var(--bg-3)}
+.mtd.on{border-color:var(--ac);background:var(--ac-soft)}
+.mtd .mi{font-size:15px;line-height:1.1;flex:none}
+.mtd b{display:block;font-size:11.5px;font-weight:650}
+.mtd span{font-size:10px;color:var(--tx-3);line-height:1.35;display:block;margin-top:1px}
+
+.code{background:#06070b;border:1px solid var(--line);border-radius:9px;padding:10px;
+  font-family:var(--fm);font-size:10.5px;line-height:1.55;color:#b9bfd8;white-space:pre-wrap;
+  word-break:break-word;max-height:270px;overflow:auto}
+
+.prog{height:5px;background:var(--bg-4);border-radius:3px;overflow:hidden}
+.prog>i{display:block;height:100%;background:linear-gradient(90deg,var(--ac),var(--ok));
+  border-radius:3px;transition:width .18s;width:0}
+
+/* ---------- toasts ---------- */
+/* bottom-right so they never sit on top of the inspector controls */
+#toasts{position:fixed;bottom:14px;right:14px;z-index:200;display:flex;flex-direction:column;gap:6px;
+  pointer-events:none;max-width:340px;align-items:flex-end}
+.toast{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:9px;font-size:12px;font-weight:550;
+  background:var(--bg-3);border:1px solid var(--line-2);box-shadow:var(--sh-2);
+  animation:tin .22s cubic-bezier(.2,.9,.3,1.3);backdrop-filter:blur(10px)}
+.toast.out{animation:tout .22s forwards}
+.toast.ok{background:rgba(0,212,170,.14);border-color:rgba(0,212,170,.34);color:#5df0d0}
+.toast.err{background:rgba(248,113,113,.14);border-color:rgba(248,113,113,.34);color:#ffa3a3}
+.toast.wr{background:rgba(251,191,36,.14);border-color:rgba(251,191,36,.34);color:#ffd775}
+@keyframes tin{from{transform:translateX(115%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes tout{to{transform:translateX(115%);opacity:0}}
+
+/* ---------- modal / palette ---------- */
+.scrim{position:fixed;inset:0;background:rgba(4,5,9,.72);backdrop-filter:blur(4px);z-index:150;
+  display:none;align-items:flex-start;justify-content:center;padding:8vh 16px 16px}
+.scrim.on{display:flex}
+.modal{width:100%;max-width:560px;background:var(--bg-1);border:1px solid var(--line-2);border-radius:14px;
+  box-shadow:var(--sh-3);overflow:hidden;animation:min .18s ease}
+.modal.wide{max-width:760px}
+@keyframes min{from{transform:translateY(-10px) scale(.985);opacity:0}to{transform:none;opacity:1}}
+.modal .mh{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--line)}
+.modal .mh h3{font-size:13px;font-weight:700}
+.modal .mb{padding:14px;max-height:64vh;overflow-y:auto}
+#palInput{width:100%;height:44px;padding:0 14px;background:transparent;border:none;font-size:15px;color:var(--tx)}
+#palInput:focus{outline:none}
+#palList{max-height:52vh;overflow-y:auto;padding:5px}
+.pitem{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12.5px}
+.pitem .pk{margin-left:auto;display:flex;gap:3px}
+.pitem .pi{width:19px;text-align:center;flex:none}
+.pitem small{color:var(--tx-3);font-size:10.5px}
+.pitem.sel{background:var(--ac-soft);box-shadow:inset 0 0 0 1px rgba(124,92,252,.32)}
+.keytbl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:center;font-size:11.5px}
+.keytbl .kk{display:flex;gap:3px;justify-content:flex-end}
+.keytbl .kg{grid-column:1/-1;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--tx-3);margin-top:8px;padding-bottom:3px;border-bottom:1px solid var(--line)}
+
+/* busy chip in header */
+#busyChip{display:none;align-items:center;gap:7px;height:24px;padding:0 10px;border-radius:20px;
+  background:var(--ac-soft);border:1px solid rgba(124,92,252,.35);font-size:11px;font-weight:600;color:var(--ac-2)}
+#busyChip.on{display:inline-flex}
+.spin{width:11px;height:11px;border:1.6px solid rgba(124,92,252,.28);border-top-color:var(--ac-2);
+  border-radius:50%;animation:sp .7s linear infinite;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+.split-h{height:1px;background:var(--line);margin:2px 0}
+
+/* responsive */
+@media (max-width:1280px){:root{--insp:312px;--rail:206px}}
+@media (max-width:1080px){
+  #workArea{grid-template-columns:0 minmax(0,1fr) var(--insp)}
+  #rail{position:absolute;left:0;top:var(--head);bottom:0;width:var(--rail);z-index:35;box-shadow:var(--sh-2)}
+  #workArea:not(.show-rail) #rail{display:none}
+}
+@media (max-width:860px){
+  :root{--insp:0px}
+  #inspector{position:absolute;right:0;top:var(--head);bottom:0;width:min(340px,90vw);z-index:35;box-shadow:var(--sh-2)}
+  #workArea:not(.show-insp) #inspector{display:none}
+  #workArea:not(.show-insp) #inspector{opacity:1}
+  #workArea.show-insp #inspector{opacity:1;pointer-events:auto}
+}
+</style>
+</head>
+
+<body>
+<div id="app">
+
+  <!-- ============ HEADER ============ -->
+  <header id="top">
+    <button class="btn icon ghost sm" id="railToggle" title="Toggle video queue (B)">☰</button>
+    <div class="brand">
+      <div class="mk">✂</div>
+      <div>
+        <b>SceneCut Studio</b>
+        <span>Batch Scene Splitter</span>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="row" style="gap:5px">
+      <button class="btn sm pri" id="addBtn">＋ Add videos</button>
+      <button class="btn sm" id="detectAllBtn" title="Auto-detect scenes in every queued video">⚡ Detect all</button>
+      <button class="btn sm" id="exportAllBtn" title="Export one master script for every video">📦 Export all</button>
+    </div>
+    <div id="busyChip"><span class="spin"></span><span id="busyText">Working…</span>
+      <button class="btn icon xs ghost" id="busyCancel" title="Cancel">✕</button>
+    </div>
+    <div class="grow"></div>
+    <div class="row" style="gap:5px">
+      <span class="chip" id="autosaveChip" title="Cut data is saved in this browser and restored when you re-add the same file">💾 Auto-save</span>
+      <button class="btn sm" id="palBtn" title="Command palette"><kbd>Ctrl</kbd><kbd>K</kbd></button>
+      <button class="btn icon sm ghost" id="helpBtn" title="Keyboard shortcuts (?)">?</button>
+      <button class="btn icon sm ghost" id="inspToggle" title="Toggle inspector (I)">⚙</button>
+    </div>
+  </header>
+
+  <div id="workArea">
+
+    <!-- ============ RAIL : VIDEO QUEUE ============ -->
+    <aside id="rail">
+      <div class="pane-head">
+        <h3>Queue</h3>
+        <span class="chip" id="queueCount">0</span>
+        <div class="grow"></div>
+        <button class="btn icon xs ghost" id="sortQueueBtn" title="Sort queue by name">⇅</button>
+        <button class="btn icon xs ghost" id="clearQueueBtn" title="Remove all videos">🗑</button>
+      </div>
+      <div class="drop" id="railDrop">
+        <span class="di">🎬</span>
+        <div class="dt">Drop videos</div>
+        <div class="ds">or click to browse — multiple OK</div>
+      </div>
+      <ul id="railList" class="sb"></ul>
+      <div style="padding:7px 9px;border-top:1px solid var(--line);font-size:9.5px;color:var(--tx-3);line-height:1.4">
+        <span id="railFooter">Nothing loaded</span>
+      </div>
+    </aside>
+
+    <!-- ============ STAGE ============ -->
+    <main id="stage">
+
+      <!-- empty state -->
+      <section id="emptyStage">
+        <div class="inner">
+          <div class="bigdrop" id="bigDrop">
+            <div style="font-size:44px;margin-bottom:10px">🎬</div>
+            <h2>Drop your videos here</h2>
+            <p>Load as many as you like — each keeps its own cuts, and one script exports them all.</p>
+            <div style="margin-top:14px" class="row" style="justify-content:center">
+              <button class="btn pri" id="bigAddBtn">Choose video files</button>
+            </div>
+            <p style="margin-top:12px;font-size:11px;color:var(--tx-3)">
+              MP4 · MKV · WebM · MOV · AVI · TS — any size · nothing is uploaded anywhere
+            </p>
+          </div>
+          <div class="feat">
+            <div><b>⚡ Real-time scan</b><span>Frame-accurate detection without seek-per-frame crawling.</span></div>
+            <div><b>🎚 Silence cuts</b><span>Split on speech gaps from the audio waveform.</span></div>
+            <div><b>📦 One batch script</b><span>Every video, every clip, a single double-click.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- live workspace -->
+      <div id="workspace" class="hide" style="display:flex;flex-direction:column;min-height:0;flex:1">
+
+        <div id="playerWrap">
+          <video id="vid" playsinline></video>
+          <div id="pOverlay">
+            <div class="row" style="gap:6px">
+              <span class="ovl-tag" id="sceneTag">—</span>
+              <span class="ovl-tag hide" id="loopTag">🔁 LOOP</span>
+            </div>
+            <div class="row" style="gap:6px;justify-content:flex-end">
+              <span class="ovl-tag mono" id="ovlRes">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- transport -->
+        <div id="transport">
+          <button class="tbtn play" id="playBtn" title="Play / pause (Space)">▶</button>
+          <div class="row" style="gap:3px">
+            <span id="tcode" class="mono">0:00.000</span>
+            <span id="tcodeTot" class="mono">/ 0:00</span>
+          </div>
+          <div class="sep"></div>
+          <button class="tbtn" data-seek="-10" title="Back 10s">−10s</button>
+          <button class="tbtn" data-seek="-1" title="Back 1s (←)">−1s</button>
+          <button class="tbtn" data-seek="-frame" title="Previous frame (Shift+←)">◀|</button>
+          <button class="tbtn" data-seek="frame" title="Next frame (Shift+→)">|▶</button>
+          <button class="tbtn" data-seek="1" title="Forward 1s (→)">+1s</button>
+          <button class="tbtn" data-seek="10" title="Forward 10s">+10s</button>
+          <div class="sep"></div>
+          <button class="tbtn mark" id="markBtn" title="Mark cut at playhead (M)">✂ Mark <kbd style="height:16px;min-width:15px;font-size:9px;background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.22);color:#fff">M</kbd></button>
+          <button class="tbtn" id="delCutBtn" title="Delete nearest cut (X)">✕ Cut</button>
+          <button class="tbtn" id="selToggleBtn" title="Keep / drop the scene at the playhead (S / D)">● —</button>
+          <div class="sep"></div>
+          <button class="tbtn" id="prevCutBtn" title="Previous cut (↑)">⏮</button>
+          <button class="tbtn" id="playSceneBtn" title="Play just this scene (P)">▶ Scene</button>
+          <button class="tbtn" id="nextCutBtn" title="Next cut (↓)">⏭</button>
+          <div class="sep"></div>
+          <button class="tbtn" id="loopBtn" title="Loop the current scene (R)">🔁</button>
+          <select class="inp sm" id="rateSel" style="width:66px" title="Playback speed">
+            <option value="0.25">0.25×</option><option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option><option value="1.5">1.5×</option>
+            <option value="2">2×</option><option value="4">4×</option>
+          </select>
+          <div class="sep"></div>
+          <button class="tbtn" id="undoBtn" title="Undo (Ctrl+Z)">↶</button>
+          <button class="tbtn" id="redoBtn" title="Redo (Ctrl+Shift+Z)">↷</button>
+        </div>
+
+        <!-- timeline -->
+        <section id="tlZone">
+          <div class="tl-bar">
+            <span class="t">Timeline</span>
+            <span class="chip" id="tlCutChip">0 cuts</span>
+            <span class="chip" id="tlAudioChip" style="display:none">🎚 audio</span>
+            <div class="grow"></div>
+            <button class="btn xs" id="fsToggle" title="Show/hide the filmstrip">🎞 Strip</button>
+            <button class="btn xs" id="wavBtn" title="Decode audio to draw the waveform and find silences">🎚 Audio</button>
+            <div class="sep"></div>
+            <span class="hint">Zoom</span>
+            <button class="btn icon xs" id="zoomOut">−</button>
+            <span class="mono" id="zoomLbl" style="min-width:38px;text-align:center;font-size:10.5px;color:var(--ac-2);font-weight:700">1.0×</span>
+            <button class="btn icon xs" id="zoomIn">+</button>
+            <button class="btn xs" id="zoomFit" title="Fit whole video (F)">Fit</button>
+          </div>
+
+          <div id="tlScroll" class="sb">
+            <div id="tlInner">
+              <canvas id="tlBase"></canvas>
+              <canvas id="tlOver"></canvas>
+            </div>
+          </div>
+
+          <div id="fsZone">
+            <div id="fsScroll" class="sb">
+              <div id="fsStrip">
+                <div class="fs-empty" id="fsEmpty"><span class="spin"></span><span>Building filmstrip…</span><span class="mono" id="fsPct">0%</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- scene table -->
+        <section id="sceneZone">
+          <div id="sceneBar">
+            <span class="t" style="font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--tx-3)">Scenes</span>
+            <span class="chip ac" id="sceneChip">0</span>
+            <span class="chip ok" id="keepChip">0 kept</span>
+            <div class="sep"></div>
+            <input class="inp sm" id="sceneSearch" placeholder="Filter by number, name or time…" style="width:190px">
+            <button class="btn xs" id="filterOffBtn" title="Show only dropped scenes">Only dropped</button>
+            <div class="grow"></div>
+            <button class="btn xs" id="keepAllBtn">☑ Keep all</button>
+            <button class="btn xs" id="dropAllBtn">☐ Drop all</button>
+            <button class="btn xs" id="invertBtn">⇄ Invert</button>
+            <div class="sep"></div>
+            <button class="btn xs" id="mergeBtn" title="Merge the checked scenes into one clip">⇥ Merge</button>
+            <button class="btn xs dg" id="clearCutsBtn">🗑 Clear cuts</button>
+          </div>
+          <div id="sceneScroll" class="sb">
+            <div id="sceneSpacer"></div>
+            <div id="sceneEmpty" class="sempty">
+              <div class="e">✂️</div>
+              <div style="font-size:12.5px;font-weight:600;color:var(--tx-2)">No cuts yet</div>
+              <div style="font-size:11px;margin-top:3px">Press <kbd>M</kbd> while watching to mark one by hand — or let it find them for you.</div>
+              <div class="row" style="margin-top:12px;justify-content:center;gap:6px">
+                <button class="btn pri sm" id="emptyDetect">⚡ Auto-detect scenes</button>
+                <button class="btn sm" id="emptySilence">🎚 Cut on silence</button>
+                <button class="btn sm" id="emptyInterval">⏱ Every 30s</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- ============ INSPECTOR ============ -->
+    <aside id="inspector">
+      <div id="inspTabs">
+        <button class="itab on" data-tab="cut">✂ Cut</button>
+        <button class="itab" data-tab="detect">⚡ Detect</button>
+        <button class="itab" data-tab="export">📤 Export</button>
+      </div>
+      <div id="inspBody" class="sb">
+
+        <!-- ---- CUT ---- -->
+        <div class="ipanel on" data-panel="cut">
+          <div class="grid3">
+            <div class="stat"><b id="stScenes" style="color:var(--ac-2)">0</b><span>Scenes</span></div>
+            <div class="stat"><b id="stKept" style="color:var(--ok)">0</b><span>Kept</span></div>
+            <div class="stat"><b id="stAvg" style="color:var(--wr);font-size:13px">—</b><span>Avg len</span></div>
+          </div>
+
+          <div class="box">
+            <div class="bt">📄 Current video</div>
+            <div class="trunc" id="curName" style="font-size:12px;font-weight:600">—</div>
+            <div class="mono" id="curMeta" style="font-size:10px;color:var(--tx-3);margin-top:3px">—</div>
+          </div>
+
+          <div class="box">
+            <div class="bt">⏱ Fixed interval</div>
+            <div class="row">
+              <input class="inp sm" id="ivalInput" type="number" value="30" min="0.5" step="0.5" style="flex:1">
+              <span class="hint">sec</span>
+              <button class="btn sm" id="ivalApply">Apply</button>
+            </div>
+            <div class="hint" style="margin-top:6px">Great for chopping long streams into upload-sized chunks.</div>
+          </div>
+
+          <div class="box">
+            <div class="bt">🔢 Equal parts</div>
+            <div class="row">
+              <input class="inp sm" id="partsInput" type="number" value="5" min="2" max="500" style="flex:1">
+              <span class="hint">clips</span>
+              <button class="btn sm" id="partsApply">Apply</button>
+            </div>
+          </div>
+
+          <div class="box">
+            <div class="bt">📝 Paste timestamps</div>
+            <textarea class="inp" id="tsInput" rows="4" placeholder="0:00&#10;1:30.5&#10;3:45&#10;620"></textarea>
+            <div class="row" style="margin-top:6px">
+              <button class="btn sm" id="tsApply" style="flex:1">Replace cuts</button>
+              <button class="btn sm" id="tsAdd" style="flex:1">Add to cuts</button>
+            </div>
+            <div class="hint" style="margin-top:6px">Accepts <span class="mono">h:mm:ss.ms</span>, <span class="mono">m:ss</span> or plain seconds. Chapter lists paste straight in.</div>
+          </div>
+
+          <div class="box">
+            <div class="bt">🎯 Precision</div>
+            <label class="row" style="justify-content:space-between">
+              <span style="font-size:11.5px">Snap marks to detected cuts</span>
+              <span class="sw"><input type="checkbox" id="snapChk" checked><i></i></span>
+            </label>
+            <div class="row" style="margin-top:8px;justify-content:space-between">
+              <span style="font-size:11.5px">Assumed frame rate</span>
+              <select class="inp sm" id="fpsSel" style="width:88px">
+                <option value="23.976">23.976</option><option value="24">24</option><option value="25">25</option>
+                <option value="29.97">29.97</option><option value="30" selected>30</option>
+                <option value="50">50</option><option value="59.94">59.94</option><option value="60">60</option>
+              </select>
+            </div>
+            <div class="hint" style="margin-top:6px">Used for frame stepping and the 1-frame guard that stops clips bleeding into the next scene.</div>
+          </div>
+        </div>
+
+        <!-- ---- DETECT ---- -->
+        <div class="ipanel" data-panel="detect">
+          <div class="box">
+            <div class="bt">⚡ Scene detection</div>
+            <div class="row" style="justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:11.5px;font-weight:600">Sensitivity</span>
+              <span class="mono" id="sensVal" style="color:var(--ac-2);font-weight:700">55</span>
+            </div>
+            <input type="range" class="rng" id="sensRng" min="1" max="100" value="55">
+            <div class="row" style="justify-content:space-between;margin-top:3px">
+              <span class="hint">Only hard cuts</span><span class="hint">Every flicker</span>
+            </div>
+
+            <div class="grid2" style="margin-top:10px">
+              <div>
+                <label class="lbl">Min scene</label>
+                <input class="inp sm" id="minGap" type="number" value="1.2" min="0.1" step="0.1">
+              </div>
+              <div>
+                <label class="lbl">Scan speed</label>
+                <select class="inp sm" id="scanRate">
+                  <option value="16">Turbo 16×</option>
+                  <option value="8" selected>Fast 8×</option>
+                  <option value="4">Careful 4×</option>
+                  <option value="sample">Sample (very long)</option>
+                </select>
+              </div>
+            </div>
+
+            <label class="row" style="justify-content:space-between;margin-top:9px">
+              <span style="font-size:11.5px">Frame-exact refine <span class="hint">(+few sec)</span></span>
+              <span class="sw"><input type="checkbox" id="refineChk" checked><i></i></span>
+            </label>
+            <label class="row" style="justify-content:space-between;margin-top:7px">
+              <span style="font-size:11.5px">Ignore fades &amp; flashes</span>
+              <span class="sw"><input type="checkbox" id="fadeChk" checked><i></i></span>
+            </label>
+
+            <div class="row" style="margin-top:10px">
+              <button class="btn pri sm" id="detectBtn" style="flex:1">⚡ Detect this video</button>
+              <button class="btn dg sm hide" id="detectCancel">✕</button>
+            </div>
+            <div class="prog" style="margin-top:8px"><i id="detProg"></i></div>
+            <div class="row" style="margin-top:5px;justify-content:space-between">
+              <span class="hint mono" id="detStat">Idle</span>
+              <span class="hint mono" id="detFound"></span>
+            </div>
+            <canvas id="detPrev" width="160" height="90"
+              style="width:100%;margin-top:8px;border-radius:7px;border:1px solid var(--line);background:#000;display:none"></canvas>
+          </div>
+
+          <div class="box">
+            <div class="bt">🎚 Silence / speech cuts</div>
+            <div class="hint" style="margin-bottom:8px">Decode the audio once, then cut where nobody is talking. Ideal for trimming dead air out of takes.</div>
+            <div class="grid2">
+              <div>
+                <label class="lbl">Silence below</label>
+                <select class="inp sm" id="silDb">
+                  <option value="-50">−50 dB (quiet room)</option>
+                  <option value="-40" selected>−40 dB (typical)</option>
+                  <option value="-30">−30 dB (noisy)</option>
+                  <option value="-24">−24 dB (very noisy)</option>
+                </select>
+              </div>
+              <div>
+                <label class="lbl">Min gap</label>
+                <input class="inp sm" id="silLen" type="number" value="0.6" min="0.1" step="0.1">
+              </div>
+            </div>
+            <label class="row" style="justify-content:space-between;margin-top:9px">
+              <span style="font-size:11.5px">Drop the silent parts</span>
+              <span class="sw"><input type="checkbox" id="silDrop" checked><i></i></span>
+            </label>
+            <div class="row" style="margin-top:9px">
+              <button class="btn sm" id="silBtn" style="flex:1">🎚 Find silences</button>
+            </div>
+            <div class="hint mono" id="silStat" style="margin-top:6px">Audio not analysed yet</div>
+          </div>
+
+          <div class="box">
+            <div class="bt">📊 Change graph</div>
+            <canvas id="diffCanvas" style="width:100%;height:74px;border-radius:7px;border:1px solid var(--line);background:#06070b;display:block"></canvas>
+            <div class="hint" style="margin-top:5px">Every bar is a frame comparison. Red bars cleared the threshold and became cuts — drag sensitivity and re-run if it looks off.</div>
+          </div>
+        </div>
+
+        <!-- ---- EXPORT ---- -->
+        <div class="ipanel" data-panel="export">
+          <div class="box">
+            <div class="bt">🎛 Encode preset</div>
+            <select class="inp sm" id="presetSel">
+              <option value="precise" selected>Precise — re-encode H.264 CRF 18</option>
+              <option value="copy">Lightning — stream copy (no re-encode)</option>
+              <option value="nvenc">GPU NVIDIA — h264_nvenc</option>
+              <option value="qsv">GPU Intel — h264_qsv</option>
+              <option value="vtb">GPU Apple — videotoolbox</option>
+              <option value="shorts">Shorts / Reels — 1080×1920 crop</option>
+              <option value="audio">Audio only — MP3 192k</option>
+              <option value="gif">GIF — 480px 15fps</option>
+            </select>
+            <div class="hint" id="presetHint" style="margin-top:6px"></div>
+            <div class="grid2" style="margin-top:9px">
+              <div>
+                <label class="lbl">Container</label>
+                <select class="inp sm" id="extSel">
+                  <option value="mp4" selected>mp4</option><option value="mkv">mkv</option>
+                  <option value="mov">mov</option><option value="webm">webm</option>
+                </select>
+              </div>
+              <div>
+                <label class="lbl">Output folder</label>
+                <input class="inp sm" id="outDir" value="Scenes">
+              </div>
+            </div>
+          </div>
+
+          <div class="box">
+            <div class="bt">🏷 File names</div>
+            <input class="inp sm" id="nameTpl" value="{name}_{nnn}">
+            <div class="hint" style="margin-top:6px">
+              <span class="mono">{name}</span> source · <span class="mono">{n}{nn}{nnn}</span> index ·
+              <span class="mono">{label}</span> your scene name · <span class="mono">{start}{end}{dur}</span> times ·
+              <span class="mono">{date}</span>
+            </div>
+            <div class="mono" id="namePreview" style="margin-top:7px;font-size:10.5px;color:var(--ok)"></div>
+          </div>
+
+          <div class="box">
+            <div class="bt">📦 What to export</div>
+            <div class="row" style="margin-bottom:8px">
+              <select class="inp sm" id="scopeSel">
+                <option value="kept" selected>Kept scenes — current video</option>
+                <option value="all">All scenes — current video</option>
+                <option value="batch">Kept scenes — every video in queue</option>
+              </select>
+            </div>
+            <label class="row" style="justify-content:space-between">
+              <span style="font-size:11.5px">Also build a single joined clip</span>
+              <span class="sw"><input type="checkbox" id="concatChk"><i></i></span>
+            </label>
+            <div class="hint" style="margin-top:5px">Stitches the kept scenes back together — the fastest way to delete bad takes from a recording.</div>
+          </div>
+
+          <div class="box">
+            <div class="bt">⬇ Download</div>
+            <div class="grid2">
+              <button class="btn pri sm" id="dlBat">🪟 .bat</button>
+              <button class="btn sm" id="dlSh">🐧 .sh</button>
+              <button class="btn sm" id="dlPs1">💠 .ps1</button>
+              <button class="btn sm" id="dlPy">🐍 .py</button>
+            </div>
+            <button class="btn ok sm wide" id="dlZip" style="margin-top:7px">📦 Everything as ZIP</button>
+            <div class="grid2" style="margin-top:7px">
+              <button class="btn sm" id="dlCsv">📊 CSV</button>
+              <button class="btn sm" id="dlChapters">📑 Chapters</button>
+              <button class="btn sm" id="dlEdl">🎞 EDL</button>
+              <button class="btn sm" id="dlJson">💾 Project</button>
+            </div>
+            <button class="btn sm wide" id="loadJson" style="margin-top:7px">📂 Load project file</button>
+          </div>
+
+          <div class="box">
+            <div class="bt">👁 Script preview
+              <div class="grow"></div>
+              <select class="inp sm" id="previewKind" style="width:104px;height:22px;font-size:10.5px">
+                <option value="bat">Windows</option><option value="sh">bash</option>
+                <option value="ps1">PowerShell</option><option value="py">Python</option>
+              </select>
+              <button class="btn xs" id="copyScript">📋</button>
+            </div>
+            <div class="code sb" id="scriptOut">Load a video and mark some cuts.</div>
+          </div>
+
+          <div class="box">
+            <div class="bt">📖 How to run it</div>
+            <div class="hint" style="line-height:1.6">
+              <b style="color:var(--tx-2)">1.</b> Install FFmpeg — <span class="mono">winget install ffmpeg</span> ·
+              <span class="mono">brew install ffmpeg</span> · <span class="mono">sudo apt install ffmpeg</span><br>
+              <b style="color:var(--tx-2)">2.</b> Put the script in the same folder as your video(s).<br>
+              <b style="color:var(--tx-2)">3.</b> Double-click the <span class="mono">.bat</span>, or run
+              <span class="mono">bash …sh</span> / <span class="mono">python …py</span>.<br>
+              <b style="color:var(--tx-2)">4.</b> Clips land in <span class="mono" id="howtoDir">Scenes/</span>. The script finds
+              your file by name, and falls back to matching its exact byte size — renaming it is fine.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- hidden bits -->
+<input type="file" id="fileInput" accept="video/*,.mkv,.ts,.m4v,.mts" multiple style="display:none">
+<input type="file" id="projInput" accept=".json,application/json" style="display:none">
+<div id="scrubPop"><canvas id="scrubCanvas" width="256" height="144"></canvas><div class="cap mono" id="scrubCap">0:00</div></div>
+<div id="toasts"></div>
+
+<!-- command palette -->
+<div class="scrim" id="palScrim">
+  <div class="modal">
+    <div style="border-bottom:1px solid var(--line);display:flex;align-items:center;padding-left:12px">
+      <span style="color:var(--tx-3)">⌕</span>
+      <input id="palInput" placeholder="Type a command…" autocomplete="off" spellcheck="false">
+    </div>
+    <div id="palList" class="sb"></div>
+  </div>
+</div>
+
+<!-- shortcuts -->
+<div class="scrim" id="helpScrim">
+  <div class="modal wide">
+    <div class="mh"><h3>⌨ Keyboard shortcuts</h3><div class="grow"></div>
+      <button class="btn icon sm ghost" data-close="helpScrim">✕</button></div>
+    <div class="mb sb">
+      <div class="keytbl" id="keyTable"></div>
+    </div>
+  </div>
+</div>
+<script>
+"use strict";
+/* ============================================================================
+   SceneCut Studio — a single-file, zero-dependency batch scene splitter.
+   No CDN, no fonts, no libraries: open the file anywhere, online or not.
+   ============================================================================ */
+
+/* ---------------------------------------------------------------- helpers */
+const $  = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.prototype.slice.call((r || document).querySelectorAll(s));
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const raf = requestAnimationFrame;
+
+function fmt(t) {
+  if (!isFinite(t) || t < 0) t = 0;
+  const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = Math.floor(t % 60);
+  return h ? h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0')
+           : m + ':' + String(s).padStart(2, '0');
+}
+function fmtMs(t) {
+  if (!isFinite(t) || t < 0) t = 0;
+  const ms = Math.round(t % 1 * 1000);
+  return fmt(Math.floor(t)) + '.' + String(ms).padStart(3, '0');
+}
+function fmtTC(t) {                       // hh:mm:ss.mmm — what ffmpeg wants
+  if (!isFinite(t) || t < 0) t = 0;
+  const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60;
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' +
+         s.toFixed(3).padStart(6, '0');
+}
+function fmtBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(0) + ' KB';
+  if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB';
+  return (b / 1073741824).toFixed(2) + ' GB';
+}
+/* Accepts 90, 1:30, 1:30.25, 01:02:03.400, and "01:02:03 Chapter title". */
+function parseTS(raw) {
+  if (raw == null) return null;
+  const m = String(raw).trim().match(/(\d{1,3}):(\d{1,2})(?::(\d{1,2}))?(?:[.,](\d{1,3}))?|^(\d+(?:[.,]\d+)?)\s*$/);
+  if (!m) return null;
+  if (m[5] !== undefined) return parseFloat(m[5].replace(',', '.'));
+  const a = +m[1], b = +m[2], c = m[3] === undefined ? null : +m[3];
+  const frac = m[4] ? parseFloat('0.' + m[4]) : 0;
+  const secs = c === null ? a * 60 + b : a * 3600 + b * 60 + c;
+  return secs + frac;
+}
+function debounce(fn, ms) {
+  let t; return function () { clearTimeout(t); const a = arguments; t = setTimeout(() => fn.apply(null, a), ms); };
+}
+function sanitizeFile(s) {
+  return String(s).replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 120) || 'clip';
+}
+/* Single-quote escaping for POSIX shells; double-quote escaping for bat/ps1. */
+const shq  = s => "'" + String(s).replace(/'/g, "'\\''") + "'";
+const pyq  = s => JSON.stringify(String(s));
+const ps1q = s => "'" + String(s).replace(/'/g, "''") + "'";
+
+/* Yields to the browser without being throttled in a background tab
+   (setTimeout is clamped to 1s when hidden; MessageChannel is not). */
+const _mc = typeof MessageChannel !== 'undefined' ? new MessageChannel() : null;
+let _mcq = [];
+if (_mc) _mc.port1.onmessage = () => { const f = _mcq.shift(); if (f) f(); };
+function yieldNow() {
+  return new Promise(res => {
+    if (_mc) { _mcq.push(res); _mc.port2.postMessage(0); } else setTimeout(res, 0);
+  });
+}
+
+/* ------------------------------------------------------------------ toast */
+let _lastToast = { msg: '', at: 0 };
+function toast(msg, kind, ms) {
+  const now = Date.now();
+  if (msg === _lastToast.msg && now - _lastToast.at < 700) return;   // no spam
+  _lastToast = { msg, at: now };
+  const host = $('#toasts');
+  const el = document.createElement('div');
+  el.className = 'toast ' + (kind || '');
+  el.textContent = ({ ok: '✓ ', err: '✕ ', wr: '⚠ ' }[kind] || '') + msg;
+  host.appendChild(el);
+  while (host.children.length > 4) host.removeChild(host.firstChild);
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 240); }, ms || 2600);
+}
+
+/* -------------------------------------------------------------- zip (store)
+   A ~70-line STORE-method zip writer so the app needs no JSZip. Output is a
+   plain, valid archive that Explorer / Finder / unzip all read. */
+const _crcTable = (() => {
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) { let c = i; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ c >>> 1 : c >>> 1; t[i] = c >>> 0; }
+  return t;
+})();
+function crc32(u8) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < u8.length; i++) c = _crcTable[(c ^ u8[i]) & 0xFF] ^ c >>> 8;
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function zipBlob(entries) {
+  const enc = new TextEncoder(), parts = [], central = [];
+  const d = new Date();
+  const dosTime = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() / 2 | 0);
+  const dosDate = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  let offset = 0;
+  for (const e of entries) {
+    const name = enc.encode(e.name);
+    const data = typeof e.data === 'string' ? enc.encode(e.data) : e.data;
+    const crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+    lh.setUint16(8, 0, true); lh.setUint16(10, dosTime, true); lh.setUint16(12, dosDate, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
+    lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    parts.push(new Uint8Array(lh.buffer), name, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true);
+    ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, dosTime, true); ch.setUint16(14, dosDate, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true);
+    ch.setUint16(28, name.length, true); ch.setUint32(42, offset, true);
+    central.push(new Uint8Array(ch.buffer), name);
+    offset += 30 + name.length + data.length;
+  }
+  let cdSize = 0; for (const p of central) cdSize += p.length;
+  const eo = new DataView(new ArrayBuffer(22));
+  eo.setUint32(0, 0x06054b50, true);
+  eo.setUint16(8, entries.length, true); eo.setUint16(10, entries.length, true);
+  eo.setUint32(12, cdSize, true); eo.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, new Uint8Array(eo.buffer)], { type: 'application/zip' });
+}
+function saveBlob(name, blob) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+const saveText = (name, text) => saveBlob(name, new Blob([text], { type: 'text/plain;charset=utf-8' }));
+
+/* =========================================================================
+   STATE
+   ========================================================================= */
+const PALETTE = ['#7c5cfc','#00d4aa','#fbbf24','#f87171','#60a5fa','#34d399','#fb923c','#e879f9','#38bdf8','#a3e635'];
+const A = {
+  videos: [], active: null, seq: 1,
+  zoom: 1, follow: true, showStrip: true, onlyDropped: false, loop: false,
+  fps: 30, snap: true, filter: '',
+  busy: null,             // { label, cancel() }
+  batch: null,            // queue controller
+};
+
+function mkVideo(file) {
+  return {
+    id: 'v' + (A.seq++), file, name: file.name, size: file.size,
+    duration: 0, w: 0, h: 0, url: null,
+    cuts: [], excluded: new Set(), labels: {},
+    thumbs: new Map(), poster: null,
+    peaks: null, silences: null, diff: null,
+    status: 'idle', prog: 0, error: null,
+    ver: 0, _sc: null, _scVer: -1,
+    undo: [], redo: [],
+    strip: null,            // filmstrip frames
+  };
+}
+const active = () => A.active;
+const guard = () => 1 / (A.fps || 30);
+
+/* Scenes are derived, memoised per mutation. Identity is the start time in ms,
+   which keeps "keep / drop" and names attached to the right clip when the cut
+   list changes around them. */
+function scenesOf(v) {
+  if (!v || !v.duration) return [];
+  if (v._sc && v._scVer === v.ver) return v._sc;
+  /* No cuts means no scenes — an uncut video is not "one clip to export". */
+  if (!v.cuts.length) { v._sc = []; v._scVer = v.ver; return v._sc; }
+  const g = guard(), pts = [0, ...v.cuts, v.duration], out = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const start = pts[i], end = pts[i + 1], last = i === pts.length - 2;
+    const stop = last ? end : Math.max(start + 0.01, end - g);
+    const dur = stop - start;
+    if (dur < 0.011) continue;             // only truly degenerate slivers
+    out.push({ i: out.length + 1, start, end, out: stop, dur, key: String(Math.round(start * 1000)) });
+  }
+  v._sc = out; v._scVer = v.ver;
+  return out;
+}
+const isKept  = (v, sc) => !v.excluded.has(sc.key);
+const keptOf  = v => scenesOf(v).filter(sc => isKept(v, sc));
+const colorOf = i => PALETTE[(i - 1) % PALETTE.length];
+
+function sceneAt(v, t) {
+  const sc = scenesOf(v);
+  let lo = 0, hi = sc.length - 1;
+  while (lo <= hi) {
+    const mid = lo + hi >> 1, s = sc[mid];
+    if (t < s.start) hi = mid - 1;
+    else if (t >= s.end) lo = mid + 1;
+    else return s;
+  }
+  return sc.length ? sc[t < sc[0].start ? 0 : sc.length - 1] : null;
+}
+
+/* -------------------------------------------------------------- mutations */
+function snap(v) {
+  return { cuts: v.cuts.slice(), excluded: Array.from(v.excluded), labels: Object.assign({}, v.labels) };
+}
+function restore(v, s) {
+  v.cuts = s.cuts.slice(); v.excluded = new Set(s.excluded); v.labels = Object.assign({}, s.labels);
+  v.ver++;
+}
+/* Every state change funnels through here: one undo entry, one re-render,
+   one autosave. Nothing else is allowed to poke v.cuts directly. */
+function edit(v, fn, opts) {
+  if (!v) return;
+  const before = snap(v);
+  fn(v);
+  v.cuts.sort((a, b) => a - b);
+  v.cuts = v.cuts.filter((t, i, arr) => t > 0.01 && t < v.duration - 0.01 && (i === 0 || t - arr[i - 1] > 0.02));
+  v.ver++;
+  v.undo.push(before); if (v.undo.length > 120) v.undo.shift();
+  v.redo.length = 0;
+  afterEdit(v, opts);
+}
+function afterEdit(v, opts) {
+  v._sc = null;
+  if (v === A.active) {
+    renderTimeline(); renderScenes(); renderStats(); schedThumbs();
+    if (!(opts && opts.quiet)) schedScript();
+  }
+  renderRail();
+  saveSoon();
+}
+function undo() {
+  const v = active(); if (!v || !v.undo.length) return toast('Nothing to undo', 'wr');
+  v.redo.push(snap(v)); restore(v, v.undo.pop()); afterEdit(v);
+  toast('Undo', 'ok', 1100);
+}
+function redo() {
+  const v = active(); if (!v || !v.redo.length) return toast('Nothing to redo', 'wr');
+  v.undo.push(snap(v)); restore(v, v.redo.pop()); afterEdit(v);
+  toast('Redo', 'ok', 1100);
+}
+
+/* ------------------------------------------------------------ persistence
+   Browsers can't hold on to the file itself, but the work you did on it is
+   small. Cuts, names and keep/drop are stored against a fingerprint of the
+   file so re-adding the same video picks up exactly where you left off. */
+const STORE_KEY = 'scenecut.studio.v1';
+const fingerprint = v => v.name + '|' + v.size + '|' + Math.round(v.duration * 10);
+
+function loadStore() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; } catch (e) { return {}; }
+}
+function writeStore(o) {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(o)); } catch (e) { /* private mode / quota */ }
+}
+const saveSoon = debounce(() => {
+  const db = loadStore();
+  db.prefs = {
+    fps: A.fps, snap: A.snap, showStrip: A.showStrip,
+    preset: $('#presetSel').value, ext: $('#extSel').value,
+    outDir: $('#outDir').value, nameTpl: $('#nameTpl').value,
+    sens: $('#sensRng').value, minGap: $('#minGap').value,
+    scanRate: $('#scanRate').value, refine: $('#refineChk').checked,
+  };
+  db.files = db.files || {};
+  for (const v of A.videos) {
+    if (!v.duration) continue;
+    if (!v.cuts.length && !v.excluded.size) { delete db.files[fingerprint(v)]; continue; }
+    db.files[fingerprint(v)] = {
+      cuts: v.cuts.map(t => +t.toFixed(3)),
+      ex: Array.from(v.excluded), labels: v.labels, at: Date.now(),
+    };
+  }
+  const keys = Object.keys(db.files);
+  if (keys.length > 60) {                       // keep the 60 freshest
+    keys.sort((a, b) => (db.files[b].at || 0) - (db.files[a].at || 0));
+    for (const k of keys.slice(60)) delete db.files[k];
+  }
+  writeStore(db);
+}, 700);
+
+function tryRestore(v) {
+  const rec = (loadStore().files || {})[fingerprint(v)];
+  if (!rec || !rec.cuts || !rec.cuts.length) return false;
+  v.cuts = rec.cuts.slice();
+  v.excluded = new Set(rec.ex || []);
+  v.labels = rec.labels || {};
+  v.ver++;
+  return true;
+}
+function applyPrefs() {
+  const p = loadStore().prefs; if (!p) return;
+  const set = (sel, val) => { const el = $(sel); if (el != null && val != null) el.value = val; };
+  if (p.fps) { A.fps = +p.fps; set('#fpsSel', p.fps); }
+  if (p.snap != null) { A.snap = !!p.snap; $('#snapChk').checked = A.snap; }
+  set('#presetSel', p.preset); set('#extSel', p.ext); set('#outDir', p.outDir);
+  set('#nameTpl', p.nameTpl); set('#sensRng', p.sens); set('#minGap', p.minGap);
+  set('#scanRate', p.scanRate);
+  if (p.refine != null) $('#refineChk').checked = !!p.refine;
+  if (p.showStrip != null) A.showStrip = !!p.showStrip;
+  $('#sensVal').textContent = $('#sensRng').value;
+}
+</script>
+<script>
+"use strict";
+/* =========================================================================
+   MEDIA ENGINE
+   The original build seeked once per sampled frame — every seek costs tens of
+   milliseconds, so a 10-minute video took minutes to analyse. Here the video
+   is *played* at up to 16× and frames are collected as the decoder presents
+   them (requestVideoFrameCallback), which is roughly an order of magnitude
+   faster. Seeking is then used only to bisect the handful of frames around
+   each detected cut, which is where frame accuracy actually matters.
+   ========================================================================= */
+
+const VID = $('#vid');
+const SIG_W = 64, SIG_H = 36;
+const GRID = 2, LEVELS = 4;                      // 2×2 tiles, 4 levels per channel
+const BINS = LEVELS * LEVELS * LEVELS;           // 64 colour bins per tile
+const SIG_LEN = GRID * GRID * BINS;              // 256 numbers per frame
+
+function once(el, ev, ms) {
+  return new Promise((res, rej) => {
+    const t = ms ? setTimeout(() => { cleanup(); res(false); }, ms) : 0;
+    function ok() { cleanup(); res(true); }
+    function bad() { cleanup(); rej(new Error(ev + ' failed')); }
+    function cleanup() { clearTimeout(t); el.removeEventListener(ev, ok); el.removeEventListener('error', bad); }
+    el.addEventListener(ev, ok, { once: true });
+    el.addEventListener('error', bad, { once: true });
+  });
+}
+/* Streams recorded by MediaRecorder (and some remuxed files) report an
+   infinite duration until you seek past the end. */
+async function settleDuration(el) {
+  if (isFinite(el.duration) && el.duration > 0) return el.duration;
+  await new Promise(res => {
+    let done = false;
+    const fin = () => { if (done) return; done = true; el.removeEventListener('timeupdate', h); res(); };
+    const h = () => { if (isFinite(el.duration) && el.duration > 0) { try { el.currentTime = 0; } catch (e) {} fin(); } };
+    el.addEventListener('timeupdate', h);
+    try { el.currentTime = 1e7; } catch (e) { fin(); }
+    setTimeout(fin, 4000);
+  });
+  return isFinite(el.duration) ? el.duration : 0;
+}
+
+/* Frame signature: a colour histogram per screen quadrant.
+   Luma alone is not enough — a cut from a red wall to a teal one can leave
+   brightness almost untouched, which is exactly the case a luma detector
+   sleeps through. Histograms also barely move when the camera pans or a
+   subject walks across frame, so motion does not masquerade as a cut. */
+function makeSig(img) {
+  const p = img.data, out = new Float32Array(SIG_LEN);
+  const bw = SIG_W / GRID, bh = SIG_H / GRID;
+  for (let y = 0; y < SIG_H; y++) {
+    const by = (y / bh) | 0;
+    for (let x = 0; x < SIG_W; x++) {
+      const i = (y * SIG_W + x) << 2;
+      const bin = ((p[i] >> 6) << 4) | ((p[i + 1] >> 6) << 2) | (p[i + 2] >> 6);
+      out[(((by * GRID) + ((x / bw) | 0)) * BINS) + bin]++;
+    }
+  }
+  const per = (SIG_W * SIG_H) / (GRID * GRID);
+  for (let i = 0; i < SIG_LEN; i++) out[i] /= per;
+  return out;
+}
+/* L1 distance, normalised to 0…1 (1 = no colours in common anywhere). */
+function sigDist(a, b) {
+  let s = 0;
+  for (let i = 0; i < SIG_LEN; i++) { const d = a[i] - b[i]; s += d < 0 ? -d : d; }
+  return s / (2 * GRID * GRID);
+}
+
+/* ------------------------------------------------------------------ grabber
+   ONE hidden <video> shared by thumbnails, the filmstrip and hover scrubbing.
+   The previous build kept up to five decoders of the same file alive at once,
+   which is what made big files feel heavy. Jobs are queued; scrub jobs are
+   latest-wins so dragging never builds up a backlog. */
+const Grab = {
+  el: null, url: null, busy: false, q: [], scrub: null, gen: 0,
+  init() {
+    const el = document.createElement('video');
+    el.muted = true; el.playsInline = true; el.preload = 'auto';
+    el.crossOrigin = 'anonymous';
+    el.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-10px;top:-10px';
+    document.body.appendChild(el);
+    this.el = el;
+  },
+  bind(url) {
+    if (this.url === url) return;
+    this.url = url; this.gen++;
+    this.q.length = 0; this.scrub = null; this.busy = false;
+    this.el.src = url || '';
+  },
+  ready() { return this.el && this.url && this.el.readyState >= 2; },
+  /* queued, in order — thumbnails and filmstrip */
+  job(t) { return new Promise(res => { this.q.push({ t, res, gen: this.gen }); this.pump(); }); },
+  /* latest-wins — hover scrubbing */
+  peek(t) { return new Promise(res => { this.scrub = { t, res, gen: this.gen }; this.pump(); }); },
+  async pump() {
+    if (this.busy || !this.el || !this.url) return;
+    const job = this.scrub || this.q.shift();
+    if (!job) return;
+    if (this.scrub) this.scrub = null;
+    if (job.gen !== this.gen) { job.res(null); return this.pump(); }
+    this.busy = true;
+    try {
+      if (this.el.readyState < 1) await once(this.el, 'loadedmetadata', 8000);
+      if (job.gen !== this.gen) throw 0;
+      if (Math.abs(this.el.currentTime - job.t) > 0.004) {
+        this.el.currentTime = job.t;
+        await once(this.el, 'seeked', 6000);
+      }
+      job.res(job.gen === this.gen && this.el.readyState >= 2 ? this.el : null);
+    } catch (e) { job.res(null); }
+    this.busy = false;
+    if (this.scrub || this.q.length) this.pump();
+  },
+};
+Grab.init();
+
+async function grabBitmap(t, w, h) {
+  const el = await Grab.job(t);
+  if (!el) return null;
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  cv.getContext('2d', { alpha: false }).drawImage(el, 0, 0, w, h);
+  try { return await createImageBitmap(cv); } catch (e) { return cv; }
+}
+function paint(canvas, src, w, h) {
+  if (!canvas || !src) return;
+  const ctx = canvas.getContext('2d', { alpha: false });
+  try { ctx.drawImage(src, 0, 0, w || canvas.width, h || canvas.height); } catch (e) {}
+}
+
+/* =========================================================================
+   FILE INTAKE
+   ========================================================================= */
+const VIDEO_RE = /\.(mp4|m4v|mkv|webm|avi|mov|flv|wmv|ts|mts|m2ts|mpg|mpeg|ogv|3gp)$/i;
+
+async function addFiles(list) {
+  const files = Array.from(list || []).filter(f => f.type.startsWith('video/') || VIDEO_RE.test(f.name));
+  if (!files.length) return toast('No video files in that drop', 'err');
+
+  let restored = 0, added = 0, first = null;
+  for (const f of files) {
+    if (A.videos.some(v => v.name === f.name && v.size === f.size)) continue;   // no dupes
+    const v = mkVideo(f);
+    v.url = URL.createObjectURL(f);
+    A.videos.push(v); added++;
+    if (!first) first = v;
+    renderRail();
+    try {
+      await probe(v);
+      if (tryRestore(v)) restored++;
+    } catch (e) {
+      v.error = 'Unreadable'; v.status = 'err';
+    }
+    renderRail();
+  }
+  if (!added) return toast('Those videos are already in the queue', 'wr');
+  if (!A.active && first) setActive(first.id);
+  else { renderRail(); renderStats(); }
+
+  toast(added + (added === 1 ? ' video added' : ' videos added') +
+        (restored ? ' · ' + restored + ' restored from last session' : ''), 'ok');
+  makePosters();
+}
+
+async function probe(v) {
+  const el = document.createElement('video');
+  el.muted = true; el.preload = 'metadata'; el.playsInline = true; el.src = v.url;
+  await once(el, 'loadedmetadata', 20000);
+  v.duration = await settleDuration(el);
+  v.w = el.videoWidth; v.h = el.videoHeight;
+  el.src = ''; el.load();
+  if (!v.duration) throw new Error('no duration');
+  return v;
+}
+
+async function makePosters() {
+  for (const v of A.videos) {
+    if (v.poster || !v.duration) continue;
+    const el = document.createElement('video');
+    el.muted = true; el.playsInline = true; el.preload = 'auto'; el.src = v.url;
+    try {
+      await once(el, 'loadedmetadata', 8000);
+      el.currentTime = Math.min(v.duration * 0.12, 30);
+      await once(el, 'seeked', 6000);
+      const cv = document.createElement('canvas'); cv.width = 112; cv.height = 64;
+      cv.getContext('2d', { alpha: false }).drawImage(el, 0, 0, 112, 64);
+      v.poster = await createImageBitmap(cv).catch(() => cv);
+      renderRail();
+    } catch (e) { /* poster is cosmetic */ }
+    el.src = ''; el.load();
+    await yieldNow();
+  }
+}
+
+function setActive(id) {
+  const v = A.videos.find(x => x.id === id);
+  if (!v || v === A.active) return;
+  stopLoop();
+  A.active = v;
+  VID.src = v.url;
+  VID.playbackRate = parseFloat($('#rateSel').value) || 1;
+  Grab.bind(v.url);
+  A.zoom = 1;
+  v.strip = null;
+  resetSceneView();
+  $('#emptyStage').classList.add('hide');
+  $('#workspace').classList.remove('hide');
+  VID.addEventListener('loadedmetadata', () => {
+    fitPlayer(); renderTimeline(); renderOverlay();
+  }, { once: true });
+  renderRail(); renderStats(); renderTimeline(); renderScenes(); schedScript();
+  buildStrip();
+  schedThumbs();
+  renderDiff();
+  $('#silStat').textContent = v.peaks ? (v.silences ? v.silences.length + ' silences found' : 'Audio ready') : 'Audio not analysed yet';
+  $('#tlAudioChip').style.display = v.peaks ? '' : 'none';
+}
+
+function removeVideo(id) {
+  const i = A.videos.findIndex(v => v.id === id); if (i < 0) return;
+  const v = A.videos[i];
+  if (v.url) URL.revokeObjectURL(v.url);
+  A.videos.splice(i, 1);
+  if (A.active === v) {
+    A.active = null;
+    VID.pause(); VID.removeAttribute('src'); VID.load();
+    Grab.bind(null);
+    if (A.videos.length) setActive(A.videos[Math.min(i, A.videos.length - 1)].id);
+    else { $('#workspace').classList.add('hide'); $('#emptyStage').classList.remove('hide'); }
+  }
+  renderRail(); renderStats();
+}
+
+/* =========================================================================
+   SCENE DETECTION
+   ========================================================================= */
+function sensToK(s) {                        // MAD multiplier: strict → eager
+  return 10 * Math.pow(1.5 / 10, (clamp(s, 1, 100) - 1) / 99);
+}
+function sensToFloor(s) {                    // absolute floor on histogram distance
+  return 0.55 * Math.pow(0.05 / 0.55, (clamp(s, 1, 100) - 1) / 99);
+}
+
+/* Adaptive peak picking: a fixed threshold cannot serve both a locked-off
+   talking head and a fast-cut montage, so the bar comes from the clip's own
+   statistics (median + robust deviation) and a cut must also be a local peak.
+   `sigs` lets us tell a real cut from a one-frame flash: after a flash the
+   picture returns to what it was, so frame i-1 and i+1 still look alike. */
+function pickCuts(times, diffs, sens, minGap, sigs) {
+  const n = diffs.length;
+  if (n < 3) return [];
+  const sorted = Float64Array.from(diffs).sort();
+  const med = sorted[n >> 1];
+  const dev = new Float64Array(n);
+  for (let i = 0; i < n; i++) dev[i] = Math.abs(diffs[i] - med);
+  dev.sort();
+  const mad = dev[n >> 1] * 1.4826 + 1e-5;
+  const thr = med + sensToK(sens) * mad;
+  const floor = sensToFloor(sens);
+
+  const peaks = [];
+  for (let i = 1; i < n - 1; i++) {
+    const d = diffs[i];
+    if (d < thr || d < floor) continue;
+    if (d < diffs[i - 1] || d < diffs[i + 1]) continue;          // local maximum only
+    if (sigs && sigs[i - 1] && sigs[i + 1] && sigDist(sigs[i - 1], sigs[i + 1]) < d * 0.4) continue;
+    peaks.push({ t: times[i], prev: times[i - 1], d });
+  }
+  peaks.sort((a, b) => b.d - a.d);                                // strongest wins ties
+  const keep = [];
+  for (const p of peaks) {
+    if (keep.every(k => Math.abs(k.t - p.t) >= minGap)) keep.push(p);
+  }
+  keep.sort((a, b) => a.t - b.t);
+  return keep;
+}
+
+/* Pass 1 — play the file fast and sample every presented frame. */
+async function fastScan(v, cfg, tok, onProg) {
+  const el = document.createElement('video');
+  el.muted = true; el.playsInline = true; el.preload = 'auto'; el.src = v.url;
+  await once(el, 'loadedmetadata', 20000);
+
+  const cv = document.createElement('canvas'); cv.width = SIG_W; cv.height = SIG_H;
+  const ctx = cv.getContext('2d', { willReadFrequently: true, alpha: false });
+  const pv = $('#detPrev'), pctx = pv.getContext('2d', { alpha: false });
+  const times = [], diffs = [], sigs = cfg.ignoreFade ? [] : null;
+  let prev = null, frames = 0, finished = false;
+
+  const useRVFC = typeof el.requestVideoFrameCallback === 'function' && !cfg.sample;
+
+  if (useRVFC) {
+    el.playbackRate = cfg.rate;
+    const step = (now, meta) => {
+      if (tok.cancelled || finished) return;
+      try {
+        ctx.drawImage(el, 0, 0, SIG_W, SIG_H);
+        const sig = makeSig(ctx.getImageData(0, 0, SIG_W, SIG_H));
+        const t = meta && isFinite(meta.mediaTime) ? meta.mediaTime : el.currentTime;
+        if (prev) { times.push(t); diffs.push(sigDist(prev, sig)); if (sigs) sigs.push(sig); }
+        prev = sig;
+        frames++;
+        if (frames % 6 === 0) {
+          pctx.drawImage(el, 0, 0, pv.width, pv.height);
+          onProg(t / v.duration * (cfg.refine ? 0.75 : 1), frames, t);
+        }
+      } catch (e) { /* a dropped frame is not fatal */ }
+      el.requestVideoFrameCallback(step);
+    };
+    el.requestVideoFrameCallback(step);
+    try { await el.play(); } catch (e) { /* fall through to the sampler */ }
+    el.playbackRate = cfg.rate;
+    /* Wait for the play-through, but never hang: if the clock stops advancing
+       (autoplay refused, decoder wedged) give up and let the sampler take over. */
+    await new Promise(res => {
+      let seen = -1, stalled = 0;
+      const check = setInterval(() => {
+        const t = el.currentTime;
+        if (Math.abs(t - seen) < 0.001) stalled++; else { stalled = 0; seen = t; }
+        if (tok.cancelled || el.ended || t >= v.duration - 0.05 || stalled > 18) { clearInterval(check); res(); }
+      }, 180);
+      el.addEventListener('ended', () => { clearInterval(check); res(); }, { once: true });
+    });
+    finished = true;
+    el.pause();
+  }
+
+  /* Fallback / "sample" mode: classic seek sampling, still useful for very
+     long files where you only want rough chapters. */
+  if (!useRVFC || cfg.sample || times.length < 8) {
+    times.length = 0; diffs.length = 0; prev = null;
+    if (sigs) sigs.length = 0;
+    const step = cfg.sample
+      ? clamp(v.duration / 1400, 0.35, 4)
+      : clamp(v.duration / 900, 0.2, 2);
+    let i = 0;
+    for (let t = 0; t < v.duration && !tok.cancelled; t += step) {
+      el.currentTime = t;
+      const ok = await once(el, 'seeked', 5000).catch(() => false);
+      if (!ok) break;
+      ctx.drawImage(el, 0, 0, SIG_W, SIG_H);
+      const sig = makeSig(ctx.getImageData(0, 0, SIG_W, SIG_H));
+      if (prev) { times.push(t); diffs.push(sigDist(prev, sig)); if (sigs) sigs.push(sig); }
+      prev = sig;
+      if (++i % 4 === 0) {
+        pctx.drawImage(el, 0, 0, pv.width, pv.height);
+        onProg(t / v.duration * (cfg.refine ? 0.75 : 1), i, t);
+        await yieldNow();
+      }
+    }
+  }
+
+  el.pause(); el.src = ''; el.load();
+  return { times, diffs, sigs };
+}
+
+/* Pass 2 — bisect the sampling window around each hit to land on the exact
+   frame. Three or four seeks per cut instead of thirty. */
+async function refineCuts(v, hits, cfg, tok, onProg) {
+  const el = document.createElement('video');
+  el.muted = true; el.playsInline = true; el.preload = 'auto'; el.src = v.url;
+  await once(el, 'loadedmetadata', 20000);
+  const cv = document.createElement('canvas'); cv.width = SIG_W; cv.height = SIG_H;
+  const ctx = cv.getContext('2d', { willReadFrequently: true, alpha: false });
+  const frame = 1 / (A.fps || 30);
+
+  async function sigAt(t) {
+    el.currentTime = clamp(t, 0, v.duration - 0.001);
+    const ok = await once(el, 'seeked', 4000).catch(() => false);
+    if (!ok) return null;
+    ctx.drawImage(el, 0, 0, SIG_W, SIG_H);
+    return makeSig(ctx.getImageData(0, 0, SIG_W, SIG_H));
+  }
+
+  const out = [];
+  for (let i = 0; i < hits.length; i++) {
+    if (tok.cancelled) break;
+    const h = hits[i];
+    let lo = Math.max(0, h.prev - 0.02), hi = Math.min(v.duration - frame, h.t + 0.02);
+    let sLo = await sigAt(lo), sHi = await sigAt(hi);
+    if (sLo && sHi) {
+      let steps = 0;
+      while (hi - lo > frame * 1.02 && steps++ < 9 && !tok.cancelled) {
+        const mid = (lo + hi) / 2;
+        const sMid = await sigAt(mid);
+        if (!sMid) break;
+        if (sigDist(sLo, sMid) >= sigDist(sMid, sHi)) { hi = mid; sHi = sMid; }
+        else { lo = mid; sLo = sMid; }
+      }
+    }
+    out.push(Math.round(hi * 1000) / 1000);
+    onProg(0.75 + (i + 1) / hits.length * 0.25, i + 1, hi);
+    if (i % 3 === 0) await yieldNow();
+  }
+  el.src = ''; el.load();
+  return out;
+}
+
+async function detectScenes(v, opts) {
+  if (!v || !v.duration) return 0;
+  const cfg = {
+    sens: +$('#sensRng').value,
+    minGap: Math.max(0.1, +$('#minGap').value || 1.2),
+    refine: $('#refineChk').checked,
+    ignoreFade: $('#fadeChk').checked,
+    rate: $('#scanRate').value === 'sample' ? 8 : Math.min(16, +$('#scanRate').value || 8),
+    sample: $('#scanRate').value === 'sample',
+  };
+  const tok = { cancelled: false };
+  const quiet = opts && opts.quiet;
+  v.status = 'busy'; v.prog = 0;
+  const t0 = performance.now();
+
+  const setProg = (p, n, t) => {
+    v.prog = clamp(p, 0, 1);
+    if (v === A.active) {
+      $('#detProg').style.width = (v.prog * 100).toFixed(1) + '%';
+      $('#detStat').textContent = (p < 0.75 ? 'Scanning ' : 'Refining ') + (v.prog * 100).toFixed(0) + '% · ' + fmt(t || 0);
+    }
+    setBusy(v.name + ' — ' + (v.prog * 100).toFixed(0) + '%', () => { tok.cancelled = true; });
+    renderRail();
+  };
+
+  try {
+    if (v === A.active) { $('#detPrev').style.display = 'block'; $('#detectCancel').classList.remove('hide'); $('#detectBtn').disabled = true; }
+    const { times, diffs, sigs } = await fastScan(v, cfg, tok, setProg);
+    if (tok.cancelled) throw new Error('cancelled');
+
+    v.diff = { times, diffs, sens: cfg.sens };
+    const hits = pickCuts(times, diffs, cfg.sens, cfg.minGap, sigs);
+    let cuts = hits.map(h => Math.round(h.t * 1000) / 1000);
+    if (cfg.refine && hits.length && hits.length <= 400) {
+      cuts = await refineCuts(v, hits, cfg, tok, setProg);
+    }
+    cuts = cuts.filter((t, i, a) => t > 0.05 && t < v.duration - 0.05 && (i === 0 || t - a[i - 1] >= cfg.minGap * 0.9));
+
+    edit(v, x => { x.cuts = cuts; x.excluded = new Set(); }, { quiet: true });
+    v.status = 'done';
+    const secs = ((performance.now() - t0) / 1000).toFixed(1);
+    if (!quiet) toast('Found ' + cuts.length + ' cuts in ' + secs + 's → ' + (cuts.length + 1) + ' scenes', 'ok', 3600);
+    if (v === A.active) {
+      $('#detStat').textContent = 'Done in ' + secs + 's';
+      $('#detFound').textContent = cuts.length + ' cuts';
+      renderDiff(); schedScript();
+    }
+    return cuts.length;
+  } catch (e) {
+    v.status = tok.cancelled ? 'idle' : 'err';
+    if (v === A.active) $('#detStat').textContent = tok.cancelled ? 'Cancelled' : 'Failed — ' + e.message;
+    if (!quiet && !tok.cancelled) toast('Detection failed: ' + e.message, 'err');
+    return 0;
+  } finally {
+    if (v === A.active) { $('#detectCancel').classList.add('hide'); $('#detectBtn').disabled = false; }
+    v.prog = 0;
+    clearBusy();
+    renderRail();
+  }
+}
+
+/* Run every queued video one after another — one decoder at a time keeps
+   memory flat, and you can keep editing whichever video you like meanwhile. */
+async function detectAll() {
+  if (A.batch) return toast('A batch is already running', 'wr');
+  const list = A.videos.filter(v => v.duration && v.status !== 'busy');
+  if (!list.length) return toast('Nothing in the queue', 'wr');
+  A.batch = { stop: false };
+  let done = 0, total = 0;
+  for (const v of list) {
+    if (A.batch.stop) break;
+    total += await detectScenes(v, { quiet: true });
+    done++;
+    toast('Detected ' + v.name + ' (' + done + '/' + list.length + ')', 'ok', 1500);
+  }
+  const wasStopped = A.batch.stop;
+  A.batch = null;
+  clearBusy();
+  toast(wasStopped ? 'Batch stopped after ' + done + ' videos'
+                   : 'Batch done — ' + total + ' cuts across ' + done + ' videos', 'ok', 4000);
+}
+
+/* =========================================================================
+   AUDIO — waveform + silence detection
+   Decoded once into a low-rate mono buffer so an hour-long file stays in the
+   tens of megabytes rather than the gigabytes a full-rate decode would need.
+   ========================================================================= */
+async function analyzeAudio(v) {
+  if (!v || !v.duration) return;
+  if (v.size > 1_400_000_000) return toast('File is too large to decode audio in the browser', 'err');
+  setBusy('Decoding audio…', null);
+  $('#silStat').textContent = 'Decoding audio…';
+  try {
+    const buf = await v.file.arrayBuffer();
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!OAC) throw new Error('no audio support');
+    const octx = new OAC(1, 1, 8000);
+    const audio = await new Promise((res, rej) => {
+      const p = octx.decodeAudioData(buf, res, rej);
+      if (p && p.then) p.then(res, rej);
+    });
+    const ch = audio.getChannelData(0);
+    const sr = audio.sampleRate;
+    const bins = clamp(Math.round(v.duration * 60), 200, 240000);   // ~60 bins/sec
+    const per = ch.length / bins;
+    const peaks = new Float32Array(bins);
+    for (let b = 0; b < bins; b++) {
+      const s = Math.floor(b * per), e = Math.min(ch.length, Math.floor((b + 1) * per));
+      let acc = 0;
+      for (let i = s; i < e; i++) acc += ch[i] * ch[i];
+      peaks[b] = Math.sqrt(acc / Math.max(1, e - s));
+    }
+    v.peaks = peaks;
+    v.peakRate = bins / v.duration;
+    v.audioSR = sr;
+    $('#tlAudioChip').style.display = '';
+    renderTimeline();
+    findSilences(v, true);
+    toast('Audio analysed — waveform is on the timeline', 'ok');
+  } catch (e) {
+    $('#silStat').textContent = 'Could not decode this container’s audio';
+    toast('Audio decode failed (container may be unsupported by the browser)', 'err', 3600);
+  } finally { clearBusy(); }
+}
+
+function findSilences(v, quietMode) {
+  if (!v || !v.peaks) { toast('Run “Audio” first to decode the waveform', 'wr'); return; }
+  const db = +$('#silDb').value, minLen = Math.max(0.05, +$('#silLen').value || 0.6);
+  const thr = Math.pow(10, db / 20);
+  const rate = v.peakRate, p = v.peaks;
+  const runs = [];
+  let start = -1;
+  for (let i = 0; i < p.length; i++) {
+    if (p[i] < thr) { if (start < 0) start = i; }
+    else if (start >= 0) {
+      const a = start / rate, b = i / rate;
+      if (b - a >= minLen) runs.push({ start: a, end: b });
+      start = -1;
+    }
+  }
+  if (start >= 0) {
+    const a = start / rate, b = p.length / rate;
+    if (b - a >= minLen) runs.push({ start: a, end: b });
+  }
+  v.silences = runs;
+  $('#silStat').textContent = runs.length + ' silences · ' +
+    fmt(runs.reduce((s, r) => s + (r.end - r.start), 0)) + ' total';
+  if (quietMode) { renderTimeline(); return runs.length; }
+
+  if (!runs.length) { toast('No silence found at that threshold — try a higher dB', 'wr'); return 0; }
+  const drop = $('#silDrop').checked;
+  edit(v, x => {
+    const cuts = new Set(x.cuts);
+    for (const r of runs) {
+      if (r.start > 0.15) cuts.add(+r.start.toFixed(3));
+      if (r.end < x.duration - 0.15) cuts.add(+r.end.toFixed(3));
+    }
+    x.cuts = Array.from(cuts).sort((a, b) => a - b);
+  });
+  if (drop) {
+    // Anything whose midpoint sits inside a silence run gets dropped.
+    const sc = scenesOf(v), ex = new Set(v.excluded);
+    for (const s of sc) {
+      const mid = (s.start + s.end) / 2;
+      if (runs.some(r => mid >= r.start && mid <= r.end)) ex.add(s.key);
+    }
+    v.excluded = ex; v.ver++; afterEdit(v);
+  }
+  toast(runs.length + ' silences → ' + scenesOf(v).length + ' scenes' + (drop ? ' (silent parts dropped)' : ''), 'ok', 3400);
+  return runs.length;
+}
+
+/* =========================================================================
+   FILMSTRIP
+   ========================================================================= */
+let stripToken = 0;
+async function buildStrip() {
+  const v = active(); if (!v || !v.duration) return;
+  const my = ++stripToken;
+  const strip = $('#fsStrip');
+  const wrapW = $('#fsScroll').clientWidth || 800;
+  const count = clamp(Math.round(wrapW / 84), 8, 160);
+  const step = v.duration / count;
+
+  if (!A.showStrip) { $('#fsZone').classList.add('hide'); return; }
+  $('#fsZone').classList.remove('hide');
+
+  strip.innerHTML = '<div class="fs-empty" id="fsEmpty"><span class="spin"></span><span>Building filmstrip…</span>' +
+                    '<span class="mono" id="fsPct">0%</span></div>';
+  const frames = [];
+  const cells = [];
+  for (let i = 0; i < count; i++) {
+    const t = Math.min(v.duration - 0.05, i * step + step * 0.35);
+    const bmp = await grabBitmap(t, 128, 72);
+    if (my !== stripToken) return;
+    if (!bmp) continue;
+    if (!frames.length) strip.innerHTML = '';
+    frames.push({ t, bmp });
+    const cell = document.createElement('div');
+    cell.className = 'fsf';
+    cell.style.width = (100 / count) + '%';
+    cell.title = fmt(t);
+    cell.onclick = () => seek(t);
+    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 72;
+    paint(cv, bmp, 128, 72);
+    cell.appendChild(cv);
+    if (i % Math.max(1, Math.round(count / 8)) === 0) {
+      const lab = document.createElement('i'); lab.textContent = fmt(t); cell.appendChild(lab);
+    }
+    strip.appendChild(cell);
+    cells.push(cell);
+    const pct = $('#fsPct'); if (pct) pct.textContent = Math.round((i + 1) / count * 100) + '%';
+  }
+  if (my !== stripToken) return;
+  v.strip = frames;
+  const head = document.createElement('div'); head.id = 'fsHead';
+  strip.appendChild(head);
+  updateStripHead();
+}
+function updateStripHead() {
+  const head = document.getElementById('fsHead'), v = active();
+  if (!head || !v || !v.duration) return;
+  head.style.left = (VID.currentTime / v.duration * 100) + '%';
+}
+function nearestStripFrame(t) {
+  const v = active(); if (!v || !v.strip || !v.strip.length) return null;
+  let best = v.strip[0], bd = 1e9;
+  for (const f of v.strip) { const d = Math.abs(f.t - t); if (d < bd) { bd = d; best = f; } }
+  return best;
+}
+
+/* =========================================================================
+   THUMBNAILS for the scene table — only for rows you can actually see.
+   ========================================================================= */
+let thumbToken = 0;
+const schedThumbs = debounce(() => runThumbs(), 220);
+async function runThumbs() {
+  const v = active(); if (!v) return;
+  const my = ++thumbToken;
+  const wanted = visibleSceneRows();
+  for (const sc of wanted) {
+    if (my !== thumbToken) return;
+    if (v.thumbs.has(sc.key)) continue;
+    const t = Math.min(sc.out - 0.02, sc.start + Math.min(0.4, sc.dur * 0.18));
+    const bmp = await grabBitmap(Math.max(0, t), 160, 90);
+    if (my !== thumbToken) return;
+    if (!bmp) continue;
+    v.thumbs.set(sc.key, bmp);
+    if (v.thumbs.size > 400) {                    // bounded cache
+      const first = v.thumbs.keys().next().value;
+      const old = v.thumbs.get(first);
+      if (old && old.close) old.close();
+      v.thumbs.delete(first);
+    }
+    const cv = document.querySelector('.srow[data-key="' + sc.key + '"] canvas');
+    if (cv) paint(cv, bmp, cv.width, cv.height);
+  }
+}
+</script>
+<script>
+"use strict";
+/* =========================================================================
+   TIMELINE
+   Drawn on two canvases that are always the size of the visible area, never
+   the size of the zoomed track. Panning and zooming move a time window
+   instead of a giant DOM element, so 5 000 cuts at 400× cost the same as 5.
+   ========================================================================= */
+const tlBase = $('#tlBase'), tlOver = $('#tlOver');
+const VIEW = { t0: 0, t1: 0 };
+const RULER_H = 26, WAVE_TOP = 6;
+
+function viewSpan() { return Math.max(0.05, VIEW.t1 - VIEW.t0); }
+function tlWidth() { return $('#tlInner').clientWidth || 800; }
+const t2x = t => (t - VIEW.t0) / viewSpan() * tlWidth();
+const x2t = x => VIEW.t0 + x / tlWidth() * viewSpan();
+
+function clampView() {
+  const v = active(); if (!v) return;
+  const d = v.duration || 1;
+  let span = clamp(viewSpan(), Math.max(0.04, d / 4000), d);
+  A.zoom = d / span;
+  let t0 = clamp(VIEW.t0, 0, Math.max(0, d - span));
+  VIEW.t0 = t0; VIEW.t1 = t0 + span;
+  $('#zoomLbl').textContent = A.zoom < 10 ? A.zoom.toFixed(1) + '×' : Math.round(A.zoom) + '×';
+}
+function setZoom(z, anchorT) {
+  const v = active(); if (!v) return;
+  const d = v.duration;
+  const at = anchorT == null ? (VIEW.t0 + VIEW.t1) / 2 : anchorT;
+  const frac = clamp((at - VIEW.t0) / viewSpan(), 0, 1);
+  const span = clamp(d / clamp(z, 1, 4000), Math.max(0.04, d / 4000), d);
+  VIEW.t0 = at - frac * span; VIEW.t1 = VIEW.t0 + span;
+  clampView(); renderTimeline();
+}
+function zoomBy(f, anchorT) { setZoom(A.zoom * f, anchorT); }
+function fitView() { const v = active(); if (!v) return; VIEW.t0 = 0; VIEW.t1 = v.duration; clampView(); renderTimeline(); }
+function panTo(center) {
+  const span = viewSpan();
+  VIEW.t0 = center - span / 2; VIEW.t1 = VIEW.t0 + span;
+  clampView(); renderTimeline();
+}
+function ensureVisible(t) {
+  if (A.zoom <= 1.01) return;
+  const span = viewSpan(), m = span * 0.12;
+  if (t < VIEW.t0 + m || t > VIEW.t1 - m) panTo(t);
+}
+
+function sizeCanvas(cv) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = tlWidth(), h = $('#tlInner').clientHeight || 118;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w, h };
+}
+
+function niceStep(pxPerSec) {
+  const want = 84 / pxPerSec;
+  const steps = [0.02,0.05,0.1,0.25,0.5,1,2,5,10,15,30,60,120,300,600,900,1800,3600,7200];
+  for (const s of steps) if (s >= want) return s;
+  return 14400;
+}
+
+function renderTimeline() {
+  const v = active(); if (!v || !v.duration) { const { ctx, w, h } = sizeCanvas(tlBase); ctx.clearRect(0, 0, w, h); return; }
+  if (!VIEW.t1) { VIEW.t0 = 0; VIEW.t1 = v.duration; }
+  clampView();
+  const { ctx, w, h } = sizeCanvas(tlBase);
+  const bodyH = h - RULER_H;
+  const span = viewSpan(), pps = w / span;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#07080c'; ctx.fillRect(0, 0, w, h);
+
+  const scenes = scenesOf(v);
+
+  /* --- scene bands (only the ones on screen) --- */
+  let lo = 0, hi = scenes.length - 1, first = scenes.length;
+  while (lo <= hi) { const m = lo + hi >> 1; if (scenes[m].end < VIEW.t0) lo = m + 1; else { first = m; hi = m - 1; } }
+  for (let i = first; i < scenes.length; i++) {
+    const s = scenes[i];
+    if (s.start > VIEW.t1) break;
+    const x = t2x(s.start), xw = Math.max(1, t2x(s.end) - x);
+    const kept = isKept(v, s), col = colorOf(s.i);
+    ctx.globalAlpha = kept ? 0.15 : 0.045;
+    ctx.fillStyle = col; ctx.fillRect(x, 0, xw, bodyH);
+    ctx.globalAlpha = kept ? 0.95 : 0.28;
+    ctx.fillRect(x, 0, xw, 3.5);
+    ctx.globalAlpha = 1;
+    if (xw > 26) {
+      ctx.fillStyle = kept ? 'rgba(255,255,255,.62)' : 'rgba(255,255,255,.22)';
+      ctx.font = '600 10px ui-monospace,monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText(String(s.i), x + xw / 2, 6);
+    }
+  }
+
+  /* --- silence shading --- */
+  if (v.silences && v.silences.length) {
+    ctx.fillStyle = 'rgba(248,113,113,.13)';
+    for (const r of v.silences) {
+      if (r.end < VIEW.t0 || r.start > VIEW.t1) continue;
+      const x = t2x(r.start);
+      ctx.fillRect(x, bodyH - 16, Math.max(1, t2x(r.end) - x), 14);
+    }
+  }
+
+  /* --- waveform --- */
+  if (v.peaks && v.peaks.length) {
+    const p = v.peaks, rate = v.peakRate;
+    const top = 18, bot = bodyH - 20, mid = (top + bot) / 2, half = (bot - top) / 2;
+    let peak = 0.0001;
+    const i0 = Math.max(0, Math.floor(VIEW.t0 * rate)), i1 = Math.min(p.length - 1, Math.ceil(VIEW.t1 * rate));
+    for (let i = i0; i <= i1; i++) if (p[i] > peak) peak = p[i];
+    const norm = 1 / Math.max(0.02, peak);
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(150,170,255,.55)'; ctx.lineWidth = 1;
+    const cols = Math.min(w, 2400);
+    for (let c = 0; c < cols; c++) {
+      const x = c / cols * w;
+      const ta = x2t(x), tb = x2t((c + 1) / cols * w);
+      let a = Math.max(0, Math.floor(ta * rate)), b = Math.min(p.length - 1, Math.ceil(tb * rate));
+      let mx = 0; for (let i = a; i <= b; i++) if (p[i] > mx) mx = p[i];
+      const amp = clamp(Math.pow(mx * norm, 0.72), 0, 1) * half;
+      ctx.moveTo(x, mid - amp); ctx.lineTo(x, mid + amp);
+    }
+    ctx.stroke();
+  }
+
+  /* --- cut markers --- */
+  const cuts = v.cuts;
+  for (let i = 0; i < cuts.length; i++) {
+    const t = cuts[i];
+    if (t < VIEW.t0 - 0.01 || t > VIEW.t1 + 0.01) continue;
+    const x = Math.round(t2x(t)) + 0.5;
+    ctx.strokeStyle = i === dragCut ? '#ff8f8f' : 'rgba(248,113,113,.92)';
+    ctx.lineWidth = i === dragCut ? 2.5 : 1.6;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, bodyH); ctx.stroke();
+    ctx.fillStyle = i === dragCut ? '#ff8f8f' : '#f87171';
+    ctx.beginPath();
+    ctx.moveTo(x - 5, 0); ctx.lineTo(x + 5, 0); ctx.lineTo(x, 8); ctx.closePath(); ctx.fill();
+  }
+
+  /* --- ruler --- */
+  ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(0, bodyH, w, RULER_H);
+  ctx.strokeStyle = '#242836'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, bodyH + .5); ctx.lineTo(w, bodyH + .5); ctx.stroke();
+  const step = niceStep(pps), sub = step / 5;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.font = '500 9.5px ui-monospace,monospace';
+  if (sub * pps > 7) {
+    ctx.strokeStyle = 'rgba(255,255,255,.09)'; ctx.beginPath();
+    for (let t = Math.ceil(VIEW.t0 / sub) * sub; t <= VIEW.t1; t += sub) {
+      const x = Math.round(t2x(t)) + .5; ctx.moveTo(x, bodyH); ctx.lineTo(x, bodyH + 5);
+    }
+    ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.beginPath();
+  const labels = [];
+  for (let t = Math.ceil(VIEW.t0 / step) * step; t <= VIEW.t1; t += step) {
+    const x = Math.round(t2x(t)) + .5;
+    ctx.moveTo(x, bodyH); ctx.lineTo(x, bodyH + 9);
+    labels.push([x, t]);
+  }
+  ctx.stroke();
+  ctx.fillStyle = '#8b90a8';
+  for (const [x, t] of labels) ctx.fillText(step < 1 ? fmtMs(t).replace(/(\.\d)\d\d$/, '$1') : fmt(t), x, bodyH + 11);
+
+  renderOverlay();
+  renderStripOverlay();
+  $('#tlCutChip').textContent = v.cuts.length + (v.cuts.length === 1 ? ' cut' : ' cuts');
+}
+
+let hoverX = -1;
+function renderOverlay() {
+  const v = active(); if (!v) return;
+  const { ctx, w, h } = sizeCanvas(tlOver);
+  const bodyH = h - RULER_H;
+  ctx.clearRect(0, 0, w, h);
+
+  if (hoverX >= 0) {
+    const x = Math.round(hoverX) + .5;
+    ctx.strokeStyle = 'rgba(96,205,255,.75)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, bodyH); ctx.stroke();
+  }
+  const t = VID.currentTime || 0;
+  if (t >= VIEW.t0 - 0.02 && t <= VIEW.t1 + 0.02) {
+    const x = Math.round(t2x(t)) + .5;
+    ctx.strokeStyle = '#00d4aa'; ctx.lineWidth = 2;
+    ctx.shadowColor = 'rgba(0,212,170,.85)'; ctx.shadowBlur = 7;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, bodyH); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#00d4aa';
+    ctx.beginPath(); ctx.arc(x, bodyH - 4, 5, 0, 6.284); ctx.fill();
+  }
+}
+
+/* the filmstrip doubles as a navigator: it always shows the whole video and
+   draws where the (possibly deeply zoomed) timeline is currently looking */
+function renderStripOverlay() {
+  const v = active(); if (!v || !v.duration) return;
+  const strip = $('#fsStrip');
+  let box = document.getElementById('fsView');
+  if (!box) {
+    box = document.createElement('div'); box.id = 'fsView';
+    box.style.cssText = 'position:absolute;top:0;height:100%;border:1px solid rgba(124,92,252,.9);' +
+      'background:rgba(124,92,252,.16);pointer-events:none;z-index:2;border-radius:2px';
+    strip.appendChild(box);
+  }
+  if (A.zoom <= 1.02) { box.style.display = 'none'; }
+  else {
+    box.style.display = '';
+    box.style.left = (VIEW.t0 / v.duration * 100) + '%';
+    box.style.width = (viewSpan() / v.duration * 100) + '%';
+  }
+  updateStripHead();
+}
+
+/* ------------------------------------------------------- timeline pointer */
+let dragCut = -1, dragMoved = false, panning = null, dragSnap = null;
+
+function cutHit(x) {
+  const v = active(); if (!v) return -1;
+  const tol = 7 / tlWidth() * viewSpan();
+  let best = -1, bd = tol;
+  for (let i = 0; i < v.cuts.length; i++) {
+    const d = Math.abs(v.cuts[i] - x2t(x));
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+
+(function timelinePointer() {
+  const el = $('#tlInner');
+  el.addEventListener('pointerdown', e => {
+    const v = active(); if (!v) return;
+    const r = el.getBoundingClientRect(), x = e.clientX - r.left;
+    if (e.button === 1 || e.altKey) {                       // pan
+      panning = { x, t0: VIEW.t0 };
+      el.classList.add('grabbing'); el.setPointerCapture(e.pointerId);
+      return;
+    }
+    const hit = cutHit(x);
+    if (hit >= 0 && e.button === 0) {
+      if (e.shiftKey) { removeCutAt(hit); return; }
+      dragCut = hit; dragMoved = false;
+      dragSnap = snap(v);                       // captured BEFORE the drag edits cuts
+      el.setPointerCapture(e.pointerId);
+      renderTimeline();
+      return;
+    }
+    if (e.button === 2) return;
+    seek(clamp(x2t(x), 0, v.duration));
+  });
+
+  el.addEventListener('pointermove', e => {
+    const v = active(); if (!v) return;
+    const r = el.getBoundingClientRect(), x = e.clientX - r.left;
+    hoverX = x >= 0 && x <= r.width ? x : -1;
+
+    if (panning) {
+      const dt = (panning.x - x) / tlWidth() * viewSpan();
+      VIEW.t0 = panning.t0 + dt; VIEW.t1 = VIEW.t0 + viewSpan();
+      clampView(); renderTimeline();
+      return;
+    }
+    if (dragCut >= 0) {
+      dragMoved = true;
+      let t = clamp(x2t(x), 0.03, v.duration - 0.03);
+      const prev = v.cuts[dragCut - 1], next = v.cuts[dragCut + 1];
+      if (prev != null) t = Math.max(t, prev + 0.05);
+      if (next != null) t = Math.min(t, next - 0.05);
+      v.cuts[dragCut] = Math.round(t * 1000) / 1000;
+      v._sc = null; v.ver++;
+      renderTimeline();
+      seekQuiet(t);
+      return;
+    }
+    el.style.cursor = cutHit(x) >= 0 ? 'ew-resize' : 'crosshair';
+    showScrub(e.clientX, e.clientY, x2t(x));
+    renderOverlay();
+  });
+
+  const finish = e => {
+    const v = active();
+    if (panning) { panning = null; el.classList.remove('grabbing'); }
+    if (dragCut >= 0 && v) {
+      const t = v.cuts[dragCut];
+      dragCut = -1;
+      if (dragMoved && dragSnap) {
+        v.cuts.sort((a, b) => a - b);
+        v.undo.push(dragSnap); if (v.undo.length > 120) v.undo.shift();
+        v.redo.length = 0;
+        v._sc = null; v.ver++;
+        afterEdit(v);
+        toast('Cut moved to ' + fmtMs(t), 'ok', 1200);
+      } else {
+        renderTimeline();
+      }
+      dragSnap = null;
+    }
+  };
+  el.addEventListener('pointerup', finish);
+  el.addEventListener('pointercancel', finish);
+  el.addEventListener('pointerleave', () => { hoverX = -1; hideScrub(); renderOverlay(); });
+  el.addEventListener('dblclick', e => {
+    const r = el.getBoundingClientRect();
+    if (cutHit(e.clientX - r.left) < 0) markCut(x2t(e.clientX - r.left));
+  });
+  el.addEventListener('contextmenu', e => {
+    const r = el.getBoundingClientRect(), hit = cutHit(e.clientX - r.left);
+    if (hit >= 0) { e.preventDefault(); removeCutAt(hit); }
+  });
+  el.addEventListener('wheel', e => {
+    const v = active(); if (!v) return;
+    e.preventDefault();
+    const r = el.getBoundingClientRect(), at = x2t(e.clientX - r.left);
+    if (e.ctrlKey || e.metaKey) zoomBy(e.deltaY < 0 ? 1.25 : 1 / 1.25, at);
+    else {
+      const dt = (e.deltaX || e.deltaY) / tlWidth() * viewSpan();
+      VIEW.t0 += dt; VIEW.t1 += dt; clampView(); renderTimeline();
+    }
+  }, { passive: false });
+})();
+
+/* filmstrip = navigator */
+(function stripPointer() {
+  const strip = $('#fsStrip');
+  let down = false;
+  const jump = e => {
+    const v = active(); if (!v) return;
+    const r = strip.getBoundingClientRect();
+    const t = clamp((e.clientX - r.left) / r.width, 0, 1) * v.duration;
+    if (A.zoom > 1.02) panTo(t); else seek(t);
+  };
+  strip.addEventListener('pointerdown', e => { down = true; strip.setPointerCapture(e.pointerId); jump(e); });
+  strip.addEventListener('pointermove', e => {
+    if (down) jump(e);
+    else {
+      const v = active(); if (!v) return;
+      const r = strip.getBoundingClientRect();
+      showScrub(e.clientX, e.clientY, clamp((e.clientX - r.left) / r.width, 0, 1) * v.duration);
+    }
+  });
+  strip.addEventListener('pointerup', () => { down = false; });
+  strip.addEventListener('pointerleave', () => { down = false; hideScrub(); });
+})();
+
+/* --------------------------------------------------------- scrub preview */
+let scrubBusy = false, scrubWant = null;
+function showScrub(cx, cy, t) {
+  const v = active(); if (!v) return;
+  const pop = $('#scrubPop');
+  pop.style.display = 'block';
+  const w = 256, pad = 12;
+  pop.style.left = clamp(cx - w / 2, 8, innerWidth - w - 8) + 'px';
+  pop.style.top = Math.max(8, cy - 144 - pad - 22) + 'px';
+  $('#scrubCap').textContent = fmtMs(t);
+  const near = nearestStripFrame(t);
+  if (near) paint($('#scrubCanvas'), near.bmp, 256, 144);      // instant, from the strip
+  scrubWant = t;
+  if (!scrubBusy) pumpScrub();
+}
+async function pumpScrub() {
+  scrubBusy = true;
+  while (scrubWant != null) {
+    const t = scrubWant; scrubWant = null;
+    const el = await Grab.peek(t);
+    if (el) paint($('#scrubCanvas'), el, 256, 144);
+  }
+  scrubBusy = false;
+}
+function hideScrub() { $('#scrubPop').style.display = 'none'; scrubWant = null; }
+
+/* =========================================================================
+   PLAYBACK
+   ========================================================================= */
+let loopScene = null;
+function seek(t) {
+  const v = active(); if (!v) return;
+  t = clamp(t, 0, Math.max(0, v.duration - 0.001));
+  VID.currentTime = t;
+  ensureVisible(t);
+  paintClock(t);
+}
+function seekQuiet(t) { const v = active(); if (!v) return; VID.currentTime = clamp(t, 0, v.duration - 0.001); paintClock(t); }
+function nudge(sec) { const v = active(); if (!v) return; seek(VID.currentTime + sec); }
+function togglePlay() { if (!active()) return; VID.paused ? VID.play().catch(() => {}) : VID.pause(); }
+function stopLoop() { loopScene = null; $('#loopTag').classList.add('hide'); $('#loopBtn').classList.remove('on'); A.loop = false; }
+
+function playCurrentScene() {
+  const v = active(); if (!v) return;
+  const sc = sceneAt(v, VID.currentTime); if (!sc) return;
+  seek(sc.start); VID.play().catch(() => {});
+  loopScene = A.loop ? sc : { ...sc, once: true };
+}
+function toggleLoop() {
+  const v = active(); if (!v) return;
+  A.loop = !A.loop;
+  $('#loopBtn').classList.toggle('on', A.loop);
+  $('#loopTag').classList.toggle('hide', !A.loop);
+  loopScene = A.loop ? sceneAt(v, VID.currentTime) : null;
+  toast(A.loop ? 'Looping this scene' : 'Loop off', 'ok', 1200);
+}
+function gotoCut(dir) {
+  const v = active(); if (!v) return;
+  const pts = [0, ...v.cuts, v.duration], t = VID.currentTime;
+  if (dir > 0) { for (const p of pts) if (p > t + 0.08) return seek(p); seek(v.duration); }
+  else { for (let i = pts.length - 1; i >= 0; i--) if (pts[i] < t - 0.25) return seek(pts[i]); seek(0); }
+}
+
+let lastClock = -1;
+function paintClock(t) {
+  if (Math.abs(t - lastClock) < 0.0005) return;
+  lastClock = t;
+  $('#tcode').textContent = fmtMs(t);
+}
+
+/* one loop drives the clock, playhead, filmstrip head and scene readout */
+(function tick() {
+  raf(tick);
+  const v = active(); if (!v || !v.duration) return;
+  const t = VID.currentTime;
+
+  if (loopScene) {
+    if (t >= loopScene.out - 0.02) {
+      if (loopScene.once) { VID.pause(); loopScene = null; }
+      else seek(loopScene.start);
+    }
+  }
+  if (Math.abs(t - lastClock) > 0.0005) {
+    paintClock(t);
+    renderOverlay();
+    updateStripHead();
+    if (A.follow && !VID.paused) ensureVisible(t);
+    const sc = sceneAt(v, t);
+    const tag = $('#sceneTag');
+    const label = sc ? 'Scene ' + sc.i + (isKept(v, sc) ? '' : ' · dropped') : '—';
+    if (tag.textContent !== label) {
+      tag.textContent = label;
+      tag.style.color = sc ? (isKept(v, sc) ? '#00d4aa' : '#f87171') : '#9aa0b8';
+      const btn = $('#selToggleBtn');
+      btn.textContent = sc ? (isKept(v, sc) ? '● Keep S' + sc.i : '○ Drop S' + sc.i) : '● —';
+      btn.style.color = sc ? (isKept(v, sc) ? 'var(--ok)' : 'var(--dg)') : '';
+      markCurrentRow(sc);
+    }
+  }
+})();
+
+VID.addEventListener('play', () => { $('#playBtn').textContent = '⏸'; });
+VID.addEventListener('pause', () => { $('#playBtn').textContent = '▶'; });
+
+/* =========================================================================
+   CUT OPERATIONS
+   ========================================================================= */
+function snapTime(t) {
+  const v = active(); if (!v || !A.snap || !v.diff) return t;
+  let best = t, bd = 0.25;                      // pull to a nearby detected peak
+  for (let i = 0; i < v.diff.times.length; i++) {
+    const d = Math.abs(v.diff.times[i] - t);
+    if (d < bd && v.diff.diffs[i] > 0.05) { bd = d; best = v.diff.times[i]; }
+  }
+  return best;
+}
+function markCut(at) {
+  const v = active(); if (!v) return toast('Load a video first', 'err');
+  let t = Math.round(snapTime(at == null ? VID.currentTime : at) * 1000) / 1000;
+  if (t < 0.05 || t > v.duration - 0.05) return toast('Too close to the edge', 'wr');
+  if (v.cuts.some(c => Math.abs(c - t) < 0.06)) return toast('There is already a cut here', 'wr');
+  edit(v, x => { x.cuts.push(t); });
+  toast('Cut at ' + fmtMs(t), 'ok', 1400);
+}
+function removeCutAt(i) {
+  const v = active(); if (!v || i < 0 || i >= v.cuts.length) return;
+  const t = v.cuts[i];
+  edit(v, x => { x.cuts.splice(i, 1); });
+  toast('Removed cut at ' + fmtMs(t) + ' · Ctrl+Z to undo', 'ok', 1800);
+}
+function removeNearestCut() {
+  const v = active(); if (!v || !v.cuts.length) return toast('No cuts to remove', 'wr');
+  const t = VID.currentTime;
+  let best = 0, bd = 1e9;
+  v.cuts.forEach((c, i) => { const d = Math.abs(c - t); if (d < bd) { bd = d; best = i; } });
+  if (bd > 3) return toast('No cut within 3s of the playhead', 'wr');
+  removeCutAt(best);
+}
+function nudgeCut(i, delta) {
+  const v = active(); if (!v || i < 0 || i >= v.cuts.length) return;
+  edit(v, x => {
+    let t = x.cuts[i] + delta;
+    const prev = x.cuts[i - 1], next = x.cuts[i + 1];
+    if (prev != null) t = Math.max(t, prev + 0.05);
+    if (next != null) t = Math.min(t, next - 0.05);
+    x.cuts[i] = clamp(Math.round(t * 1000) / 1000, 0.03, x.duration - 0.03);
+  });
+  seek(v.cuts[i]);
+}
+function splitEvery(sec) {
+  const v = active(); if (!v) return toast('Load a video first', 'err');
+  if (!(sec > 0.2)) return toast('Interval must be at least 0.2s', 'err');
+  const cuts = [];
+  for (let t = sec; t < v.duration - 0.05; t += sec) cuts.push(+t.toFixed(3));
+  if (!cuts.length) return toast('That interval is longer than the video', 'wr');
+  edit(v, x => { x.cuts = cuts; x.excluded = new Set(); });
+  toast('Split into ' + (cuts.length + 1) + ' clips', 'ok');
+}
+function splitParts(n) {
+  const v = active(); if (!v) return toast('Load a video first', 'err');
+  n = Math.round(n);
+  if (!(n >= 2)) return toast('Need at least 2 parts', 'err');
+  const cuts = [];
+  for (let i = 1; i < n; i++) cuts.push(+(v.duration * i / n).toFixed(3));
+  edit(v, x => { x.cuts = cuts; x.excluded = new Set(); });
+  toast('Split into ' + n + ' equal clips', 'ok');
+}
+function applyTimestamps(replace) {
+  const v = active(); if (!v) return toast('Load a video first', 'err');
+  const lines = $('#tsInput').value.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
+  const got = [];
+  for (const l of lines) {
+    const t = parseTS(l);
+    if (t != null && t > 0.03 && t < v.duration - 0.03) got.push(+t.toFixed(3));
+  }
+  if (!got.length) return toast('No usable timestamps found', 'err');
+  edit(v, x => { x.cuts = replace ? got : x.cuts.concat(got); if (replace) x.excluded = new Set(); });
+  toast((replace ? 'Set ' : 'Added ') + got.length + ' cuts', 'ok');
+}
+function clearCuts() {
+  const v = active(); if (!v || !v.cuts.length) return;
+  edit(v, x => { x.cuts = []; x.excluded = new Set(); });
+  toast('All cuts cleared · Ctrl+Z to undo', 'ok');
+}
+/* Merge the checked scenes: drop the cuts that sit between them. */
+function mergeChecked() {
+  const v = active(); if (!v) return;
+  const picked = Array.from(picks).sort((a, b) => a - b);
+  if (picked.length < 2) return toast('Tick at least two rows (click a row number) to merge', 'wr');
+  const chosen = picked.map(i => filtered[i]).filter(Boolean);
+  if (chosen.length < 2) return toast('Those rows are no longer visible', 'wr');
+  const from = chosen[0], to = chosen[chosen.length - 1];
+  edit(v, x => { x.cuts = x.cuts.filter(c => !(c > from.start + 0.001 && c < to.end - 0.001)); });
+  picks.clear();
+  toast('Merged into one clip: ' + fmt(from.start) + ' → ' + fmt(to.end), 'ok');
+}
+
+/* ----------------------------------------------------------- keep / drop */
+function setKept(v, sc, keep) {
+  if (keep) v.excluded.delete(sc.key); else v.excluded.add(sc.key);
+  v.ver++; v._sc = null;
+}
+function toggleSceneAtPlayhead(force) {
+  const v = active(); if (!v) return;
+  const sc = sceneAt(v, VID.currentTime); if (!sc) return toast('No scene here', 'wr');
+  const keep = force == null ? !isKept(v, sc) : force;
+  const before = snap(v);
+  setKept(v, sc, keep);
+  v.undo.push(before); v.redo.length = 0;
+  afterEdit(v);
+  toast((keep ? '✓ Keeping' : '✕ Dropping') + ' scene ' + sc.i, keep ? 'ok' : 'wr', 1200);
+}
+function keepAll(keep) {
+  const v = active(); if (!v) return;
+  const before = snap(v);
+  v.excluded = keep ? new Set() : new Set(scenesOf(v).map(s => s.key));
+  v.ver++; v._sc = null;
+  v.undo.push(before); v.redo.length = 0;
+  afterEdit(v);
+}
+function invertKeep() {
+  const v = active(); if (!v) return;
+  const before = snap(v);
+  const ex = new Set();
+  for (const s of scenesOf(v)) if (isKept(v, s)) ex.add(s.key);
+  v.excluded = ex; v.ver++; v._sc = null;
+  v.undo.push(before); v.redo.length = 0;
+  afterEdit(v);
+}
+
+/* =========================================================================
+   SCENE TABLE — virtualised: only the rows on screen exist in the DOM.
+   ========================================================================= */
+const ROW_H = 54;
+const rowEls = new Map();
+const picks = new Set();
+let lastPick = -1;
+let filtered = [];
+
+/* Switching videos throws away every pooled row — scene keys are per-video
+   and reusing one across files would show the wrong thumbnail. */
+function resetSceneView() {
+  for (const [, el] of rowEls) el.remove();
+  rowEls.clear(); picks.clear(); lastPick = -1;
+  const s = $('#sceneScroll'); if (s) s.scrollTop = 0;
+}
+function computeFiltered() {
+  const v = active(); if (!v) return (filtered = []);
+  const q = A.filter.toLowerCase();
+  const all = scenesOf(v);
+  filtered = all.filter(s => {
+    if (A.onlyDropped && isKept(v, s)) return false;
+    if (!q) return true;
+    const nm = (v.labels[s.key] || '').toLowerCase();
+    return String(s.i) === q || String(s.i).includes(q) || nm.includes(q) ||
+           fmt(s.start).includes(q) || fmt(s.end).includes(q);
+  });
+  return filtered;
+}
+function visibleSceneRows() {
+  const out = [];
+  for (const [, el] of rowEls) {
+    const i = +el.dataset.idx;
+    if (filtered[i]) out.push(filtered[i]);
+  }
+  return out;
+}
+
+function renderScenes() {
+  const v = active();
+  computeFiltered();
+  const scroll = $('#sceneScroll'), spacer = $('#sceneSpacer'), empty = $('#sceneEmpty');
+  const scenes = v ? scenesOf(v) : [];
+
+  $('#sceneChip').textContent = scenes.length + (scenes.length === 1 ? ' scene' : ' scenes');
+  const kept = v ? keptOf(v).length : 0;
+  $('#keepChip').textContent = kept + ' kept';
+
+  if (!filtered.length) {
+    for (const [, el] of rowEls) el.remove();
+    rowEls.clear();
+    spacer.style.height = '0px';
+    empty.style.display = '';
+    empty.querySelector('div:nth-child(2)').textContent = scenes.length ? 'Nothing matches that filter' : 'No cuts yet';
+    return;
+  }
+  empty.style.display = 'none';
+  spacer.style.height = filtered.length * ROW_H + 'px';
+  paintRows();
+}
+
+function paintRows() {
+  const v = active(); if (!v) return;
+  const scroll = $('#sceneScroll'), spacer = $('#sceneSpacer');
+  const top = scroll.scrollTop, h = scroll.clientHeight;
+  const from = Math.max(0, Math.floor(top / ROW_H) - 4);
+  const to = Math.min(filtered.length, Math.ceil((top + h) / ROW_H) + 4);
+  const want = new Set();
+  const ext = ($('#extSel').value || 'mp4');
+  const cur = sceneAt(v, VID.currentTime);
+
+  for (let i = from; i < to; i++) {
+    const sc = filtered[i];
+    want.add(sc.key);
+    let el = rowEls.get(sc.key);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'srow';
+      el.dataset.key = sc.key;
+      el.style.height = ROW_H + 'px';
+      el.innerHTML =
+        '<input type="checkbox" class="scb" data-act="keep">' +
+        '<div class="snum" data-act="pick"></div>' +
+        '<div class="sthumb" data-act="play"><canvas width="160" height="90"></canvas><div class="pl">▶</div></div>' +
+        '<div class="stimes">' +
+          '<span class="tpill s0"></span><span style="color:var(--tx-3)">→</span>' +
+          '<span class="tpill s1"></span><span class="tpill g s2"></span>' +
+        '</div>' +
+        '<div class="sname"><input spellcheck="false" data-act="label"></div>' +
+        '<div class="sacts">' +
+          '<button class="btn xs" data-act="nudgeL" title="Move this scene\'s start back 1 frame">◀|</button>' +
+          '<button class="btn xs" data-act="nudgeR" title="Move this scene\'s start forward 1 frame">|▶</button>' +
+          '<button class="btn xs nf" data-act="copy" title="Copy the ffmpeg command for this clip">📋</button>' +
+          '<button class="btn xs dg" data-act="del" title="Delete the cut that starts this scene">✕</button>' +
+        '</div>';
+      spacer.appendChild(el);
+      rowEls.set(sc.key, el);
+      const bmp = v.thumbs.get(sc.key);
+      if (bmp) paint(el.querySelector('canvas'), bmp, 160, 90);
+    }
+    el.dataset.idx = i;
+    el.style.transform = 'translateY(' + i * ROW_H + 'px)';
+    const keptNow = isKept(v, sc);
+    el.classList.toggle('off', !keptNow);
+    el.classList.toggle('cur', !!cur && cur.key === sc.key);
+    el.classList.toggle('pick', picks.has(i));
+    const cb = el.querySelector('.scb'); if (cb.checked !== keptNow) cb.checked = keptNow;
+    const num = el.querySelector('.snum');
+    num.textContent = sc.i;
+    num.style.background = colorOf(sc.i);
+    el.querySelector('.s0').textContent = fmt(sc.start);
+    el.querySelector('.s1').textContent = fmt(sc.end);
+    el.querySelector('.s2').textContent = fmt(sc.dur);
+    const inp = el.querySelector('.sname input');
+    if (document.activeElement !== inp) {
+      inp.value = v.labels[sc.key] || '';
+      inp.placeholder = clipName(v, sc) + '.' + ext;
+    }
+  }
+  for (const [key, el] of Array.from(rowEls)) {
+    if (!want.has(key)) { el.remove(); rowEls.delete(key); }
+  }
+  schedThumbs();
+}
+function markCurrentRow(sc) {
+  for (const [key, el] of rowEls) el.classList.toggle('cur', !!sc && key === sc.key);
+}
+
+$('#sceneScroll').addEventListener('scroll', () => { paintRows(); }, { passive: true });
+
+$('#sceneScroll').addEventListener('click', e => {
+  const v = active(); if (!v) return;
+  const row = e.target.closest('.srow'); if (!row) return;
+  const idx = +row.dataset.idx, sc = filtered[idx]; if (!sc) return;
+  const hit = e.target.closest('[data-act]');
+  const act = hit ? hit.dataset.act : '';
+
+  if (act === 'keep') {
+    const before = snap(v);
+    setKept(v, sc, e.target.checked);
+    v.undo.push(before); v.redo.length = 0;
+    afterEdit(v);
+    return;
+  }
+  if (act === 'pick') {
+    if (e.shiftKey && lastPick >= 0) {
+      const [a, b] = [Math.min(lastPick, idx), Math.max(lastPick, idx)];
+      for (let i = a; i <= b; i++) picks.add(i);
+    } else if (picks.has(idx)) picks.delete(idx);
+    else picks.add(idx);
+    lastPick = idx;
+    paintRows();
+    return;
+  }
+  if (act === 'play') { seek(sc.start); VID.play().catch(() => {}); loopScene = { ...sc, once: !A.loop }; return; }
+  if (act === 'copy') { copyOne(sc); return; }
+  if (act === 'del') {
+    const ci = v.cuts.findIndex(c => Math.abs(c - sc.start) < 0.002);
+    if (ci >= 0) removeCutAt(ci); else toast('This scene starts at the beginning of the video', 'wr');
+    return;
+  }
+  if (act === 'nudgeL' || act === 'nudgeR') {
+    const ci = v.cuts.findIndex(c => Math.abs(c - sc.start) < 0.002);
+    if (ci < 0) return toast('The first scene always starts at 0', 'wr');
+    nudgeCut(ci, (act === 'nudgeL' ? -1 : 1) / (A.fps || 30));
+    return;
+  }
+  seek(sc.start + 0.02);
+});
+
+$('#sceneScroll').addEventListener('change', e => {
+  const v = active(); if (!v) return;
+  if (!e.target.matches('.sname input')) return;
+  const row = e.target.closest('.srow'), sc = filtered[+row.dataset.idx];
+  if (!sc) return;
+  const val = e.target.value.trim();
+  const before = snap(v);
+  if (val) v.labels[sc.key] = val; else delete v.labels[sc.key];
+  v.undo.push(before); v.redo.length = 0;
+  v.ver++; afterEdit(v);
+});
+
+/* =========================================================================
+   RAIL + STATS
+   ========================================================================= */
+function renderRail() {
+  const list = $('#railList');
+  $('#queueCount').textContent = A.videos.length;
+  const frag = document.createDocumentFragment();
+  for (const v of A.videos) {
+    const el = document.createElement('li');
+    el.className = 'vcard' + (v === A.active ? ' on' : '');
+    el.dataset.id = v.id;
+    const st = v.status === 'busy' ? 'busy' : v.status === 'err' ? 'err' : (v.cuts.length ? 'done' : 'idle');
+    el.innerHTML =
+      '<div class="vt"><canvas width="112" height="64"></canvas></div>' +
+      '<div class="vi">' +
+        '<div class="vn" title="' + v.name.replace(/"/g, '&quot;') + '">' + v.name + '</div>' +
+        '<div class="vm"><span class="vdot ' + st + '"></span>' +
+          '<span>' + (v.duration ? fmt(v.duration) : '…') + '</span><span>·</span>' +
+          '<span>' + (v.cuts.length ? scenesOf(v).length + ' sc' : 'no cuts') + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<button class="vx" data-del="' + v.id + '" title="Remove from queue">✕</button>' +
+      (v.status === 'busy' ? '<div class="vbar" style="width:' + (v.prog * 100).toFixed(0) + '%"></div>' : '');
+    if (v.poster) paint(el.querySelector('canvas'), v.poster, 112, 64);
+    frag.appendChild(el);
+  }
+  list.replaceChildren(frag);
+  const total = A.videos.reduce((s, v) => s + (v.duration || 0), 0);
+  const clips = A.videos.reduce((s, v) => s + (v.cuts.length ? keptOf(v).length : 0), 0);
+  $('#railFooter').textContent = A.videos.length
+    ? A.videos.length + ' videos · ' + fmt(total) + ' · ' + clips + ' clips queued'
+    : 'Nothing loaded';
+}
+$('#railList').addEventListener('click', e => {
+  const del = e.target.closest('[data-del]');
+  if (del) { e.stopPropagation(); removeVideo(del.dataset.del); return; }
+  const card = e.target.closest('.vcard');
+  if (card) setActive(card.dataset.id);
+});
+
+function renderStats() {
+  const v = active();
+  const scenes = v ? scenesOf(v) : [];
+  const kept = v ? keptOf(v) : [];
+  $('#stScenes').textContent = scenes.length;
+  $('#stKept').textContent = kept.length;
+  $('#stAvg').textContent = kept.length ? fmt(kept.reduce((s, x) => s + x.dur, 0) / kept.length) : '—';
+  $('#curName').textContent = v ? v.name : '—';
+  $('#curMeta').textContent = v
+    ? fmtBytes(v.size) + ' · ' + fmt(v.duration) + ' · ' + (v.w || '?') + '×' + (v.h || '?')
+    : '—';
+  $('#tcodeTot').textContent = '/ ' + (v ? fmt(v.duration) : '0:00');
+  $('#ovlRes').textContent = v ? (v.w + '×' + v.h) : '—';
+  $('#undoBtn').disabled = !v || !v.undo.length;
+  $('#redoBtn').disabled = !v || !v.redo.length;
+  updateNamePreview();
+}
+
+function renderDiff() {
+  const v = active(), cv = $('#diffCanvas');
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  const w = cv.clientWidth || 300, h = 74;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#06070b'; ctx.fillRect(0, 0, w, h);
+  if (!v || !v.diff || !v.diff.diffs.length) {
+    ctx.fillStyle = '#5c6178'; ctx.font = '11px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('Run detection to see the change graph', w / 2, h / 2 + 4);
+    return;
+  }
+  const d = v.diff.diffs, times = v.diff.times;
+  let max = 0.02; for (const x of d) if (x > max) max = x;
+  const cutSet = v.cuts;
+  for (let i = 0; i < d.length; i++) {
+    const x = times[i] / v.duration * w;
+    const bh = d[i] / max * (h - 6);
+    const near = cutSet.some(c => Math.abs(c - times[i]) < 0.4);
+    ctx.fillStyle = near ? 'rgba(248,113,113,.9)' : 'rgba(124,92,252,.35)';
+    ctx.fillRect(x, h - bh, Math.max(1, w / d.length), bh);
+  }
+}
+
+/* =========================================================================
+   BUSY CHIP
+   ========================================================================= */
+let busyCancel = null;
+function setBusy(text, cancel) {
+  $('#busyChip').classList.add('on');
+  $('#busyText').textContent = text;
+  busyCancel = cancel || null;
+  $('#busyCancel').style.display = cancel ? '' : 'none';
+}
+function clearBusy() {
+  if (A.videos.some(v => v.status === 'busy')) return;
+  $('#busyChip').classList.remove('on'); busyCancel = null;
+}
+$('#busyCancel').onclick = () => {
+  if (busyCancel) busyCancel();
+  if (A.batch) A.batch.stop = true;
+};
+
+/* =========================================================================
+   LAYOUT
+   ========================================================================= */
+const onResize = debounce(() => {
+  if (!active()) return;
+  renderTimeline(); renderDiff(); paintRows();
+}, 90);
+addEventListener('resize', onResize);
+function fitPlayer() { renderTimeline(); }
+</script>
+<script>
+"use strict";
+/* =========================================================================
+   EXPORT ENGINE
+   One description of the work (jobs → clips) is rendered into four shells,
+   so the Windows, macOS, Linux and Python outputs can never drift apart.
+   ========================================================================= */
+const PRESETS = {
+  precise: { label: 'H.264 CRF 18', ext: null, hint: 'Re-encodes, so clips start on the exact frame you marked. The safe default.',
+    v: ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p'], a: ['-c:a', 'aac', '-b:a', '192k'] },
+  copy:    { label: 'stream copy', ext: null, hint: 'No re-encode — near-instant, but cuts snap to the nearest keyframe, so clips can start up to a few seconds early.',
+    v: ['-c', 'copy'], a: [] },
+  nvenc:   { label: 'NVIDIA NVENC', ext: null, hint: 'Needs an NVIDIA GPU. Much faster than CPU encoding at similar quality.',
+    v: ['-c:v', 'h264_nvenc', '-preset', 'p5', '-cq', '20', '-pix_fmt', 'yuv420p'], a: ['-c:a', 'aac', '-b:a', '192k'] },
+  qsv:     { label: 'Intel QuickSync', ext: null, hint: 'Needs an Intel iGPU with QuickSync enabled.',
+    v: ['-c:v', 'h264_qsv', '-global_quality', '22'], a: ['-c:a', 'aac', '-b:a', '192k'] },
+  vtb:     { label: 'Apple VideoToolbox', ext: null, hint: 'Hardware encoding on Apple silicon and recent Intel Macs.',
+    v: ['-c:v', 'h264_videotoolbox', '-b:v', '8M'], a: ['-c:a', 'aac', '-b:a', '192k'] },
+  shorts:  { label: 'Shorts 1080×1920', ext: 'mp4', hint: 'Centre-crops to 9:16 and scales to 1080×1920 for Shorts, Reels and TikTok.',
+    v: ['-vf', 'crop=ih*9/16:ih,scale=1080:1920:flags=lanczos', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p'],
+    a: ['-c:a', 'aac', '-b:a', '192k'] },
+  audio:   { label: 'MP3 192k', ext: 'mp3', hint: 'Audio only — handy for transcription or podcast cuts.',
+    v: ['-vn'], a: ['-c:a', 'libmp3lame', '-b:a', '192k'] },
+  gif:     { label: 'GIF 480px', ext: 'gif', hint: 'Silent 15 fps GIF, 480 px wide. Keep the clips short.',
+    v: ['-vf', 'fps=15,scale=480:-1:flags=lanczos', '-loop', '0'], a: ['-an'] },
+};
+const preset = () => PRESETS[$('#presetSel').value] || PRESETS.precise;
+const outExt = () => preset().ext || $('#extSel').value || 'mp4';
+
+function clipName(v, sc) {
+  const tpl = $('#nameTpl').value || '{name}_{nnn}';
+  const base = v.name.replace(/\.[^.]+$/, '');
+  const t = (x) => fmt(x).replace(/:/g, '-');
+  return sanitizeFile(tpl
+    .replace(/\{name\}/g, base)
+    .replace(/\{label\}/g, v.labels[sc.key] || '')
+    .replace(/\{nnn\}/g, String(sc.i).padStart(3, '0'))
+    .replace(/\{nn\}/g, String(sc.i).padStart(2, '0'))
+    .replace(/\{n\}/g, String(sc.i))
+    .replace(/\{start\}/g, t(sc.start))
+    .replace(/\{end\}/g, t(sc.end))
+    .replace(/\{dur\}/g, t(sc.dur))
+    .replace(/\{date\}/g, new Date().toISOString().slice(0, 10))
+    .replace(/_{2,}/g, '_').replace(/^_|_$/g, ''));
+}
+function updateNamePreview() {
+  const v = active();
+  const el = $('#namePreview'); if (!el) return;
+  const sc = v && scenesOf(v)[0];
+  el.textContent = sc ? '→ ' + clipName(v, sc) + '.' + outExt() : '→ example_001.' + outExt();
+  const p = preset();
+  $('#presetHint').textContent = p.hint;
+  $('#howtoDir').textContent = ($('#outDir').value || 'Scenes') + '/';
+  $('#extSel').disabled = !!p.ext;
+}
+
+/* which videos / which scenes */
+function buildJobs(scopeOverride) {
+  const scope = scopeOverride || $('#scopeSel').value;
+  const vids = scope === 'batch' ? A.videos.filter(v => v.duration && v.cuts.length) : (active() ? [active()] : []);
+  const jobs = [];
+  for (const v of vids) {
+    const list = scope === 'all' ? scenesOf(v) : keptOf(v);
+    if (!list.length) continue;
+    const used = new Set();
+    const clips = list.map(sc => {
+      let nm = clipName(v, sc);
+      while (used.has(nm.toLowerCase())) nm = nm + '_' + sc.i;
+      used.add(nm.toLowerCase());
+      return { name: nm, start: sc.start, dur: sc.out - sc.start, end: sc.end, i: sc.i, label: v.labels[sc.key] || '' };
+    });
+    jobs.push({ v, src: v.name, size: v.size, base: v.name.replace(/\.[^.]+$/, ''), clips });
+  }
+  return jobs;
+}
+function jobDir(job, many) {
+  const root = sanitizeFile($('#outDir').value || 'Scenes');
+  return many ? root + '/' + sanitizeFile(job.base) : root;
+}
+function ffArgs(clip, ext) {
+  const p = preset();
+  return ['-y', '-ss', fmtTC(clip.start), '-i', '__IN__', '-t', fmtTC(clip.dur)]
+    .concat(p.v, p.a, p.v[0] === '-c' ? [] : [], ['-avoid_negative_ts', 'make_zero', '__OUT__']);
+}
+const totalClips = jobs => jobs.reduce((s, j) => s + j.clips.length, 0);
+
+/* ------------------------------------------------------------------- .bat */
+function genBat(jobs) {
+  const many = jobs.length > 1, ext = outExt(), n = totalClips(jobs);
+  let s = '@echo off\r\nsetlocal enabledelayedexpansion\r\nchcp 65001 >nul\r\n';
+  s += 'title SceneCut Studio - ' + n + ' clips\r\ncolor 0A\r\ncls\r\n';
+  s += 'echo ============================================\r\necho   SCENECUT STUDIO\r\n';
+  s += 'echo   ' + jobs.length + ' video(s), ' + n + ' clip(s), preset: ' + preset().label + '\r\n';
+  s += 'echo ============================================\r\necho.\r\n\r\n';
+  s += 'set "FFMPEG=ffmpeg"\r\nwhere ffmpeg >nul 2>&1 || (\r\n  if exist "ffmpeg.exe" ( set "FFMPEG=.\\ffmpeg.exe" ) else (\r\n';
+  s += '    echo [ERROR] FFmpeg not found. Install with:  winget install ffmpeg\r\n    pause & exit /b 1\r\n  )\r\n)\r\n';
+  s += 'echo [OK] FFmpeg ready.\r\necho.\r\nset "FAILED=0"\r\n\r\n';
+
+  jobs.forEach((job, ji) => {
+    const dir = jobDir(job, many).replace(/\//g, '\\');
+    s += 'REM ===== ' + job.src + ' =====\r\n';
+    s += 'call :resolve "' + job.src + '" ' + job.size + '\r\n';
+    s += 'if not defined INPUT (\r\n  echo [SKIP] Could not find "' + job.src + '" in this folder.\r\n  goto :done' + ji + '\r\n)\r\n';
+    s += 'echo [FILE] !INPUT!\r\n';
+    s += 'if not exist "' + dir + '" mkdir "' + dir + '"\r\n';
+    job.clips.forEach((c, i) => {
+      const out = dir + '\\' + c.name + '.' + ext;
+      s += 'echo   [' + (i + 1) + '/' + job.clips.length + '] ' + fmt(c.start) + ' -> ' + fmt(c.end) + '  ' + c.name + '\r\n';
+      s += '%FFMPEG% ' + ffArgs(c, ext).map(a =>
+        a === '__IN__' ? '"!INPUT!"' : a === '__OUT__' ? '"' + out + '"' : (/[ ,=:]/.test(a) ? '"' + a + '"' : a)
+      ).join(' ') + ' -loglevel error -stats\r\n';
+      s += 'if errorlevel 1 ( echo   [WARN] failed & set /a FAILED+=1 )\r\n';
+    });
+    if ($('#concatChk').checked && job.clips.length > 1) {
+      s += 'echo   [JOIN] building ' + job.base + '_joined.' + ext + '\r\n';
+      s += '> "' + dir + '\\_join.txt" (\r\n';
+      job.clips.forEach(c => { s += '  echo file \'' + c.name + '.' + ext + '\'\r\n'; });
+      s += ')\r\n';
+      s += '%FFMPEG% -y -f concat -safe 0 -i "' + dir + '\\_join.txt" -c copy "' + dir + '\\' + job.base + '_joined.' + ext + '" -loglevel error\r\n';
+      s += 'del "' + dir + '\\_join.txt" >nul 2>&1\r\n';
+    }
+    s += ':done' + ji + '\r\necho.\r\n\r\n';
+  });
+
+  s += 'echo ============================================\r\n';
+  s += 'if !FAILED! gtr 0 ( echo   Finished with !FAILED! failure(s). ) else ( echo   All ' + n + ' clips written. )\r\n';
+  s += 'echo ============================================\r\n';
+  s += 'start "" "' + sanitizeFile($('#outDir').value || 'Scenes') + '"\r\npause\r\ngoto :eof\r\n\r\n';
+  s += ':resolve\r\nset "INPUT="\r\nif exist %1 set "INPUT=%~1"\r\nif defined INPUT goto :eof\r\n';
+  s += 'for %%F in (*.mp4 *.mkv *.webm *.avi *.mov *.m4v *.ts *.mts *.flv *.wmv) do if %%~zF==%2 set "INPUT=%%F"\r\n';
+  s += 'goto :eof\r\n';
+  return s;
+}
+
+/* -------------------------------------------------------------------- .sh */
+function genSh(jobs) {
+  const many = jobs.length > 1, ext = outExt(), n = totalClips(jobs);
+  let s = '#!/usr/bin/env bash\n# SceneCut Studio — ' + jobs.length + ' video(s), ' + n + ' clip(s)\n';
+  s += 'set -u\nshopt -s nullglob\n\n';
+  s += 'command -v ffmpeg >/dev/null || { echo "[ERROR] FFmpeg not found (brew install ffmpeg / sudo apt install ffmpeg)"; exit 1; }\n';
+  s += 'FAILED=0\n\nfsize() { stat -c%s "$1" 2>/dev/null || stat -f%z "$1" 2>/dev/null; }\n';
+  s += 'resolve() {\n  INPUT=""\n  [ -f "$1" ] && { INPUT="$1"; return; }\n';
+  s += '  for f in *.mp4 *.mkv *.webm *.avi *.mov *.m4v *.ts *.mts *.flv *.wmv; do\n';
+  s += '    [ -f "$f" ] || continue\n    [ "$(fsize "$f")" = "$2" ] && { INPUT="$f"; return; }\n  done\n}\n\n';
+
+  for (const job of jobs) {
+    const dir = jobDir(job, many);
+    s += '# ===== ' + job.src + ' =====\n';
+    s += 'resolve ' + shq(job.src) + ' ' + job.size + '\n';
+    s += 'if [ -z "$INPUT" ]; then echo "[SKIP] ' + job.src.replace(/"/g, '\\"') + ' not found"; else\n';
+    s += '  echo "[FILE] $INPUT"\n  mkdir -p ' + shq(dir) + '\n';
+    job.clips.forEach((c, i) => {
+      const out = dir + '/' + c.name + '.' + ext;
+      s += '  echo "  [' + (i + 1) + '/' + job.clips.length + '] ' + fmt(c.start) + ' -> ' + fmt(c.end) + '"\n';
+      s += '  ffmpeg ' + ffArgs(c, ext).map(a =>
+        a === '__IN__' ? '"$INPUT"' : a === '__OUT__' ? shq(out) : shq(a)).join(' ') +
+        ' -loglevel error -stats || FAILED=$((FAILED+1))\n';
+    });
+    if ($('#concatChk').checked && job.clips.length > 1) {
+      s += '  : > ' + shq(dir + '/_join.txt') + '\n';
+      job.clips.forEach(c => { s += '  printf "file %s\\n" ' + shq("'" + c.name + '.' + ext + "'") + ' >> ' + shq(dir + '/_join.txt') + '\n'; });
+      s += '  ffmpeg -y -f concat -safe 0 -i ' + shq(dir + '/_join.txt') + ' -c copy ' +
+           shq(dir + '/' + job.base + '_joined.' + ext) + ' -loglevel error\n';
+      s += '  rm -f ' + shq(dir + '/_join.txt') + '\n';
+    }
+    s += 'fi\n\n';
+  }
+  s += 'echo "Done — $((' + n + ' - FAILED)) / ' + n + ' clips written."\n';
+  return s;
+}
+
+/* ------------------------------------------------------------------- .ps1 */
+function genPs1(jobs) {
+  const many = jobs.length > 1, ext = outExt(), n = totalClips(jobs);
+  let s = '# SceneCut Studio — ' + jobs.length + ' video(s), ' + n + ' clip(s)\n';
+  s += '$ErrorActionPreference = "Continue"\n';
+  s += 'if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) { Write-Host "[ERROR] FFmpeg not found" -Fore Red; exit 1 }\n';
+  s += '$Failed = 0\n';
+  s += 'function Resolve-Input($Name, $Size) {\n  if (Test-Path -LiteralPath $Name) { return $Name }\n';
+  s += '  $m = Get-ChildItem -File | Where-Object { $_.Length -eq $Size } | Select-Object -First 1\n';
+  s += '  if ($m) { return $m.Name }\n  return $null\n}\n\n';
+  for (const job of jobs) {
+    const dir = jobDir(job, many).replace(/\//g, '\\');
+    s += '# ===== ' + job.src + ' =====\n';
+    s += '$In = Resolve-Input ' + ps1q(job.src) + ' ' + job.size + '\n';
+    s += 'if (-not $In) { Write-Host "[SKIP] ' + job.src.replace(/'/g, "''") + ' not found" -Fore Yellow } else {\n';
+    s += '  Write-Host "[FILE] $In" -Fore Green\n';
+    s += '  New-Item -ItemType Directory -Force -Path ' + ps1q(dir) + ' | Out-Null\n';
+    job.clips.forEach((c, i) => {
+      const out = dir + '\\' + c.name + '.' + ext;
+      s += '  Write-Host "  [' + (i + 1) + '/' + job.clips.length + '] ' + fmt(c.start) + ' -> ' + fmt(c.end) + '"\n';
+      s += '  ffmpeg ' + ffArgs(c, ext).map(a =>
+        a === '__IN__' ? '$In' : a === '__OUT__' ? ps1q(out) : ps1q(a)).join(' ') + ' -loglevel error -stats\n';
+      s += '  if ($LASTEXITCODE -ne 0) { $Failed++ }\n';
+    });
+    if ($('#concatChk').checked && job.clips.length > 1) {
+      s += '  $list = ' + ps1q(dir + '\\_join.txt') + '\n';
+      s += '  @(' + job.clips.map(c => ps1q("file '" + c.name + '.' + ext + "'")).join(',') + ') | Set-Content -Encoding ascii $list\n';
+      s += '  ffmpeg -y -f concat -safe 0 -i $list -c copy ' + ps1q(dir + '\\' + job.base + '_joined.' + ext) + ' -loglevel error\n';
+      s += '  Remove-Item $list -Force\n';
+    }
+    s += '}\n\n';
+  }
+  s += 'Write-Host "Done — $(' + n + ' - $Failed) / ' + n + ' clips written." -Fore Cyan\n';
+  return s;
+}
+
+/* -------------------------------------------------------------------- .py */
+function genPy(jobs) {
+  const many = jobs.length > 1, ext = outExt(), n = totalClips(jobs);
+  const data = jobs.map(job => ({
+    src: job.src, size: job.size, dir: jobDir(job, many), base: job.base,
+    clips: job.clips.map(c => ({ name: c.name + '.' + ext, ss: fmtTC(c.start), t: fmtTC(c.dur) })),
+  }));
+  let s = '#!/usr/bin/env python3\n"""SceneCut Studio — ' + jobs.length + ' video(s), ' + n + ' clip(s).\n\n';
+  s += 'Run it next to your video files:  python ' + 'scenecut.py\n"""\n';
+  s += 'import json, os, shutil, subprocess, sys\n\n';
+  s += 'VIDEO_EXT = (".mp4",".mkv",".webm",".avi",".mov",".m4v",".ts",".mts",".flv",".wmv")\n';
+  s += 'ENCODE = ' + JSON.stringify(preset().v.concat(preset().a)) + '\n';
+  s += 'CONCAT = ' + ($('#concatChk').checked ? 'True' : 'False') + '\n';
+  s += 'JOBS = ' + JSON.stringify(data, null, 1) + '\n\n';
+  s += 'def ffmpeg_bin():\n    b = shutil.which("ffmpeg")\n    if b: return b\n';
+  s += '    if os.path.exists("ffmpeg.exe"): return os.path.abspath("ffmpeg.exe")\n';
+  s += '    sys.exit("[ERROR] FFmpeg not found — install it and try again.")\n\n';
+  s += 'def resolve(name, size):\n    if os.path.exists(name): return name\n';
+  s += '    for f in os.listdir("."):\n        if f.lower().endswith(VIDEO_EXT) and os.path.isfile(f):\n';
+  s += '            try:\n                if os.path.getsize(f) == size: return f\n            except OSError: pass\n    return None\n\n';
+  s += 'def main():\n    ff = ffmpeg_bin()\n    total = ok = 0\n';
+  s += '    for job in JOBS:\n        src = resolve(job["src"], job["size"])\n';
+  s += '        if not src:\n            print("[SKIP] %s not found" % job["src"]); continue\n';
+  s += '        print("[FILE] %s" % src)\n        os.makedirs(job["dir"], exist_ok=True)\n';
+  s += '        made = []\n        for i, c in enumerate(job["clips"], 1):\n';
+  s += '            out = os.path.join(job["dir"], c["name"])\n';
+  s += '            print("  [%d/%d] %s" % (i, len(job["clips"]), c["name"]))\n';
+  s += '            cmd = [ff,"-y","-ss",c["ss"],"-i",src,"-t",c["t"]] + ENCODE + ["-avoid_negative_ts","make_zero",out,"-loglevel","error"]\n';
+  s += '            total += 1\n';
+  s += '            if subprocess.run(cmd).returncode == 0: ok += 1; made.append(c["name"])\n';
+  s += '            else: print("     [WARN] failed")\n';
+  s += '        if CONCAT and len(made) > 1:\n';
+  s += '            lst = os.path.join(job["dir"], "_join.txt")\n';
+  s += '            with open(lst, "w", encoding="utf-8") as fh:\n';
+  s += '                for nm in made: fh.write("file \'%s\'\\n" % nm)\n';
+  s += '            joined = os.path.join(job["dir"], job["base"] + "_joined.' + ext + '")\n';
+  s += '            subprocess.run([ff,"-y","-f","concat","-safe","0","-i",lst,"-c","copy",joined,"-loglevel","error"])\n';
+  s += '            os.remove(lst)\n';
+  s += '    print("Done — %d/%d clips written." % (ok, total))\n\n';
+  s += 'if __name__ == "__main__":\n    main()\n';
+  return s;
+}
+
+const GENERATORS = { bat: genBat, sh: genSh, ps1: genPs1, py: genPy };
+
+/* ---------------------------------------------------------------- sidecars */
+function genCsv(jobs) {
+  let s = 'video,index,clip,start,end,duration,kept,label\n';
+  for (const job of jobs) {
+    const all = scenesOf(job.v);
+    for (const sc of all) {
+      s += [job.src, sc.i, clipName(job.v, sc), fmtTC(sc.start), fmtTC(sc.end), fmtTC(sc.dur),
+            isKept(job.v, sc) ? 'yes' : 'no', (job.v.labels[sc.key] || '').replace(/,/g, ' ')]
+           .map(x => /[",]/.test(String(x)) ? '"' + String(x).replace(/"/g, '""') + '"' : x).join(',') + '\n';
+    }
+  }
+  return s;
+}
+function genChapters(v) {
+  const list = keptOf(v);
+  if (!list.length) return '';
+  let s = '';
+  list.forEach((sc, i) => {
+    const t = i === 0 ? 0 : sc.start;                       // YouTube needs 0:00 first
+    const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), sec = Math.floor(t % 60);
+    const stamp = (h ? h + ':' + String(m).padStart(2, '0') : String(m)) + ':' + String(sec).padStart(2, '0');
+    s += stamp + ' ' + (v.labels[sc.key] || 'Chapter ' + (i + 1)) + '\n';
+  });
+  return s;
+}
+function genEdl(v) {
+  const fps = A.fps || 30;
+  const tc = t => {
+    const f = Math.round(t * fps);
+    const hh = Math.floor(f / (3600 * fps)), mm = Math.floor(f / (60 * fps)) % 60,
+          ss = Math.floor(f / fps) % 60, ff = f % Math.round(fps);
+    return [hh, mm, ss, ff].map(x => String(x).padStart(2, '0')).join(':');
+  };
+  let s = 'TITLE: ' + v.name.replace(/\.[^.]+$/, '') + '\nFCM: NON-DROP FRAME\n\n';
+  let rec = 0;
+  keptOf(v).forEach((sc, i) => {
+    const n = String(i + 1).padStart(3, '0');
+    s += n + '  AX       V     C        ' + tc(sc.start) + ' ' + tc(sc.out) + ' ' + tc(rec) + ' ' + tc(rec + sc.dur) + '\n';
+    s += '* FROM CLIP NAME: ' + v.name + '\n\n';
+    rec += sc.dur;
+  });
+  return s;
+}
+function genProject() {
+  return JSON.stringify({
+    app: 'SceneCut Studio', version: 1, saved: new Date().toISOString(),
+    settings: { fps: A.fps, preset: $('#presetSel').value, ext: $('#extSel').value,
+                outDir: $('#outDir').value, nameTpl: $('#nameTpl').value },
+    videos: A.videos.filter(v => v.duration).map(v => ({
+      name: v.name, size: v.size, duration: +v.duration.toFixed(3),
+      cuts: v.cuts.map(t => +t.toFixed(3)), excluded: Array.from(v.excluded), labels: v.labels,
+    })),
+  }, null, 2);
+}
+function genReadme(jobs) {
+  const n = totalClips(jobs);
+  return [
+    'SceneCut Studio — export package',
+    '================================',
+    'Videos : ' + jobs.map(j => j.src).join(', '),
+    'Clips  : ' + n,
+    'Preset : ' + preset().label + '  (' + preset().hint + ')',
+    'Made   : ' + new Date().toLocaleString(),
+    '',
+    'HOW TO USE',
+    '  1. Install FFmpeg:',
+    '       Windows  winget install ffmpeg',
+    '       macOS    brew install ffmpeg',
+    '       Linux    sudo apt install ffmpeg',
+    '  2. Put these files in the same folder as your video(s).',
+    '  3. Run one of:',
+    '       scenecut.bat        (Windows — just double-click)',
+    '       bash scenecut.sh    (macOS / Linux)',
+    '       python scenecut.py  (anywhere Python 3 runs)',
+    '  4. Clips are written to ' + ($('#outDir').value || 'Scenes') + '/',
+    '',
+    'The scripts find your video by name; if you renamed it they fall back to',
+    'matching its exact byte size, so renaming is safe.',
+    '',
+    'scenes.csv        every scene with times, kept flag and label',
+    'chapters.txt      paste straight into a YouTube description',
+    'scenes.edl        import into Resolve / Premiere / Avid',
+    'project.json      reload in SceneCut Studio to carry on editing',
+    '',
+    'If Windows blocks the .bat: right-click > Properties > Unblock.',
+  ].join('\n');
+}
+
+/* ------------------------------------------------------------- downloads */
+function needJobs(scope) {
+  const jobs = buildJobs(scope);
+  if (!jobs.length) { toast('Nothing to export — mark some cuts first', 'err'); return null; }
+  return jobs;
+}
+function download(kind) {
+  const jobs = needJobs(); if (!jobs) return;
+  const body = GENERATORS[kind](jobs);
+  const nm = 'scenecut' + (jobs.length > 1 ? '_batch_' + jobs.length + 'videos' : '');
+  saveText(nm + '.' + kind, body);
+  toast('Saved ' + nm + '.' + kind + ' · ' + totalClips(jobs) + ' clips', 'ok');
+}
+function downloadZip() {
+  const jobs = needJobs(); if (!jobs) return;
+  const v = active();
+  const files = [
+    { name: 'scenecut.bat', data: genBat(jobs) },
+    { name: 'scenecut.sh', data: genSh(jobs) },
+    { name: 'scenecut.ps1', data: genPs1(jobs) },
+    { name: 'scenecut.py', data: genPy(jobs) },
+    { name: 'scenes.csv', data: genCsv(jobs) },
+    { name: 'project.json', data: genProject() },
+    { name: 'README.txt', data: genReadme(jobs) },
+  ];
+  if (v) {
+    const ch = genChapters(v); if (ch) files.push({ name: 'chapters.txt', data: ch });
+    files.push({ name: 'scenes.edl', data: genEdl(v) });
+  }
+  saveBlob('scenecut_' + totalClips(jobs) + 'clips.zip', zipBlob(files));
+  toast('ZIP saved — ' + files.length + ' files, ' + totalClips(jobs) + ' clips', 'ok', 3200);
+}
+function copyOne(sc) {
+  const v = active(); if (!v) return;
+  const ext = outExt(), out = clipName(v, sc) + '.' + ext;
+  const cmd = 'ffmpeg ' + ffArgs({ start: sc.start, dur: sc.out - sc.start }, ext)
+    .map(a => a === '__IN__' ? shq(v.name) : a === '__OUT__' ? shq(out) : shq(a)).join(' ');
+  navigator.clipboard.writeText(cmd).then(
+    () => toast('Command copied for scene ' + sc.i, 'ok', 1500),
+    () => toast('Clipboard blocked by the browser', 'err'));
+}
+
+const schedScript = debounce(() => {
+  const el = $('#scriptOut'); if (!el) return;
+  updateNamePreview();
+  const jobs = buildJobs();
+  if (!jobs.length) { el.textContent = 'Mark some cuts to see the script.'; return; }
+  const LIMIT = 60;
+  const trimmed = jobs.map(j => ({ ...j, clips: j.clips.slice(0, LIMIT) }));
+  const n = totalClips(jobs), shown = totalClips(trimmed);
+  let body = GENERATORS[$('#previewKind').value](trimmed);
+  if (shown < n) body += '\n\n# … preview truncated — the downloaded file contains all ' + n + ' clips.';
+  el.textContent = body;
+}, 260);
+
+/* ------------------------------------------------------------ load project */
+function loadProject(text) {
+  let data;
+  try { data = JSON.parse(text); } catch (e) { return toast('That is not a valid project file', 'err'); }
+  if (!data || !Array.isArray(data.videos)) return toast('Unrecognised project file', 'err');
+  let hit = 0, miss = 0;
+  for (const rec of data.videos) {
+    const v = A.videos.find(x => x.name === rec.name && x.size === rec.size) ||
+              A.videos.find(x => x.name === rec.name);
+    if (!v) { miss++; continue; }
+    edit(v, x => { x.cuts = rec.cuts || []; x.excluded = new Set(rec.excluded || []); x.labels = rec.labels || {}; });
+    hit++;
+  }
+  if (data.settings) {
+    const st = data.settings;
+    if (st.preset) $('#presetSel').value = st.preset;
+    if (st.ext) $('#extSel').value = st.ext;
+    if (st.outDir) $('#outDir').value = st.outDir;
+    if (st.nameTpl) $('#nameTpl').value = st.nameTpl;
+    if (st.fps) { A.fps = +st.fps; $('#fpsSel').value = st.fps; }
+  }
+  renderStats(); schedScript();
+  toast(hit ? 'Restored ' + hit + ' video(s)' + (miss ? ' · ' + miss + ' not in the queue' : '') : 'None of those videos are loaded — add them first', hit ? 'ok' : 'wr', 3600);
+}
+</script>
+<script>
+"use strict";
+/* =========================================================================
+   WIRING — inputs, shortcuts, command palette, init
+   ========================================================================= */
+
+/* ------------------------------------------------------------ file intake */
+const pickFiles = () => $('#fileInput').click();
+$('#fileInput').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
+$('#addBtn').onclick = pickFiles;
+$('#bigAddBtn').onclick = e => { e.stopPropagation(); pickFiles(); };
+$('#bigDrop').onclick = pickFiles;
+$('#railDrop').onclick = pickFiles;
+
+['#bigDrop', '#railDrop'].forEach(sel => {
+  const el = $(sel);
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('over'); });
+  el.addEventListener('dragleave', () => el.classList.remove('over'));
+  el.addEventListener('drop', e => {
+    e.preventDefault(); e.stopPropagation(); el.classList.remove('over');
+    addFiles(e.dataTransfer.files);
+  });
+});
+/* dropping anywhere in the window works too */
+addEventListener('dragover', e => { e.preventDefault(); });
+addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+
+$('#clearQueueBtn').onclick = () => {
+  if (!A.videos.length) return;
+  if (!confirm('Remove all ' + A.videos.length + ' videos from the queue? Your cut data stays saved.')) return;
+  for (const v of A.videos.slice()) removeVideo(v.id);
+  toast('Queue cleared', 'ok');
+};
+$('#sortQueueBtn').onclick = () => {
+  A.videos.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  renderRail(); toast('Queue sorted by name', 'ok', 1400);
+};
+
+/* -------------------------------------------------------------- transport */
+$('#playBtn').onclick = togglePlay;
+$$('#transport [data-seek]').forEach(b => {
+  b.onclick = () => {
+    const s = b.dataset.seek;
+    nudge(s === 'frame' ? 1 / (A.fps || 30) : s === '-frame' ? -1 / (A.fps || 30) : +s);
+  };
+});
+$('#markBtn').onclick = () => markCut();
+$('#delCutBtn').onclick = removeNearestCut;
+$('#selToggleBtn').onclick = () => toggleSceneAtPlayhead();
+$('#prevCutBtn').onclick = () => gotoCut(-1);
+$('#nextCutBtn').onclick = () => gotoCut(1);
+$('#playSceneBtn').onclick = playCurrentScene;
+$('#loopBtn').onclick = toggleLoop;
+$('#rateSel').onchange = () => { VID.playbackRate = parseFloat($('#rateSel').value) || 1; };
+$('#undoBtn').onclick = undo;
+$('#redoBtn').onclick = redo;
+
+/* --------------------------------------------------------------- timeline */
+$('#zoomIn').onclick = () => zoomBy(1.6, VID.currentTime);
+$('#zoomOut').onclick = () => zoomBy(1 / 1.6, VID.currentTime);
+$('#zoomFit').onclick = fitView;
+$('#fsToggle').onclick = () => {
+  A.showStrip = !A.showStrip;
+  $('#fsToggle').classList.toggle('on', A.showStrip);
+  $('#fsZone').classList.toggle('hide', !A.showStrip);
+  if (A.showStrip && active() && !active().strip) buildStrip();
+  saveSoon();
+};
+$('#wavBtn').onclick = () => { const v = active(); if (v) analyzeAudio(v); };
+
+/* --------------------------------------------------------------- inspector */
+$$('.itab').forEach(t => {
+  t.onclick = () => {
+    $$('.itab').forEach(x => x.classList.toggle('on', x === t));
+    $$('.ipanel').forEach(p => p.classList.toggle('on', p.dataset.panel === t.dataset.tab));
+    if (t.dataset.tab === 'detect') renderDiff();
+    if (t.dataset.tab === 'export') schedScript();
+  };
+});
+$('#sensRng').oninput = () => { $('#sensVal').textContent = $('#sensRng').value; saveSoon(); };
+$('#detectBtn').onclick = () => { const v = active(); if (v) detectScenes(v); else toast('Load a video first', 'err'); };
+$('#detectCancel').onclick = () => { if (busyCancel) busyCancel(); };
+$('#detectAllBtn').onclick = detectAll;
+$('#silBtn').onclick = () => {
+  const v = active(); if (!v) return toast('Load a video first', 'err');
+  if (!v.peaks) analyzeAudio(v).then(() => { if (v.peaks) findSilences(v); });
+  else findSilences(v);
+};
+$('#ivalApply').onclick = () => splitEvery(parseFloat($('#ivalInput').value));
+$('#partsApply').onclick = () => splitParts(parseInt($('#partsInput').value, 10));
+$('#tsApply').onclick = () => applyTimestamps(true);
+$('#tsAdd').onclick = () => applyTimestamps(false);
+$('#snapChk').onchange = e => { A.snap = e.target.checked; saveSoon(); };
+$('#fpsSel').onchange = e => {
+  A.fps = parseFloat(e.target.value) || 30;
+  const v = active(); if (v) { v._sc = null; v.ver++; afterEdit(v); }
+  saveSoon();
+};
+
+/* ------------------------------------------------------------ scene table */
+$('#sceneSearch').oninput = debounce(e => { A.filter = e.target.value.trim(); renderScenes(); }, 130);
+$('#filterOffBtn').onclick = () => {
+  A.onlyDropped = !A.onlyDropped;
+  $('#filterOffBtn').classList.toggle('on', A.onlyDropped);
+  renderScenes();
+};
+$('#emptyDetect').onclick = () => { const v = active(); if (v) detectScenes(v); else toast('Load a video first', 'err'); };
+$('#emptySilence').onclick = () => $('#silBtn').click();
+$('#emptyInterval').onclick = () => splitEvery(30);
+$('#keepAllBtn').onclick = () => keepAll(true);
+$('#dropAllBtn').onclick = () => keepAll(false);
+$('#invertBtn').onclick = invertKeep;
+$('#mergeBtn').onclick = mergeChecked;
+$('#clearCutsBtn').onclick = clearCuts;
+
+/* ----------------------------------------------------------------- export */
+['#presetSel', '#extSel', '#outDir', '#nameTpl', '#scopeSel', '#concatChk', '#previewKind'].forEach(sel => {
+  const el = $(sel);
+  el.addEventListener(el.tagName === 'INPUT' && el.type !== 'checkbox' ? 'input' : 'change', () => {
+    updateNamePreview(); schedScript(); renderScenes(); saveSoon();
+  });
+});
+$('#dlBat').onclick = () => download('bat');
+$('#dlSh').onclick = () => download('sh');
+$('#dlPs1').onclick = () => download('ps1');
+$('#dlPy').onclick = () => download('py');
+$('#dlZip').onclick = downloadZip;
+$('#dlCsv').onclick = () => { const j = needJobs(); if (j) { saveText('scenes.csv', genCsv(j)); toast('scenes.csv saved', 'ok'); } };
+$('#dlChapters').onclick = () => {
+  const v = active(); if (!v) return toast('Load a video first', 'err');
+  const t = genChapters(v);
+  if (!t) return toast('No kept scenes to turn into chapters', 'err');
+  saveText('chapters.txt', t); toast('YouTube chapters saved', 'ok');
+};
+$('#dlEdl').onclick = () => {
+  const v = active(); if (!v || !v.cuts.length) return toast('Mark some cuts first', 'err');
+  saveText(v.name.replace(/\.[^.]+$/, '') + '.edl', genEdl(v)); toast('EDL saved', 'ok');
+};
+$('#dlJson').onclick = () => { saveText('scenecut-project.json', genProject()); toast('Project saved', 'ok'); };
+$('#loadJson').onclick = () => $('#projInput').click();
+$('#projInput').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (f) loadProject(await f.text());
+});
+$('#exportAllBtn').onclick = () => {
+  const jobs = buildJobs('batch');
+  if (!jobs.length) return toast('No video in the queue has cuts yet', 'err');
+  $('#scopeSel').value = 'batch';
+  downloadZip();
+};
+$('#copyScript').onclick = () => {
+  navigator.clipboard.writeText($('#scriptOut').textContent).then(
+    () => toast('Script copied', 'ok', 1400), () => toast('Clipboard blocked', 'err'));
+};
+
+/* ------------------------------------------------------------ panel toggles */
+$('#railToggle').onclick = () => {
+  const wa = $('#workArea');
+  if (innerWidth <= 1080) wa.classList.toggle('show-rail');
+  else wa.classList.toggle('no-rail');
+  onResize();
+};
+$('#inspToggle').onclick = () => {
+  const wa = $('#workArea');
+  if (innerWidth <= 860) wa.classList.toggle('show-insp');
+  else wa.classList.toggle('no-insp');
+  onResize();
+};
+
+/* ============================== SHORTCUTS ============================== */
+const SHUTTLE = [0.25, 0.5, 1, 1.5, 2, 4];
+function shuttle(dir) {
+  if (!active()) return;
+  let i = SHUTTLE.indexOf(VID.playbackRate);
+  if (i < 0) i = 2;
+  if (dir > 0) {
+    if (VID.paused) { VID.play().catch(() => {}); return; }
+    i = Math.min(SHUTTLE.length - 1, i + 1);
+  } else {
+    if (VID.paused || i === 0) { nudge(-1); return; }
+    i = Math.max(0, i - 1);
+  }
+  VID.playbackRate = SHUTTLE[i];
+  $('#rateSel').value = String(SHUTTLE[i]);
+  toast(SHUTTLE[i] + '× playback', 'ok', 900);
+}
+
+const KEYS = [
+  ['Playback', null, null],
+  ['Space', 'Play / pause', () => togglePlay()],
+  ['K', 'Pause and reset speed', () => { VID.pause(); VID.playbackRate = 1; $('#rateSel').value = '1'; }],
+  ['L', 'Play faster (shuttle)', () => shuttle(1)],
+  ['J', 'Play slower / step back', () => shuttle(-1)],
+  ['P', 'Play only this scene', () => playCurrentScene()],
+  ['R', 'Loop this scene', () => toggleLoop()],
+  ['← →', 'Nudge 1 second', null],
+  ['Shift ← →', 'Nudge one frame', null],
+  ['Ctrl ← →', 'Nudge 5 seconds', null],
+  ['↑ ↓', 'Jump to previous / next cut', null],
+  ['Home End', 'Go to start / end', null],
+
+  ['Cutting', null, null],
+  ['M', 'Mark a cut at the playhead', () => markCut()],
+  ['X', 'Delete the nearest cut', () => removeNearestCut()],
+  ['S', 'Keep the scene at the playhead', () => toggleSceneAtPlayhead(true)],
+  ['D', 'Drop the scene at the playhead', () => toggleSceneAtPlayhead(false)],
+  ['A', 'Keep every scene', () => keepAll(true)],
+  ['Shift A', 'Drop every scene', () => keepAll(false)],
+  ['Ctrl Z', 'Undo', () => undo()],
+  ['Ctrl Shift Z', 'Redo', () => redo()],
+
+  ['View', null, null],
+  ['+ −', 'Zoom the timeline', null],
+  ['F', 'Fit the whole video', () => fitView()],
+  ['[ ]', 'Previous / next video in the queue', null],
+  ['B', 'Show or hide the queue', () => $('#railToggle').click()],
+  ['I', 'Show or hide the inspector', () => $('#inspToggle').click()],
+
+  ['Everything else', null, null],
+  ['Ctrl K', 'Command palette', () => openPalette()],
+  ['Ctrl S', 'Save the project file', () => $('#dlJson').click()],
+  ['?', 'This list', () => toggleModal('helpScrim')],
+];
+
+function stepVideo(dir) {
+  if (A.videos.length < 2) return;
+  const i = A.videos.indexOf(A.active);
+  setActive(A.videos[(i + dir + A.videos.length) % A.videos.length].id);
+}
+
+/* A checkbox or a button holding focus must not swallow Ctrl+Z — only real
+   text entry does, because there the browser's own undo is what you want. */
+const TEXT_TYPES = /^(text|search|number|email|url|tel|password)$/;
+function isTextEntry(el) {
+  if (!el) return false;
+  if (el.isContentEditable) return true;
+  const tag = (el.tagName || '').toUpperCase();
+  if (tag === 'TEXTAREA') return true;
+  return tag === 'INPUT' && TEXT_TYPES.test((el.type || 'text').toLowerCase());
+}
+addEventListener('keydown', e => {
+  const tag = (e.target.tagName || '').toUpperCase();
+  const textEntry = isTextEntry(e.target);
+  const inWidget = textEntry || tag === 'SELECT';       // widgets eat plain keys only
+
+  if (e.key === 'Escape') {
+    if ($('#palScrim').classList.contains('on')) return closePalette();
+    if ($('#helpScrim').classList.contains('on')) return toggleModal('helpScrim', false);
+    if (inWidget) e.target.blur();
+    return;
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); return openPalette(); }
+
+  const k = e.key.toLowerCase();
+  const mod = e.ctrlKey || e.metaKey;
+
+  if (mod && !textEntry) {
+    if (k === 's') { e.preventDefault(); $('#dlJson').click(); return; }
+    if (k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+    if (k === 'y') { e.preventDefault(); redo(); return; }
+  }
+  if (inWidget) return;
+  /* Arrows use Ctrl for ±5s; every other browser chord (Ctrl+R, Ctrl+F,
+     Ctrl+P…) belongs to the browser, not to us. */
+  if (mod && k.slice(0, 5) !== 'arrow') return;
+
+  switch (k) {
+    case ' ': e.preventDefault(); togglePlay(); return;
+    case 'm': e.preventDefault(); markCut(); return;
+    case 'x': e.preventDefault(); removeNearestCut(); return;
+    case 's': e.preventDefault(); toggleSceneAtPlayhead(true); return;
+    case 'd': e.preventDefault(); toggleSceneAtPlayhead(false); return;
+    case 'a': e.preventDefault(); keepAll(!e.shiftKey); return;
+    case 'p': e.preventDefault(); playCurrentScene(); return;
+    case 'r': e.preventDefault(); toggleLoop(); return;
+    case 'j': e.preventDefault(); shuttle(-1); return;
+    case 'k': e.preventDefault(); VID.pause(); VID.playbackRate = 1; $('#rateSel').value = '1'; return;
+    case 'l': e.preventDefault(); shuttle(1); return;
+    case 'f': e.preventDefault(); fitView(); return;
+    case 'b': e.preventDefault(); $('#railToggle').click(); return;
+    case 'i': e.preventDefault(); $('#inspToggle').click(); return;
+    case '[': e.preventDefault(); stepVideo(-1); return;
+    case ']': e.preventDefault(); stepVideo(1); return;
+    case '?': e.preventDefault(); toggleModal('helpScrim'); return;
+    case '+': case '=': e.preventDefault(); zoomBy(1.6, VID.currentTime); return;
+    case '-': case '_': e.preventDefault(); zoomBy(1 / 1.6, VID.currentTime); return;
+    case 'home': e.preventDefault(); seek(0); return;
+    case 'end': e.preventDefault(); if (active()) seek(active().duration - 0.05); return;
+    case 'arrowleft': case 'arrowright': {
+      e.preventDefault();
+      const s = k === 'arrowleft' ? -1 : 1;
+      nudge(s * (e.shiftKey ? 1 / (A.fps || 30) : mod ? 5 : 1));
+      return;
+    }
+    case 'arrowup': e.preventDefault(); gotoCut(-1); return;
+    case 'arrowdown': e.preventDefault(); gotoCut(1); return;
+  }
+  if (k >= '1' && k <= '3') { const t = $$('.itab')[+k - 1]; if (t) t.click(); }
+});
+
+/* ============================ COMMAND PALETTE ========================== */
+const COMMANDS = [
+  ['＋', 'Add videos…', 'Load one or many files', pickFiles],
+  ['⚡', 'Detect scenes in this video', 'Automatic scene cuts', () => { const v = active(); if (v) detectScenes(v); }],
+  ['⚡', 'Detect scenes in every video', 'Runs the whole queue', detectAll],
+  ['🎚', 'Analyse audio (waveform)', 'Needed for silence cuts', () => { const v = active(); if (v) analyzeAudio(v); }],
+  ['🎚', 'Cut on silence', 'Split where nobody is speaking', () => { const v = active(); if (v) v.peaks ? findSilences(v) : analyzeAudio(v).then(() => findSilences(v)); }],
+  ['✂', 'Mark cut at playhead', 'M', () => markCut()],
+  ['✕', 'Delete nearest cut', 'X', removeNearestCut],
+  ['🗑', 'Clear all cuts', 'Undoable', clearCuts],
+  ['⇄', 'Invert keep / drop', '', invertKeep],
+  ['☑', 'Keep every scene', 'A', () => keepAll(true)],
+  ['☐', 'Drop every scene', 'Shift+A', () => keepAll(false)],
+  ['⇥', 'Merge ticked scenes', 'Click row numbers first', mergeChecked],
+  ['⏱', 'Split every N seconds', '', () => { $$('.itab')[0].click(); $('#ivalInput').focus(); $('#ivalInput').select(); }],
+  ['🔢', 'Split into equal parts', '', () => { $$('.itab')[0].click(); $('#partsInput').focus(); $('#partsInput').select(); }],
+  ['📦', 'Download everything as ZIP', 'Scripts + CSV + project', downloadZip],
+  ['🪟', 'Download Windows .bat', '', () => download('bat')],
+  ['🐧', 'Download bash .sh', '', () => download('sh')],
+  ['🐍', 'Download Python script', '', () => download('py')],
+  ['📑', 'Download YouTube chapters', '', () => $('#dlChapters').click()],
+  ['🎞', 'Download EDL for your NLE', '', () => $('#dlEdl').click()],
+  ['💾', 'Save project file', 'Ctrl+S', () => $('#dlJson').click()],
+  ['📂', 'Load project file', '', () => $('#projInput').click()],
+  ['📤', 'Export the whole queue', 'One script for every video', () => $('#exportAllBtn').click()],
+  ['🔍', 'Fit timeline', 'F', fitView],
+  ['⌨', 'Keyboard shortcuts', '?', () => toggleModal('helpScrim')],
+  ['🗑', 'Remove current video', '', () => { const v = active(); if (v) removeVideo(v.id); }],
+];
+let palSel = 0, palHits = [];
+function openPalette() {
+  $('#palScrim').classList.add('on');
+  $('#palInput').value = ''; palSel = 0;
+  fillPalette('');
+  setTimeout(() => $('#palInput').focus(), 20);
+}
+function closePalette() { $('#palScrim').classList.remove('on'); }
+function fillPalette(q) {
+  q = q.toLowerCase().trim();
+  palHits = COMMANDS.filter(c => !q || (c[1] + ' ' + c[2]).toLowerCase().includes(q));
+  palSel = Math.min(palSel, Math.max(0, palHits.length - 1));
+  $('#palList').innerHTML = palHits.length
+    ? palHits.map((c, i) => '<div class="pitem' + (i === palSel ? ' sel' : '') + '" data-i="' + i + '">' +
+        '<span class="pi">' + c[0] + '</span><span>' + c[1] + '</span>' +
+        (c[2] ? '<small style="margin-left:auto">' + c[2] + '</small>' : '') + '</div>').join('')
+    : '<div class="pitem"><span class="pi">·</span><span style="color:var(--tx-3)">No matching command</span></div>';
+}
+$('#palInput').addEventListener('input', e => fillPalette(e.target.value));
+$('#palInput').addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); palSel = Math.min(palHits.length - 1, palSel + 1); fillPalette($('#palInput').value); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); palSel = Math.max(0, palSel - 1); fillPalette($('#palInput').value); }
+  else if (e.key === 'Enter') { e.preventDefault(); runPalette(palSel); }
+});
+$('#palList').addEventListener('click', e => {
+  const it = e.target.closest('.pitem'); if (it && it.dataset.i != null) runPalette(+it.dataset.i);
+});
+function runPalette(i) {
+  const c = palHits[i]; closePalette();
+  if (c && typeof c[3] === 'function') setTimeout(c[3], 10);
+}
+$('#palBtn').onclick = openPalette;
+$('#palScrim').addEventListener('click', e => { if (e.target === $('#palScrim')) closePalette(); });
+
+/* ================================ MODALS =============================== */
+function toggleModal(id, force) {
+  const el = document.getElementById(id);
+  const on = force == null ? !el.classList.contains('on') : force;
+  el.classList.toggle('on', on);
+}
+$('#helpBtn').onclick = () => toggleModal('helpScrim');
+$$('[data-close]').forEach(b => b.onclick = () => toggleModal(b.dataset.close, false));
+$('#helpScrim').addEventListener('click', e => { if (e.target === $('#helpScrim')) toggleModal('helpScrim', false); });
+
+(function buildKeyTable() {
+  const host = $('#keyTable');
+  host.innerHTML = KEYS.map(([keys, desc]) => {
+    if (!desc) return '<div class="kg">' + keys + '</div>';
+    const kk = keys.split(' ').map(k => '<kbd>' + k + '</kbd>').join('');
+    return '<div class="kk">' + kk + '</div><div style="color:var(--tx-2)">' + desc + '</div>';
+  }).join('');
+})();
+
+/* ================================= INIT ================================ */
+(function init() {
+  applyPrefs();
+  updateNamePreview();
+  $('#fsToggle').classList.toggle('on', A.showStrip);
+  $('#fsZone').classList.toggle('hide', !A.showStrip);
+  renderRail(); renderStats(); renderDiff();
+  const saved = Object.keys((loadStore().files || {})).length;
+  if (saved) {
+    $('#autosaveChip').textContent = '💾 ' + saved + ' saved';
+    $('#autosaveChip').title = saved + ' videos have cut data stored in this browser — re-add the same file and it comes back.';
+  }
+  window.SceneCut = { A, active, scenesOf, keptOf, detectScenes, buildJobs, zipBlob,
+                      genBat, genSh, genPs1, genPy, genCsv, genChapters, genEdl, genProject };
+})();
+</script>
+</body>
+</html>
