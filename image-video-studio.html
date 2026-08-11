@@ -39,7 +39,7 @@
   --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   --rail:336px;
   --insp:312px;
-  --tl:214px;
+  --tl:252px;
   --top:54px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -453,6 +453,7 @@ kbd{
 .awave.none{background:rgba(255,255,255,.02);border-style:dashed;border-color:var(--line);display:grid;place-items:center;cursor:pointer}
 .awave.none:hover{border-color:var(--line-2);background:rgba(255,255,255,.04)}
 .awave.none .ph{font-size:10px;color:var(--txt-3)}
+.awave:not(.none) .ph{display:none}
 
 .playhead{position:absolute;top:0;bottom:0;width:1px;background:var(--acc-3);z-index:7;pointer-events:none;box-shadow:0 0 10px rgba(244,114,182,.85)}
 .playhead::before{
@@ -519,6 +520,39 @@ kbd{
 .note b{color:#fff;font-weight:700}
 .note code{font-family:var(--mono);font-size:10px;background:rgba(0,0,0,.4);padding:1px 4px;border-radius:4px}
 
+/* Reference-image chip */
+.ref{display:flex;align-items:center;gap:8px;padding:6px;border-radius:10px;background:rgba(124,92,255,.09);border:1px solid rgba(124,92,255,.3)}
+.ref img{width:44px;height:30px;object-fit:cover;border-radius:6px;flex:none;background:#000}
+.ref .m{flex:1;min-width:0}
+.ref .m b{display:block;font-size:10.5px;font-weight:700;color:#c5b6ff}
+.ref .m span{display:block;font-size:9.5px;color:var(--txt-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Jobs list */
+.jobs{display:flex;flex-direction:column;gap:8px}
+.job{display:flex;gap:10px;padding:9px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line);transition:var(--fast)}
+.job:hover{border-color:var(--line-2);background:var(--panel-3)}
+.job .thumbs{display:flex;gap:4px;flex:none}
+.job .thumbs img{width:52px;height:34px;object-fit:cover;border-radius:6px;background:#0a0c11;border:1px solid var(--line)}
+.job .thumbs .none{width:52px;height:34px;border-radius:6px;background:rgba(255,255,255,.04);border:1px dashed var(--line-2);display:grid;place-items:center;font-size:8.5px;color:var(--txt-3)}
+.job .bd{flex:1;min-width:0}
+.job .bd .p{font-size:11px;color:var(--txt-2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.job .bd .meta{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:9.5px;font-family:var(--mono);color:var(--txt-3);flex-wrap:wrap}
+.job .acts{display:flex;flex-direction:column;gap:4px;flex:none;justify-content:center}
+.pager{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;font-size:11px;color:var(--txt-3)}
+
+/* Audio lanes */
+.trk{display:flex;align-items:center;gap:8px;padding:8px;border-radius:11px;background:var(--panel-2);border:1px solid var(--line);margin-bottom:8px}
+.trk .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:none;background:rgba(34,211,238,.12);color:var(--acc-2)}
+.trk.mu .ic{background:rgba(244,114,182,.12);color:var(--acc-3)}
+.trk .ic svg{width:13px;height:13px}
+.trk .bd{flex:1;min-width:0}
+.trk .bd b{display:block;font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trk .bd span{font-size:9.5px;color:var(--txt-3);font-family:var(--mono)}
+.trk.empty-t{border-style:dashed;cursor:pointer;color:var(--txt-3)}
+.trk.empty-t:hover{border-color:var(--line-2);background:var(--panel-3)}
+.awave.mu{background:rgba(244,114,182,.05);border-color:rgba(244,114,182,.18)}
+.awave.mu .nm{color:rgba(255,190,220,.85)}
+
 .keys{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px}
 .keys div{display:flex;justify-content:space-between;gap:10px;font-size:11px;padding:3px 0;color:var(--txt-2)}
 
@@ -565,6 +599,12 @@ kbd{
   <symbol id="i-img" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.4"/><circle cx="8.6" cy="9.6" r="1.7"/><path d="M21 15.5l-5-4.5L5.5 20"/></symbol>
   <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4"/><path d="M10.4 12.7L20 3.2M16.8 6.4l2.6 2.6M14.2 9l2.2 2.2"/></symbol>
   <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5h11a5.5 5.5 0 010 11H8"/><path d="M7 4L3.5 8.5 7 13"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 8.5h-11a5.5 5.5 0 000 11H16"/><path d="M17 4l3.5 4.5L17 13"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3.5"/></symbol>
   <symbol id="i-wand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20L16.5 7.5"/><path d="M14 5l1.2 1.2M19 10l-1.2-1.2M17.6 4.4l-.7 2.3-2.3.7 2.3.7.7 2.3.7-2.3 2.3-.7-2.3-.7zM5.5 3l.5 1.6L7.6 5l-1.6.5L5.5 7 5 5.5 3.4 5 5 4.6z"/></symbol>
 </svg>
 
@@ -578,6 +618,8 @@ kbd{
       <div><b>LUMEN</b><span>STUDIO</span></div>
     </div>
     <input class="pname" id="pName" value="Untitled Film" spellcheck="false" aria-label="Project name" />
+    <button class="btn ico ghost" id="bUndo" title="Undo (⌘/Ctrl Z)" disabled><svg><use href="#i-undo"/></svg></button>
+    <button class="btn ico ghost" id="bRedo" title="Redo (⌘/Ctrl ⇧ Z)" disabled><svg><use href="#i-redo"/></svg></button>
     <div class="chip" id="chModel" title="Active model"><svg style="width:12px;height:12px;color:var(--txt-3)"><use href="#i-img"/></svg><b id="chModelT">seedream-4.5</b></div>
     <div class="chip" id="chFilm"><b id="chFilmT">0 shots · 0:00</b></div>
     <div class="spacer"></div>
@@ -586,6 +628,7 @@ kbd{
     <button class="btn" id="bEstimate"><svg><use href="#i-coin"/></svg>Price</button>
     <button class="btn pri" id="bGenAll"><svg><use href="#i-spark"/></svg>Generate All</button>
     <button class="btn" id="bExport"><svg><use href="#i-export"/></svg>Export</button>
+    <button class="btn ico ghost" id="bJobs" title="Task history (J)"><svg><use href="#i-list"/></svg></button>
     <button class="btn ico ghost" id="bSettings" title="Settings (,)"><svg><use href="#i-gear"/></svg></button>
     <button class="btn ico ghost" id="bHelp" title="Shortcuts (?)"><svg><use href="#i-info"/></svg></button>
     <button class="btn ico ghost m-only" id="mInsp" title="Inspector"><svg><use href="#i-look"/></svg></button>
@@ -687,14 +730,31 @@ kbd{
     <!-- AUDIO -->
     <section class="pane" data-pane="audio">
       <div class="sec">
-        <div class="sec-h">Voiceover / music<div class="ln"></div></div>
-        <div class="drop" id="audDrop"><svg style="width:18px;height:18px;opacity:.5;display:block;margin:0 auto 6px"><use href="#i-audio"/></svg>Drop an audio file, or click to browse<br /><span style="opacity:.7">mp3 · wav · m4a · ogg</span></div>
-        <input type="file" id="audFile" accept="audio/*" hidden />
-        <div id="audInfo" style="display:none;margin-top:11px">
-          <div class="kv"><span class="k" id="audName">—</span><span class="v" id="audDur">0:00</span></div>
-          <div class="fld" style="margin-top:9px"><div class="lbl"><span>Volume</span><span class="v" id="vVol">80%</span></div><input type="range" id="rVol" min="0" max="1" step=".05" value=".8" /></div>
-          <button class="btn wide" id="bAudClear"><svg><use href="#i-trash"/></svg>Remove audio</button>
+        <div class="sec-h">Voiceover<div class="ln"></div></div>
+        <div class="trk empty-t" id="voSlot" data-t="vo">
+          <div class="ic"><svg><use href="#i-mic"/></svg></div>
+          <div class="bd"><b id="voName">Add a voiceover</b><span id="voMeta">drop a file or click · mp3 wav m4a ogg</span></div>
+          <button class="btn sm ico danger" id="voClear" style="display:none"><svg><use href="#i-trash"/></svg></button>
         </div>
+        <input type="file" id="voFile" accept="audio/*" hidden />
+        <div class="fld" id="voVolWrap" style="display:none">
+          <div class="lbl"><span>Voiceover level</span><span class="v" id="vVoVol">90%</span></div>
+          <input type="range" id="rVoVol" min="0" max="1.5" step=".05" value=".9" />
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-h">Music bed<div class="ln"></div></div>
+        <div class="trk mu empty-t" id="muSlot" data-t="mu">
+          <div class="ic"><svg><use href="#i-music"/></svg></div>
+          <div class="bd"><b id="muName">Add a music bed</b><span id="muMeta">loops to fill the film if it is short</span></div>
+          <button class="btn sm ico danger" id="muClear" style="display:none"><svg><use href="#i-trash"/></svg></button>
+        </div>
+        <input type="file" id="muFile" accept="audio/*" hidden />
+        <div class="fld" id="muVolWrap" style="display:none">
+          <div class="lbl"><span>Music level</span><span class="v" id="vMuVol">30%</span></div>
+          <input type="range" id="rMuVol" min="0" max="1" step=".05" value=".3" />
+        </div>
+        <label class="sw" id="swDuck"><div><div class="t">Duck music under voice</div><div class="d">Automatically drops the bed wherever the voiceover is speaking.</div></div><div class="tgl"></div></label>
       </div>
       <div class="sec">
         <div class="sec-h">Sync<div class="ln"></div></div>
@@ -713,7 +773,7 @@ kbd{
           <button class="btn sm" id="bLoad"><svg><use href="#i-open"/></svg>Open</button>
         </div>
         <input type="file" id="projFile" accept="application/json,.json" hidden />
-        <div class="hint">Autosaved to this browser continuously. Shots, timing, look and images travel in the file; the <b>API key and the audio track do not</b> — re-attach the voiceover after opening a project.</div>
+        <div class="hint">Autosaved to this browser continuously — audio included, so a reload restores the whole session. Saved files carry shots, timing, look, images, references and both audio tracks (under 24 MB each). The <b>API key is never written into a project file</b>.</div>
       </div>
     </section>
   </aside>
@@ -764,7 +824,8 @@ kbd{
       <div class="tl-inner" id="tlInner">
         <div class="ruler" id="ruler"><canvas id="rulerC" height="19"></canvas></div>
         <div class="clips" id="clips"><div class="drop-ind" id="dropInd"></div></div>
-        <div class="awave none" id="awave"><span class="ph">Audio track — drop a voiceover in the Audio tab</span><canvas id="awaveC" height="38"></canvas><span class="nm" id="awaveNm"></span></div>
+        <div class="awave none" id="awave" data-t="vo"><span class="ph">Voiceover — drop a file in the Audio tab</span><canvas id="awaveC" height="38"></canvas><span class="nm" id="awaveNm"></span></div>
+        <div class="awave mu none" id="awaveM" data-t="mu"><span class="ph">Music bed — optional</span><canvas id="awaveMC" height="38"></canvas><span class="nm" id="awaveMNm"></span></div>
         <div class="playhead" id="playhead" style="left:0"></div>
       </div>
     </div>
@@ -842,7 +903,29 @@ kbd{
         <div class="bar"><i id="expBar" style="width:0"></i></div>
       </div>
     </div>
-    <div class="m-f"><button class="btn" data-close>Cancel</button><button class="btn pri" id="bExpGo"><svg><use href="#i-export"/></svg>Start render</button></div>
+    <div class="m-f">
+      <button class="btn" data-close id="bExpClose">Cancel</button>
+      <button class="btn danger" id="bExpStop" style="display:none"><svg><use href="#i-stop"/></svg>Stop render</button>
+      <button class="btn pri" id="bExpGo"><svg><use href="#i-export"/></svg>Start render</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= JOBS ================= -->
+<div class="scrim" id="mdJobs">
+  <div class="modal wide">
+    <div class="m-h">
+      <div class="ic"><svg><use href="#i-list"/></svg></div>
+      <div><h3>Task history</h3><p>Every image job on your account — reuse a result, or clear it out.</p></div>
+      <button class="x" data-close><svg style="width:15px;height:15px"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="m-b" id="jobsBody"></div>
+    <div class="m-f">
+      <button class="btn danger" id="bJobsPurge"><svg><use href="#i-trash"/></svg>Delete listed</button>
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn" data-close>Close</button>
+      <button class="btn pri" id="bJobsReload"><svg><use href="#i-refresh"/></svg>Refresh</button>
+    </div>
   </div>
 </div>
 
@@ -859,9 +942,9 @@ kbd{
       <div style="font-size:11.5px;line-height:1.75;color:var(--txt-2);margin-bottom:14px">
         <b style="color:var(--txt)">1 · Write</b> — paste narration or a prompt list and press <b>Build shot list</b>. Each shot gets a prompt, a caption and a duration paced off its word count.<br />
         <b style="color:var(--txt)">2 · Look</b> — pick a Style DNA. Its suffix rides on every prompt so the film holds one visual language; turn on continuity to chain each frame as reference for the next.<br />
-        <b style="color:var(--txt)">3 · Generate</b> — price it, then fire. Shots queue in parallel and poll until done.<br />
-        <b style="color:var(--txt)">4 · Time</b> — drag clips to reorder, drag their right edge to retime, set motion and cuts per shot, drop in a voiceover and fit the film to it.<br />
-        <b style="color:var(--txt)">5 · Export</b> — the canvas renders with motion, transitions, captions and grade, and records to a video file with your audio mixed in.
+        <b style="color:var(--txt)">3 · Generate</b> — price it, then fire. Shots queue in parallel and poll until done; the button turns into a stop control while the batch runs. Anything you have already generated stays in <b>Task history</b> (J) to reuse or delete.<br />
+        <b style="color:var(--txt)">4 · Time</b> — drag clips to reorder, drag their right edge to retime, split at the playhead, set motion and cuts per shot. Drop in a voiceover and fit the film to it, then lay a music bed underneath — it loops to fill and ducks under the voice.<br />
+        <b style="color:var(--txt)">5 · Export</b> — the canvas renders with motion, transitions, captions and grade, and records to a video file with your audio mixed in. Every edit is undoable.
       </div>
       <div class="sec-h">Shortcuts<div class="ln"></div></div>
       <div class="keys">
@@ -874,7 +957,9 @@ kbd{
         <div><span>Duplicate shot</span><kbd>⌘/Ctrl D</kbd></div>
         <div><span>Delete shot</span><kbd>Del</kbd></div>
         <div><span>Generate selected</span><kbd>G</kbd></div>
-        <div><span>Generate all</span><kbd>⌘/Ctrl G</kbd></div>
+        <div><span>Generate all / stop</span><kbd>⌘/Ctrl G</kbd></div>
+        <div><span>Undo / redo</span><kbd>⌘/Ctrl (⇧) Z</kbd></div>
+        <div><span>Task history</span><kbd>J</kbd></div>
         <div><span>Export</span><kbd>⌘/Ctrl E</kbd></div>
         <div><span>Save project</span><kbd>⌘/Ctrl S</kbd></div>
         <div><span>Settings</span><kbd>,</kbd></div>
@@ -992,8 +1077,10 @@ const DEFCFG = {
   motion:"auto", trans:"dissolve", transDur:.6,
   captions:"none", grain:.06, vignette:.35, bars:false,
   conc:2, poll:3000, timeout:300,
-  eh:1080, fps:30, br:12, fmt:"", vol:.8, loop:false, snap:true, pace:0, mode:"script"
+  eh:1080, fps:30, br:12, fmt:"", loop:false, snap:true, pace:0, mode:"script",
+  voVol:.9, muVol:.3, duck:true
 };
+function emptyTrack(){ return {name:"",buffer:null,peaks:null,bytes:null,type:""}; }
 const S = {
   name:"Untitled Film",
   scenes:[],
@@ -1003,8 +1090,7 @@ const S = {
   cfg:Object.assign({},DEFCFG),
   models:FALLBACK_MODELS.slice(),
   pps:70,
-  audio:{ name:"", buffer:null, peaks:null },
-  busy:0,
+  au:{ vo:emptyTrack(), mu:emptyTrack() },
   credits:null
 };
 const IMGCACHE = new Map();     // url -> {img, tainted}
@@ -1033,9 +1119,14 @@ function serialize(forFile){
       id:s.id, prompt:s.prompt, caption:s.caption, duration:s.duration,
       motion:s.motion, trans:s.trans, transDur:s.transDur,
       images:s.images.filter(i=>forFile||!/^data:/.test(i.url)).map(i=>({url:i.url,w:i.w,h:i.h})),
-      active:s.active,
+      active:s.active, ref:forFile?s.ref:null,
       status:s.status==="done"?"done":"idle", taskId:s.taskId||null
     })),
+    audio:forFile?["vo","mu"].reduce((o,k)=>{
+      const t=S.au[k];
+      if(t.bytes && t.bytes.byteLength<24*1024*1024) o[k]={name:t.name,type:t.type,data:b64(t.bytes)};
+      return o;
+    },{}):undefined,
     cfg:(()=>{ const c=Object.assign({},S.cfg); delete c.apiKey; return c; })()
   };
 }
@@ -1044,6 +1135,19 @@ function hydrate(o,keepCfg){
   if(o.name) S.name=o.name;
   if(o.cfg && !keepCfg) Object.assign(S.cfg,o.cfg,{apiKey:S.cfg.apiKey});
   if(Array.isArray(o.scenes)) S.scenes=o.scenes.map(s=>normScene(s));
+}
+async function hydrateAudio(o){
+  if(!o || !o.audio) return;
+  for(const k of ["vo","mu"]){
+    const rec=o.audio[k]; if(!rec||!rec.data) continue;
+    try{
+      const bytes=unb64(rec.data);
+      const b=await ac().decodeAudioData(bytes.slice(0));
+      S.au[k]=Object.assign(emptyTrack(),{name:rec.name,buffer:b,peaks:peaks(b,2400),bytes:bytes,type:rec.type});
+      saveTrackToDB(k,bytes,rec.name,rec.type);
+    }catch(e){ toast("Audio in project could not be decoded",String(e.message||e),"warn"); }
+  }
+  syncAudioUI(); renderAudioLane();
 }
 function normScene(s){
   s=s||{};
@@ -1058,8 +1162,60 @@ function normScene(s){
     images:Array.isArray(s.images)?s.images.slice():[],
     active:s.active||0,
     status:(s.images&&s.images.length)?"done":"idle",
-    progress:0, taskId:s.taskId||null, error:"", ref:null
+    progress:0, taskId:s.taskId||null, error:"",
+    ref:s.ref||null            // {url, name} data URL used as @img1 for this shot
   };
+}
+
+/* ============================================================================
+   UNDO / REDO
+   Snapshots copy scene records but share the immutable image entries, so a deep
+   history stays cheap even with embedded data: URLs.
+   ============================================================================ */
+const HIST={past:[],future:[],tag:"",at:0};
+function snapshot(){
+  return { name:S.name, sel:S.sel, scenes:S.scenes.map(s=>Object.assign({},s,{images:s.images.slice()})) };
+}
+function applySnap(sn){
+  S.name=sn.name; S.sel=sn.sel;
+  S.scenes=sn.scenes.map(s=>Object.assign({},s,{images:s.images.slice()}));
+  $("#pName").value=S.name;
+}
+// tag coalesces a burst of same-kind edits (typing, dragging a slider) into one step
+function pushHist(tag){
+  const now=Date.now();
+  if(tag && tag===HIST.tag && now-HIST.at<900){ HIST.at=now; return; }
+  HIST.past.push(snapshot());
+  if(HIST.past.length>80) HIST.past.shift();
+  HIST.future.length=0;
+  HIST.tag=tag||""; HIST.at=now;
+  histUI();
+}
+function undo(){
+  if(!HIST.past.length) return;
+  HIST.future.push(snapshot());
+  applySnap(HIST.past.pop());
+  HIST.tag=""; histUI(); renderAll();
+  toast("Undo","","info",1200);
+}
+function redo(){
+  if(!HIST.future.length) return;
+  HIST.past.push(snapshot());
+  applySnap(HIST.future.pop());
+  HIST.tag=""; histUI(); renderAll();
+  toast("Redo","","info",1200);
+}
+// commit a snapshot captured earlier — used by drags, where we only know
+// afterwards whether anything actually changed
+function commitHist(sn){
+  HIST.past.push(sn);
+  if(HIST.past.length>80) HIST.past.shift();
+  HIST.future.length=0; HIST.tag=""; histUI();
+}
+function histUI(){
+  const u=$("#bUndo"), r=$("#bRedo");
+  if(u) u.disabled=!HIST.past.length;
+  if(r) r.disabled=!HIST.future.length;
 }
 
 /* --------------------------------- toasts -------------------------------- */
@@ -1140,6 +1296,20 @@ async function apiTask(id){
   return res.json();
 }
 
+async function apiTasks(page,limit){
+  const url="/v1/tasks?type=imagen2&page="+page+"&limit="+limit;
+  const res=await fetch(endpoint(url),{headers:keyHeaders({"Content-Type":"application/json"})});
+  if(!res.ok) throw new Error(await readErr(res));
+  return res.json();
+}
+async function apiDeleteTasks(ids){
+  const res=await fetch(endpoint("/v1/task/delete"),{
+    method:"POST", headers:keyHeaders({"Content-Type":"application/json"}),
+    body:JSON.stringify({task_ids:ids})
+  });
+  if(!res.ok) throw new Error(await readErr(res));
+  return res.json();
+}
 function curModel(){
   return S.models.find(m=>m.model_id===S.cfg.modelId) || S.models[0] || FALLBACK_MODELS[0];
 }
@@ -1376,6 +1546,7 @@ function buildShots(append){
   if(!txt.trim()){ toast("Nothing to build","Paste a script or a list of prompts first.","warn"); return; }
   const parsed=parseScript(txt,S.cfg.mode,S.cfg.pace);
   if(!parsed.length){ toast("No shots found","Could not split that text into shots.","warn"); return; }
+  pushHist();
   const made=parsed.map(p=>normScene({
     prompt:p.prompt, caption:p.caption, duration:p.duration,
     motion:S.cfg.motion, trans:S.cfg.trans, transDur:S.cfg.transDur
@@ -1405,6 +1576,7 @@ function sceneAt(t){
 function selScene(){ return S.scenes.find(s=>s.id===S.sel)||null; }
 function selIndex(){ return S.scenes.findIndex(s=>s.id===S.sel); }
 function addShot(after){
+  pushHist();
   const sc=normScene({prompt:"",caption:"",duration:4,motion:S.cfg.motion,trans:S.cfg.trans,transDur:S.cfg.transDur});
   const i = after==null ? S.scenes.length : after+1;
   S.scenes.splice(i,0,sc);
@@ -1413,6 +1585,7 @@ function addShot(after){
 }
 function dupShot(){
   const i=selIndex(); if(i<0) return;
+  pushHist();
   const c=JSON.parse(JSON.stringify(serializeScene(S.scenes[i])));
   const sc=normScene(c); sc.id=uid();
   S.scenes.splice(i+1,0,sc); S.sel=sc.id; renderAll();
@@ -1422,6 +1595,7 @@ function serializeScene(s){
 }
 function delShot(){
   const i=selIndex(); if(i<0) return;
+  pushHist();
   S.scenes.splice(i,1);
   S.sel = S.scenes.length ? S.scenes[clamp(i,0,S.scenes.length-1)].id : null;
   renderAll();
@@ -1442,6 +1616,27 @@ function queueScenes(list){
   list.forEach(sc=>{ if(sc.status!=="working"&&sc.status!=="queued"){ sc.status="queued"; sc.error=""; sc.progress=0; QUEUE.push(sc.id); } });
   renderShots(); renderClips(); pump();
 }
+function busy(){ return RUNNING>0 || QUEUE.length>0; }
+function genUI(){
+  const b=$("#bGenAll"); if(!b) return;
+  if(busy()){
+    b.classList.remove("pri"); b.classList.add("danger");
+    b.innerHTML='<svg><use href="#i-stop"/></svg>Stop ('+(RUNNING+QUEUE.length)+')';
+  }else{
+    b.classList.add("pri"); b.classList.remove("danger");
+    b.innerHTML='<svg><use href="#i-spark"/></svg>Generate All';
+  }
+}
+function cancelGen(){
+  if(!busy()) return;
+  ABORT=true;
+  const n=QUEUE.length;
+  QUEUE.length=0;
+  S.scenes.forEach(s=>{ if(s.status==="queued") s.status=s.images.length?"done":"idle"; });
+  toast("Stopping","Queued shots dropped"+(RUNNING?"; "+RUNNING+" in flight will finish or abort at the next poll.":"."),"warn");
+  genUI(); renderShots(); renderClips(); updProgress();
+  return n;
+}
 function pump(){
   const max=clamp(+S.cfg.conc||2,1,6);
   while(RUNNING<max && QUEUE.length && !ABORT){
@@ -1449,20 +1644,25 @@ function pump(){
     const sc=S.scenes.find(x=>x.id===id);
     if(!sc||sc.status!=="queued") continue;
     RUNNING++;
+    genUI();
     runScene(sc).catch(e=>{
-      sc.status="error"; sc.error=netHint(e);
+      const m=netHint(e);
+      if(/cancelled/i.test(m)){ sc.status=sc.images.length?"done":"idle"; sc.error=""; }
+      else { sc.status="error"; sc.error=m; }
     }).then(()=>{
-      RUNNING--; updProgress(); renderShots(); renderClips(); renderInspector(); draw();
-      if(QUEUE.length) pump(); else if(!RUNNING) finishBatch();
+      RUNNING--; updProgress(); genUI(); renderShots(); renderClips(); renderInspector(); draw();
+      if(QUEUE.length && !ABORT) pump(); else if(!RUNNING) finishBatch();
     });
   }
-  updProgress();
+  updProgress(); genUI();
 }
 function finishBatch(){
   const bad=S.scenes.filter(s=>s.status==="error").length;
   const ok=S.scenes.filter(s=>s.status==="done").length;
   $("#topProg").style.width="0";
-  if(bad) toast("Batch finished with errors",bad+" shot"+(bad>1?"s":"")+" failed · "+ok+" ready","warn");
+  genUI();
+  if(ABORT){ ABORT=false; toast("Generation stopped",ok+" shots ready","info"); }
+  else if(bad) toast("Batch finished with errors",bad+" shot"+(bad>1?"s":"")+" failed · "+ok+" ready","warn");
   else if(ok) toast("All shots ready",ok+" images on the timeline","ok");
   persist();
 }
@@ -1497,10 +1697,16 @@ async function runScene(sc){
 
   // -------- live API --------
   const fd=new FormData();
-  let promptOut=prompt, assets=0;
+  let promptOut=prompt;
   // reference images: explicit per-shot ref wins, else continuity chain
   const refs=[];
-  if(sc.ref) refs.push(sc.ref);
+  if(sc.ref && sc.ref.url){
+    try{
+      const r=await fetch(sc.ref.url);
+      const b=await r.blob();
+      refs.push(new File([b],sc.ref.name||"ref.png",{type:b.type||"image/png"}));
+    }catch(e){ /* unreadable reference — fall through to no asset */ }
+  }
   else if(S.cfg.continuity && idx>0 && curModel().supports_images){
     const prev=S.scenes[idx-1];
     const pi=prev.images[clamp(prev.active,0,prev.images.length-1)];
@@ -1511,11 +1717,12 @@ async function runScene(sc){
       }catch(e){ /* reference unavailable — continue without */ }
     }
   }
+  const maxA=curModel().max_assets||10;
   if(refs.length){
+    refs.length=Math.min(refs.length,maxA);
     const tags=refs.map((_,i)=>"@img"+(i+1)).join(" and ");
     promptOut="Continue the exact visual style, palette and characters of "+tags+". "+promptOut;
     refs.forEach(f=>fd.append("assets",f));
-    assets=refs.length;
   }
   fd.append("prompt",promptOut.slice(0,4000));
   fd.append("model_id",S.cfg.modelId);
@@ -1586,6 +1793,99 @@ async function estimate(){
     rows(null,"Could not price this: "+esc(netHint(e)));
   }
 }
+/* ============================================================================
+   TASK HISTORY
+   ============================================================================ */
+const JOBS={page:1,limit:12,total:0,rows:[]};
+async function loadJobs(page){
+  JOBS.page=page||JOBS.page;
+  const box=$("#jobsBody");
+  if(S.cfg.demo){
+    box.innerHTML='<div class="note warn">Demo mode is on, so there is no server-side history. Turn it off in Settings to list the jobs on your account.</div>';
+    return;
+  }
+  if(!S.cfg.apiKey){
+    box.innerHTML='<div class="note warn">Add an API key in Settings to list your tasks.</div>';
+    return;
+  }
+  box.innerHTML='<div class="empty"><div class="t">Loading…</div></div>';
+  try{
+    const r=await apiTasks(JOBS.page,JOBS.limit);
+    JOBS.rows=r.data||r.tasks||[];
+    JOBS.total=r.total||JOBS.rows.length;
+    renderJobs();
+  }catch(e){
+    box.innerHTML='<div class="note warn">'+esc(netHint(e))+'</div>';
+  }
+}
+function renderJobs(){
+  const box=$("#jobsBody");
+  if(!JOBS.rows.length){
+    box.innerHTML='<div class="empty"><svg><use href="#i-list"/></svg><div class="t">No image tasks yet</div><div class="d">Jobs you run from this app show up here and can be reused later.</div></div>';
+    return;
+  }
+  const pages=Math.max(1,Math.ceil(JOBS.total/JOBS.limit));
+  box.innerHTML='<div class="jobs">'+JOBS.rows.map(t=>{
+    const md=t.metadata||{};
+    const imgs=(md.result_images||[]).slice(0,4);
+    const st=String(t.status||"").toLowerCase();
+    const cls=st==="done"?"done":(st==="error"||st==="failed")?"error":"working";
+    return '<div class="job" data-id="'+esc(t.id)+'">'+
+      '<div class="thumbs">'+(imgs.length
+        ? imgs.map(i=>'<img loading="lazy" src="'+esc(i.previewUrl||i.imageUrl)+'" alt="" />').join("")
+        : '<div class="none">'+esc(st||"—")+'</div>')+'</div>'+
+      '<div class="bd"><div class="p">'+esc(md.prompt||"(no prompt recorded)")+'</div>'+
+      '<div class="meta"><span class="st '+cls+'">'+esc(st||"?")+'</span>'+
+      '<span>'+esc(md.modelId||t.type||"")+'</span>'+
+      (t.credit_cost!=null?'<span>'+t.credit_cost+' cr</span>':'')+
+      (t.created_at?'<span>'+esc(String(t.created_at).replace("T"," ").slice(0,16))+'</span>':'')+
+      '<span>'+esc(t.id)+'</span></div></div>'+
+      '<div class="acts">'+
+        (imgs.length?'<button class="btn sm" data-act="add">Add as shots</button>':'')+
+        (imgs.length?'<button class="btn sm" data-act="into">Into shot</button>':'')+
+        '<button class="btn sm ico danger" data-act="del" title="Delete task"><svg><use href="#i-trash"/></svg></button>'+
+      '</div></div>';
+  }).join("")+'</div>'+
+  '<div class="pager"><button class="btn sm" id="jPrev"'+(JOBS.page<=1?" disabled":"")+'>Previous</button>'+
+  '<span>Page '+JOBS.page+' of '+pages+' · '+JOBS.total+' tasks</span>'+
+  '<button class="btn sm" id="jNext"'+(JOBS.page>=pages?" disabled":"")+'>Next</button></div>';
+
+  $("#jPrev").addEventListener("click",()=>loadJobs(JOBS.page-1));
+  $("#jNext").addEventListener("click",()=>loadJobs(JOBS.page+1));
+  $$(".job [data-act]").forEach(b=>b.addEventListener("click",async()=>{
+    const id=b.closest(".job").dataset.id;
+    const t=JOBS.rows.find(x=>String(x.id)===id); if(!t) return;
+    const md=t.metadata||{}, imgs=(md.result_images||[]).filter(i=>i.imageUrl||i.previewUrl);
+    if(b.dataset.act==="del"){
+      if(!confirm("Delete task "+id+" on the server?")) return;
+      try{ await apiDeleteTasks([id]); toast("Task deleted",id,"ok"); loadJobs(JOBS.page); }
+      catch(e){ toast("Delete failed",netHint(e),"err"); }
+      return;
+    }
+    if(!imgs.length) return;
+    pushHist();
+    if(b.dataset.act==="into"){
+      const s=selScene();
+      if(!s){ toast("No shot selected","Pick a shot on the timeline first.","warn"); return; }
+      imgs.forEach(i=>s.images.push({url:i.imageUrl||i.previewUrl,w:i.width||0,h:i.height||0}));
+      s.active=s.images.length-imgs.length; s.status="done"; s.error=""; s.taskId=id;
+      await warmScene(s);
+      toast("Imported",imgs.length+" image"+(imgs.length>1?"s":"")+" added to shot "+(selIndex()+1),"ok");
+    }else{
+      const made=imgs.map(i=>normScene({
+        prompt:md.prompt||"", caption:"", duration:4,
+        motion:S.cfg.motion, trans:S.cfg.trans, transDur:S.cfg.transDur,
+        images:[{url:i.imageUrl||i.previewUrl,w:i.width||0,h:i.height||0}], taskId:id
+      }));
+      S.scenes=S.scenes.concat(made);
+      S.sel=made[0].id;
+      for(const s of made) await warmScene(s);
+      toast("Added to timeline",made.length+" shot"+(made.length>1?"s":""),"ok");
+    }
+    closeM("#mdJobs"); fitZoom(); renderAll();
+  }));
+}
+
 /* ============================================================================
    RENDERER
    ============================================================================ */
@@ -1846,32 +2146,72 @@ function draw(){ renderFrame(PVG,PV.width,PV.height,S.time); }
 /* ============================================================================
    AUDIO
    ============================================================================ */
-let AC=null, SRC=null, GAIN=null;
+let AC=null, VOICES={vo:null,mu:null};
 function ac(){ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); return AC; }
-function stopAudio(){ if(SRC){ try{SRC.stop();}catch(e){} try{SRC.disconnect();}catch(e){} SRC=null; } }
+function stopAudio(){
+  for(const k in VOICES){
+    const v=VOICES[k]; if(!v) continue;
+    try{ v.src.stop(); }catch(e){}
+    try{ v.src.disconnect(); v.gain.disconnect(); }catch(e){}
+    VOICES[k]=null;
+  }
+}
+function trackVol(k){ return k==="vo"?S.cfg.voVol:S.cfg.muVol; }
+/* Envelope for the music bed: sample the voiceover's own peaks along the
+   timeline and schedule gain dips wherever there is speech. */
+function scheduleDuck(gain,startAt,offset){
+  const vo=S.au.vo, base=S.cfg.muVol;
+  if(!S.cfg.duck || !vo.peaks || !vo.buffer){ gain.gain.value=base; return; }
+  const c=ac(), STEP=.15, D=vo.buffer.duration;
+  gain.gain.cancelScheduledValues(startAt);
+  gain.gain.setValueAtTime(base,startAt);
+  for(let t=Math.max(0,offset); t<D; t+=STEP){
+    const i=Math.floor(t/D*vo.peaks.length);
+    // look slightly ahead so the dip lands before the syllable, not after it
+    let lvl=0; for(let k=i;k<Math.min(vo.peaks.length,i+3);k++) lvl=Math.max(lvl,vo.peaks[k]||0);
+    const target=base*(lvl>.06 ? .28 : 1);
+    gain.gain.linearRampToValueAtTime(target, startAt+(t-offset)+STEP);
+  }
+}
 function startAudio(offset,destNode){
-  if(!S.audio.buffer) return;
   const c=ac(); if(c.state==="suspended") c.resume();
   stopAudio();
-  SRC=c.createBufferSource(); SRC.buffer=S.audio.buffer;
-  GAIN=c.createGain(); GAIN.gain.value=S.cfg.vol;
-  SRC.connect(GAIN);
-  GAIN.connect(destNode||c.destination);
-  const off=clamp(offset,0,S.audio.buffer.duration-.02);
-  if(off<S.audio.buffer.duration) SRC.start(0,off);
+  const out=destNode||c.destination, at=c.currentTime+.02;
+  for(const k of ["vo","mu"]){
+    const tr=S.au[k]; if(!tr.buffer) continue;
+    const src=c.createBufferSource();
+    src.buffer=tr.buffer;
+    // the bed loops to cover a film longer than the cue
+    if(k==="mu" && tr.buffer.duration<total()-.1) src.loop=true;
+    const gain=c.createGain();
+    gain.gain.value=trackVol(k);
+    if(k==="mu") scheduleDuck(gain,at,offset);
+    src.connect(gain); gain.connect(out);
+    const off=clamp(offset,0,Math.max(0,tr.buffer.duration-.02));
+    if(src.loop || off<tr.buffer.duration) src.start(at, src.loop?(offset%tr.buffer.duration):off);
+    VOICES[k]={src:src,gain:gain};
+  }
 }
-async function loadAudioFile(f){
+function liveGain(k){ return VOICES[k]?VOICES[k].gain:null; }
+
+async function loadAudioFile(f,which){
   try{
-    const buf=await f.arrayBuffer();
-    const b=await ac().decodeAudioData(buf);
-    S.audio.name=f.name; S.audio.buffer=b; S.audio.peaks=peaks(b,2400);
-    $("#audInfo").style.display="block";
-    $("#audName").textContent=f.name;
-    $("#audDur").textContent=dur(b.duration);
-    $("#audDrop").style.display="none";
-    renderAudioLane();
-    toast("Audio loaded",f.name+" · "+dur(b.duration),"ok");
+    const bytes=await f.arrayBuffer();
+    // decodeAudioData detaches the buffer, so keep a copy for persistence
+    const keep=bytes.slice(0);
+    const b=await ac().decodeAudioData(bytes);
+    const tr=S.au[which];
+    tr.name=f.name; tr.buffer=b; tr.peaks=peaks(b,2400); tr.bytes=keep; tr.type=f.type||"audio/*";
+    saveTrackToDB(which,keep,f.name,f.type||"audio/*");
+    syncAudioUI(); renderAudioLane();
+    toast((which==="vo"?"Voiceover":"Music")+" loaded",f.name+" · "+dur(b.duration),"ok");
   }catch(e){ toast("Could not decode audio",String(e.message||e),"err"); }
+}
+function clearTrack(which){
+  stopAudio();
+  S.au[which]=emptyTrack();
+  delTrackFromDB(which);
+  syncAudioUI(); renderAudioLane();
 }
 function peaks(buf,n){
   const ch=buf.getChannelData(0), step=Math.max(1,Math.floor(ch.length/n)), out=new Float32Array(n);
@@ -1881,6 +2221,76 @@ function peaks(buf,n){
     out[i]=mx;
   }
   return out;
+}
+function syncAudioUI(){
+  for(const k of ["vo","mu"]){
+    const tr=S.au[k], has=!!tr.buffer, P=k==="vo"?"vo":"mu";
+    const slot=$("#"+P+"Slot");
+    slot.classList.toggle("empty-t",!has);
+    $("#"+P+"Name").textContent=has?tr.name:(k==="vo"?"Add a voiceover":"Add a music bed");
+    $("#"+P+"Meta").textContent=has
+      ? dur(tr.buffer.duration)+" · "+Math.round(tr.buffer.sampleRate/1000)+" kHz · "+(tr.buffer.numberOfChannels>1?"stereo":"mono")
+      : (k==="vo"?"drop a file or click · mp3 wav m4a ogg":"loops to fill the film if it is short");
+    $("#"+P+"Clear").style.display=has?"":"none";
+    $("#"+P+"VolWrap").style.display=has?"":"none";
+  }
+  $("#swDuck").classList.toggle("on",!!S.cfg.duck);
+}
+
+/* --------- audio persistence: raw bytes in IndexedDB, keyed per track -------- */
+let DB=null;
+function db(){
+  if(DB) return DB;
+  DB=new Promise((res,rej)=>{
+    let rq;
+    try{ rq=indexedDB.open("lumen-audio",1); }catch(e){ return rej(e); }
+    rq.onupgradeneeded=()=>{ rq.result.createObjectStore("tracks"); };
+    rq.onsuccess=()=>res(rq.result);
+    rq.onerror=()=>rej(rq.error);
+  });
+  return DB;
+}
+async function saveTrackToDB(key,bytes,name,type){
+  try{
+    const d=await db();
+    await new Promise((res,rej)=>{
+      const tx=d.transaction("tracks","readwrite");
+      tx.objectStore("tracks").put({bytes:bytes,name:name,type:type},key);
+      tx.oncomplete=res; tx.onerror=()=>rej(tx.error);
+    });
+  }catch(e){/* private mode or no quota — audio just will not survive reload */}
+}
+async function delTrackFromDB(key){
+  try{ const d=await db(); const tx=d.transaction("tracks","readwrite"); tx.objectStore("tracks").delete(key); }catch(e){}
+}
+async function restoreTracks(){
+  try{
+    const d=await db();
+    for(const k of ["vo","mu"]){
+      const rec=await new Promise((res)=>{
+        const tx=d.transaction("tracks","readonly");
+        const rq=tx.objectStore("tracks").get(k);
+        rq.onsuccess=()=>res(rq.result); rq.onerror=()=>res(null);
+      });
+      if(rec && rec.bytes){
+        try{
+          const b=await ac().decodeAudioData(rec.bytes.slice(0));
+          S.au[k]=Object.assign(emptyTrack(),{name:rec.name,buffer:b,peaks:peaks(b,2400),bytes:rec.bytes,type:rec.type});
+        }catch(e){}
+      }
+    }
+    syncAudioUI(); renderAudioLane();
+  }catch(e){}
+}
+function b64(buf){
+  const bytes=new Uint8Array(buf); let s="";
+  for(let i=0;i<bytes.length;i+=0x8000) s+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
+  return btoa(s);
+}
+function unb64(str){
+  const bin=atob(str), out=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i);
+  return out.buffer;
 }
 
 /* ============================================================================
@@ -2001,27 +2411,38 @@ function renderClips(){
   $("#chFilmT").textContent=S.scenes.length+" shots · "+dur(total());
 }
 function renderAudioLane(){
-  const lane=$("#awave"), c=$("#awaveC");
-  if(!S.audio.buffer){ lane.classList.add("none"); c.style.display="none"; $("#awaveNm").textContent=""; return; }
+  drawWave("vo","#awave","#awaveC","#awaveNm",["rgba(34,211,238,.85)","rgba(124,92,255,.6)"]);
+  drawWave("mu","#awaveM","#awaveMC","#awaveMNm",["rgba(244,114,182,.8)","rgba(124,92,255,.5)"]);
+}
+function drawWave(key,laneSel,canvasSel,nmSel,cols){
+  const tr=S.au[key], lane=$(laneSel), c=$(canvasSel);
+  if(!tr.buffer){ lane.classList.add("none"); c.style.display="none"; $(nmSel).textContent=""; return; }
   lane.classList.remove("none"); c.style.display="block";
   const W=tlWidth(), dpr=Math.min(2,window.devicePixelRatio||1);
   c.width=W*dpr; c.height=38*dpr; c.style.width=W+"px";
   const g=c.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0);
   g.clearRect(0,0,W,38);
-  const pk=S.audio.peaks, d=S.audio.buffer.duration, wpx=Math.max(1,d*S.pps);
+  const pk=tr.peaks, T=total(), d=tr.buffer.duration;
+  // the bed loops, so paint it across the whole film
+  const looped = key==="mu" && d<T-.1;
+  const span = looped ? T : d;
+  const wpx=Math.max(1,span*S.pps);
   const grad=g.createLinearGradient(0,0,0,38);
-  grad.addColorStop(0,"rgba(34,211,238,.85)"); grad.addColorStop(1,"rgba(124,92,255,.6)");
+  grad.addColorStop(0,cols[0]); grad.addColorStop(1,cols[1]);
   g.fillStyle=grad;
   for(let x=0;x<wpx;x++){
-    const idx=Math.floor(x/wpx*pk.length);
+    const t=x/S.pps, idx=Math.floor(((t%d)/d)*pk.length);
     const v=pk[idx]||0, h=Math.max(1,v*32);
     g.fillRect(12+x,19-h/2,1,h);
   }
-  const T=total();
-  if(d>T+.05){
+  if(looped){
+    g.fillStyle="rgba(255,255,255,.18)";
+    for(let t=d;t<T;t+=d) g.fillRect(12+t*S.pps,0,1,38);
+  }
+  if(d>T+.05){ // audio running past the last frame gets flagged
     g.fillStyle="rgba(251,113,133,.16)"; g.fillRect(12+T*S.pps,0,(d-T)*S.pps,38);
   }
-  $("#awaveNm").textContent=S.audio.name+" · "+dur(d);
+  $(nmSel).textContent=tr.name+" · "+dur(d)+(looped?" · looping":"");
 }
 function renderShots(){
   const host=$("#shotList");
@@ -2085,6 +2506,15 @@ function renderInspector(){
     '<input type="file" id="imgFile" accept="image/*" hidden />'+
   '</div>'+
   '<div class="sec">'+
+    '<div class="sec-h">Reference<div class="ln"></div>'+(s.ref?'<span class="act" id="aRefClear">clear</span>':'')+'</div>'+
+    (s.ref
+      ? '<div class="ref"><img src="'+esc(s.ref.url)+'" alt="" /><div class="m"><b>@img1</b><span>'+esc(s.ref.name||"reference")+'</span></div></div>'
+      : '<div class="drop" id="refDrop">Drop a reference image — it is sent as <b>@img1</b> for this shot only</div>')+
+    (!s.ref && S.cfg.continuity && i>0 ? '<div class="hint">Continuity is on, so shot '+i+' is used as the reference unless you set one here.</div>' : '')+
+    (!curModel().supports_images ? '<div class="hint">This model does not accept reference images.</div>' : '')+
+    '<input type="file" id="refFile" accept="image/*" hidden />'+
+  '</div>'+
+  '<div class="sec">'+
     '<div class="sec-h">Timing<div class="ln"></div></div>'+
     '<div class="fld"><div class="lbl"><span>Duration</span><span class="v" id="vDur">'+s.duration.toFixed(2)+'s</span></div>'+
       '<input type="range" id="iDur" min=".4" max="20" step=".1" value="'+s.duration+'" /></div>'+
@@ -2106,17 +2536,18 @@ function renderInspector(){
   $("#promptPrev").innerHTML="<b>Sent:</b> "+esc(fullPrompt(s,i).slice(0,220))+(fullPrompt(s,i).length>220?"…":"");
 
   const on=(id,ev,fn)=>{ const el=$(id); if(el) el.addEventListener(ev,fn); };
-  on("#iPrompt","input",e=>{ s.prompt=e.target.value; $("#promptPrev").innerHTML="<b>Sent:</b> "+esc(fullPrompt(s,selIndex()).slice(0,220)); renderShots(); persist(); });
-  on("#iCap","input",e=>{ s.caption=e.target.value; renderClips(); draw(); persist(); });
-  on("#aFromCap","click",()=>{ s.prompt=s.caption; renderInspector(); renderShots(); persist(); });
-  on("#iDur","input",e=>{ s.duration=Math.max(.4,+e.target.value); $("#vDur").textContent=s.duration.toFixed(2)+"s"; renderClips(); syncTime(); draw(); persist(); });
-  on("#iMotion","change",e=>{ s.motion=e.target.value; renderShots(); draw(); persist(); });
-  on("#iTrans","change",e=>{ s.trans=e.target.value; renderClips(); draw(); persist(); });
-  on("#iTd","input",e=>{ s.transDur=+e.target.value; $("#vITd").textContent=(+s.transDur).toFixed(2)+"s"; renderClips(); draw(); persist(); });
+  on("#iPrompt","input",e=>{ pushHist("prompt:"+s.id); s.prompt=e.target.value; $("#promptPrev").innerHTML="<b>Sent:</b> "+esc(fullPrompt(s,selIndex()).slice(0,220)); renderShots(); persist(); });
+  on("#iCap","input",e=>{ pushHist("cap:"+s.id); s.caption=e.target.value; renderClips(); draw(); persist(); });
+  on("#aFromCap","click",()=>{ pushHist(); s.prompt=s.caption; renderInspector(); renderShots(); persist(); });
+  on("#iDur","input",e=>{ pushHist("dur:"+s.id); s.duration=Math.max(.4,+e.target.value); $("#vDur").textContent=s.duration.toFixed(2)+"s"; renderClips(); syncTime(); draw(); persist(); });
+  on("#iMotion","change",e=>{ pushHist(); s.motion=e.target.value; renderShots(); draw(); persist(); });
+  on("#iTrans","change",e=>{ pushHist(); s.trans=e.target.value; renderClips(); draw(); persist(); });
+  on("#iTd","input",e=>{ pushHist("td:"+s.id); s.transDur=+e.target.value; $("#vITd").textContent=(+s.transDur).toFixed(2)+"s"; renderClips(); draw(); persist(); });
   on("#bGenOne","click",()=>queueScenes([s]));
   on("#bDup","click",dupShot);
   on("#bDel","click",delShot);
   on("#bApplyAll","click",()=>{
+    pushHist();
     S.scenes.forEach((x,k)=>{ x.motion=s.motion; if(k>0){ x.trans=s.trans; x.transDur=s.transDur; } });
     renderAll(); toast("Look applied","Motion and cut copied to every shot.","ok");
   });
@@ -2124,13 +2555,14 @@ function renderInspector(){
     const L=layout(), idx=selIndex(); if(idx<0) return;
     const local=S.time-L[idx].start;
     if(local<.3||local>s.duration-.3){ toast("Cannot split","Move the playhead further into this shot.","warn"); return; }
+    pushHist();
     const b=normScene(serializeScene(s)); b.id=uid();
     b.duration=round2(s.duration-local); s.duration=round2(local);
     b.trans="cut"; b.transDur=0;
     S.scenes.splice(idx+1,0,b); S.sel=b.id; renderAll();
   });
   $$("#varStrip .variant").forEach(v=>v.addEventListener("click",()=>{
-    s.active=+v.dataset.k; renderAll(); persist();
+    pushHist(); s.active=+v.dataset.k; renderAll(); persist();
   }));
   const up=()=>$("#imgFile").click();
   on("#aUp","click",up); on("#imgDrop","click",up);
@@ -2138,10 +2570,27 @@ function renderInspector(){
     const f=e.target.files&&e.target.files[0]; if(!f) return;
     const url=await new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(f); });
     const im=await loadImg(url,false);
+    pushHist();
     s.images.push({url:url,w:im.naturalWidth,h:im.naturalHeight});
     s.active=s.images.length-1; s.status="done"; s.error="";
     await getImage(url); renderAll(); persist();
   });
+  // reference image (@img1 for this shot)
+  const setRef=async f=>{
+    if(!f||!/^image\//.test(f.type)) return;
+    if(f.size>5*1024*1024){ toast("Reference too large","The API caps assets at 5 MB per file.","warn"); return; }
+    const url=await new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(f); });
+    pushHist(); s.ref={url:url,name:f.name}; renderInspector(); persist();
+  };
+  on("#refDrop","click",()=>$("#refFile").click());
+  on("#refFile","change",e=>setRef(e.target.files&&e.target.files[0]));
+  on("#aRefClear","click",()=>{ pushHist(); s.ref=null; renderInspector(); persist(); });
+  const rz=$("#refDrop");
+  if(rz){
+    ["dragover","dragenter"].forEach(t=>rz.addEventListener(t,e=>{e.preventDefault();rz.classList.add("over");}));
+    ["dragleave","drop"].forEach(t=>rz.addEventListener(t,e=>{e.preventDefault();rz.classList.remove("over");}));
+    rz.addEventListener("drop",e=>setRef(e.dataTransfer.files&&e.dataTransfer.files[0]));
+  }
   const dz=$("#imgDrop");
   if(dz){
     ["dragover","dragenter"].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.add("over");}));
@@ -2150,6 +2599,7 @@ function renderInspector(){
       const f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(!f||!/^image\//.test(f.type)) return;
       const url=await new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(f); });
       const im=await loadImg(url,false);
+      pushHist();
       s.images.push({url:url,w:im.naturalWidth,h:im.naturalHeight}); s.active=s.images.length-1; s.status="done";
       await getImage(url); renderAll(); persist();
     });
@@ -2179,7 +2629,7 @@ function snap(t){
 
 (function clipDrag(){
   const host=$("#clips");
-  let mode=null, id=null, startX=0, startDur=0, startIdx=0, moved=false, el=null;
+  let mode=null, id=null, startX=0, startDur=0, startIdx=0, moved=false, el=null, snapAtDown=null;
 
   host.addEventListener("pointerdown",e=>{
     const c=e.target.closest(".clip"); if(!c) return;
@@ -2188,6 +2638,7 @@ function snap(t){
     S.sel=id; renderShots(); renderInspector();
     $$(".clip").forEach(x=>x.classList.toggle("on",x.dataset.id===id));
     startX=e.clientX; startDur=sc.duration;
+    snapAtDown=snapshot();
     mode = e.target.classList.contains("hnd") ? "resize" : "move";
     host.setPointerCapture(e.pointerId);
     e.preventDefault();
@@ -2219,6 +2670,9 @@ function snap(t){
   const end=e=>{
     if(!mode) return;
     const wasMove=mode==="move"&&moved;
+    const changed = wasMove || (mode==="resize" && moved);
+    if(changed && snapAtDown) commitHist(snapAtDown);
+    snapAtDown=null;
     if(el){ el.classList.remove("drag"); el.style.transform=""; }
     $("#dropInd").classList.remove("on");
     if(wasMove){
@@ -2285,20 +2739,27 @@ function expStats(){
     '<div class="kv"><span class="k">Resolution</span><span class="v">'+W+' × '+H+'</span></div>'+
     '<div class="kv"><span class="k">Runtime</span><span class="v">'+tc(T)+'</span></div>'+
     '<div class="kv"><span class="k">Shots</span><span class="v">'+S.scenes.length+(missing?' ('+missing+' without an image)':'')+'</span></div>'+
-    '<div class="kv"><span class="k">Audio</span><span class="v">'+(S.audio.buffer?esc(S.audio.name):"none")+'</span></div>'+
+    '<div class="kv"><span class="k">Audio</span><span class="v">'+
+      ([S.au.vo.buffer?"voice":null,S.au.mu.buffer?"music":null].filter(Boolean).join(" + ")||"none")+'</span></div>'+
     '<div class="kv"><span class="k">Approx. size</span><span class="v">'+ (T*(+S.cfg.br)/8).toFixed(1) +' MB</span></div>';
   if(TAINTED){
     $("#expNote").innerHTML="<b>Heads up — some images could not be loaded cross-origin.</b> The canvas is tainted and recording will fail. Set a CORS proxy in Settings and regenerate, or re-upload those frames locally.";
     $("#expNote").className="note warn";
   }
 }
-let RECORDING=false;
+let RECORDING=false, EXPCANCEL=false;
+function stopExport(){
+  if(!RECORDING) return;
+  EXPCANCEL=true;
+  $("#expPhase").textContent="Stopping…";
+}
 async function runExport(){
   if(RECORDING) return;
   if(!S.scenes.length){ toast("Nothing to export","Build a shot list first.","warn"); return; }
   const list=supportedFormats(); if(!list.length){ toast("Recording unsupported","This browser has no MediaRecorder canvas support.","err"); return; }
 
   pause();
+  EXPCANCEL=false;
   const [W,H]=exportSize();
   const fps=+S.cfg.fps||30;
   const T=total();
@@ -2309,20 +2770,23 @@ async function runExport(){
   $("#expProg").style.display="block";
   $("#expPhase").textContent="Loading images…";
   $("#expBar").style.width="0"; $("#expPctT").textContent="0%";
+  $("#bExpStop").style.display=""; $("#bExpClose").style.display="none";
   for(let i=0;i<S.scenes.length;i++){
+    if(EXPCANCEL) break;
     await warmScene(S.scenes[i]);
     const p=Math.round(((i+1)/S.scenes.length)*100);
     $("#expBar").style.width=p+"%"; $("#expPctT").textContent=p+"%";
   }
+  if(EXPCANCEL){ endExportUI(); toast("Export cancelled","","info"); return; }
   if(TAINTED){
-    $("#expProg").style.display="none";
+    endExportUI();
     toast("Export blocked","Some images are cross-origin restricted, which taints the canvas. Add a CORS proxy in Settings, then regenerate.","err",9000);
     return;
   }
 
   const stream=cv.captureStream(fps);
   let audioDest=null;
-  if(S.audio.buffer){
+  if(S.au.vo.buffer||S.au.mu.buffer){
     const c=ac(); if(c.state==="suspended") await c.resume();
     audioDest=c.createMediaStreamDestination();
     stream.addTrack(audioDest.stream.getAudioTracks()[0]);
@@ -2332,7 +2796,7 @@ async function runExport(){
   try{
     rec=new MediaRecorder(stream,{ mimeType:mime, videoBitsPerSecond:(+S.cfg.br||12)*1000000, audioBitsPerSecond:192000 });
   }catch(e){
-    $("#expProg").style.display="none";
+    endExportUI();
     toast("Recorder rejected settings",String(e.message||e),"err"); return;
   }
   const chunks=[];
@@ -2358,7 +2822,7 @@ async function runExport(){
     if((n++ % 3)===0){ draw(); syncTime(); }
     const p=Math.round(t/T*100);
     $("#expBar").style.width=p+"%"; $("#expPctT").textContent=p+"%"; $("#recPct").textContent=p+"%";
-    if(el>=T+.08){ stop=true; try{rec.stop();}catch(e){} return; }
+    if(EXPCANCEL || el>=T+.08){ stop=true; try{rec.stop();}catch(e){} return; }
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
@@ -2367,8 +2831,9 @@ async function runExport(){
   stopAudio();
   RECORDING=false;
   $("#recBadge").classList.remove("on");
-  $("#bExpGo").disabled=false;
   $("#expPhase").textContent="Writing file…";
+
+  if(EXPCANCEL){ endExportUI(); seek(0); toast("Export cancelled","Partial recording discarded.","info"); return; }
 
   const blob=new Blob(chunks,{type:mime.split(";")[0]});
   const ext=/mp4/.test(mime)?"mp4":"webm";
@@ -2376,10 +2841,18 @@ async function runExport(){
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a"); a.href=url; a.download=nm+"."+ext; a.click();
   setTimeout(()=>URL.revokeObjectURL(url),20000);
-  $("#expProg").style.display="none";
+  endExportUI();
   closeM("#mdExport");
   seek(S.time); // resync the selection the recorder was holding still
   toast("Film exported",nm+"."+ext+" · "+(blob.size/1048576).toFixed(1)+" MB · "+tc(T),"ok",6000);
+}
+function endExportUI(){
+  RECORDING=false; EXPCANCEL=false;
+  $("#expProg").style.display="none";
+  $("#recBadge").classList.remove("on");
+  $("#bExpGo").disabled=false;
+  $("#bExpStop").style.display="none";
+  $("#bExpClose").style.display="";
 }
 function saveFrame(){
   const [W,H]=exportSize();
@@ -2482,8 +2955,10 @@ function applyCfgToUI(){
   $("#rBr").value=String(S.cfg.br);
   $("#vBr").textContent=S.cfg.br+" Mbps";
   $("#rZoom").value=String(S.pps);
-  $("#rVol").value=String(S.cfg.vol);
-  $("#vVol").textContent=Math.round(S.cfg.vol*100)+"%";
+  $("#rVoVol").value=String(S.cfg.voVol);
+  $("#vVoVol").textContent=Math.round(S.cfg.voVol*100)+"%";
+  $("#rMuVol").value=String(S.cfg.muVol);
+  $("#vMuVol").textContent=Math.round(S.cfg.muVol*100)+"%";
   $("#bSnap").textContent="Snap: "+(S.cfg.snap?"on":"off");
   $$("#segMode button").forEach(b=>b.classList.toggle("on",b.dataset.m===S.cfg.mode));
   fillSelect($("#selMotion"),MOTIONS,S.cfg.motion);
@@ -2555,28 +3030,34 @@ function init(){
   $("#bClear").addEventListener("click",()=>{
     if(!S.scenes.length) return;
     if(!confirm("Delete all "+S.scenes.length+" shots? The script stays.")) return;
+    pushHist();
     S.scenes=[]; S.sel=null; S.time=0; renderAll();
   });
 
   // audio tab
-  $("#audDrop").addEventListener("click",()=>$("#audFile").click());
-  $("#audFile").addEventListener("change",e=>{ const f=e.target.files&&e.target.files[0]; if(f) loadAudioFile(f); });
-  ["dragover","dragenter"].forEach(t=>$("#audDrop").addEventListener(t,e=>{e.preventDefault();$("#audDrop").classList.add("over");}));
-  ["dragleave","drop"].forEach(t=>$("#audDrop").addEventListener(t,e=>{e.preventDefault();$("#audDrop").classList.remove("over");}));
-  $("#audDrop").addEventListener("drop",e=>{ const f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) loadAudioFile(f); });
-  $("#rVol").addEventListener("input",e=>{
-    S.cfg.vol=+e.target.value; $("#vVol").textContent=Math.round(S.cfg.vol*100)+"%";
-    if(GAIN) GAIN.gain.value=S.cfg.vol; persist();
-  });
-  $("#bAudClear").addEventListener("click",()=>{
-    stopAudio(); S.audio={name:"",buffer:null,peaks:null};
-    $("#audInfo").style.display="none"; $("#audDrop").style.display="";
-    renderAudioLane();
-  });
+  for(const k of ["vo","mu"]){
+    const slot=$("#"+k+"Slot"), inp=$("#"+k+"File");
+    slot.addEventListener("click",e=>{ if(!e.target.closest("#"+k+"Clear")) inp.click(); });
+    inp.addEventListener("change",e=>{ const f=e.target.files&&e.target.files[0]; if(f) loadAudioFile(f,k); e.target.value=""; });
+    ["dragover","dragenter"].forEach(t=>slot.addEventListener(t,e=>{e.preventDefault();slot.classList.add("over");}));
+    ["dragleave","drop"].forEach(t=>slot.addEventListener(t,e=>{e.preventDefault();slot.classList.remove("over");}));
+    slot.addEventListener("drop",e=>{ const f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(f&&/^audio\//.test(f.type)) loadAudioFile(f,k); });
+    $("#"+k+"Clear").addEventListener("click",e=>{ e.stopPropagation(); clearTrack(k); });
+    const key=k==="vo"?"voVol":"muVol", lab=k==="vo"?"#vVoVol":"#vMuVol";
+    $(k==="vo"?"#rVoVol":"#rMuVol").addEventListener("input",e=>{
+      S.cfg[key]=+e.target.value;
+      $(lab).textContent=Math.round(S.cfg[key]*100)+"%";
+      const g=liveGain(k);
+      if(g){ if(k==="mu"&&S.cfg.duck) scheduleDuck(g,ac().currentTime,S.time); else g.gain.value=S.cfg[key]; }
+      persist();
+    });
+  }
+  bindSwitch("#swDuck","duck",()=>{ if(S.playing) startAudio(S.time,null); });
   $("#bFit").addEventListener("click",()=>{
-    if(!S.audio.buffer){ toast("No audio","Load a voiceover first.","warn"); return; }
+    if(!S.au.vo.buffer){ toast("No voiceover","Load a voiceover first — the music bed loops instead of setting the length.","warn"); return; }
     if(!S.scenes.length){ toast("No shots","Build a shot list first.","warn"); return; }
-    const D=S.audio.buffer.duration;
+    pushHist();
+    const D=S.au.vo.buffer.duration;
     const ws=S.scenes.map(s=>Math.max(1,words(s.caption||s.prompt)));
     const tot=ws.reduce((a,b)=>a+b,0);
     S.scenes.forEach((s,i)=>{ s.duration=Math.max(.5,round2(D*ws[i]/tot)); });
@@ -2587,12 +3068,13 @@ function init(){
   });
   $("#bEven").addEventListener("click",()=>{
     if(!S.scenes.length) return;
-    const T=S.audio.buffer?S.audio.buffer.duration:total();
+    pushHist();
+    const T=S.au.vo.buffer?S.au.vo.buffer.duration:total();
     const d=round2(T/S.scenes.length);
     S.scenes.forEach(s=>s.duration=Math.max(.5,d)); fitZoom(); renderAll();
   });
-  $("#bLen4").addEventListener("click",()=>{ S.scenes.forEach(s=>s.duration=4); fitZoom(); renderAll(); });
-  $("#bLen6").addEventListener("click",()=>{ S.scenes.forEach(s=>s.duration=6); fitZoom(); renderAll(); });
+  $("#bLen4").addEventListener("click",()=>{ pushHist(); S.scenes.forEach(s=>s.duration=4); fitZoom(); renderAll(); });
+  $("#bLen6").addEventListener("click",()=>{ pushHist(); S.scenes.forEach(s=>s.duration=6); fitZoom(); renderAll(); });
 
   // project io
   $("#bSave").addEventListener("click",()=>{
@@ -2608,9 +3090,11 @@ function init(){
     try{
       const o=JSON.parse(await f.text());
       hydrate(o,false); S.sel=S.scenes[0]?S.scenes[0].id:null; S.time=0;
+      HIST.past.length=0; HIST.future.length=0; histUI();
       applyCfgToUI(); renderStyles(); syncModelUI(); fitZoom(); renderAll();
+      await hydrateAudio(o);
       for(const s of S.scenes) warmScene(s).then(draw);
-      toast("Project opened",S.scenes.length+" shots","ok");
+      toast("Project opened",S.scenes.length+" shots"+(o.audio&&(o.audio.vo||o.audio.mu)?" · audio restored":""),"ok");
     }catch(err){ toast("Could not open file",String(err.message||err),"err"); }
   });
 
@@ -2621,10 +3105,23 @@ function init(){
   $("#bEstimate").addEventListener("click",estimate);
   $("#bPriceGo").addEventListener("click",()=>{ closeM("#mdPrice"); queueScenes(S.scenes.filter(s=>!s.images.length).length?S.scenes.filter(s=>!s.images.length):S.scenes); });
   $("#bGenAll").addEventListener("click",()=>{
+    if(busy()){ cancelGen(); return; }
     const missing=S.scenes.filter(s=>!s.images.length);
     queueScenes(missing.length?missing:S.scenes);
   });
   $("#bExport").addEventListener("click",()=>{ expStats(); openM("#mdExport"); });
+  $("#bUndo").addEventListener("click",undo);
+  $("#bRedo").addEventListener("click",redo);
+  $("#bJobs").addEventListener("click",()=>{ openM("#mdJobs"); loadJobs(1); });
+  $("#bJobsReload").addEventListener("click",()=>loadJobs(JOBS.page));
+  $("#bJobsPurge").addEventListener("click",async()=>{
+    if(!JOBS.rows.length) return;
+    const ids=JOBS.rows.map(t=>String(t.id));
+    if(!confirm("Delete all "+ids.length+" tasks on this page from the server? Images already on your timeline are unaffected.")) return;
+    try{ await apiDeleteTasks(ids); toast("Tasks deleted",ids.length+" removed","ok"); loadJobs(1); }
+    catch(e){ toast("Delete failed",netHint(e),"err"); }
+  });
+  $("#bExpStop").addEventListener("click",stopExport);
   $("#bSettings").addEventListener("click",()=>openM("#mdSettings"));
   $("#bHelp").addEventListener("click",()=>openM("#mdHelp"));
   $("#mRail").addEventListener("click",()=>$("#rail").classList.toggle("open"));
@@ -2661,7 +3158,10 @@ function init(){
   $("#rZoom").addEventListener("input",e=>{ S.pps=+e.target.value; renderClips(); syncTime(); });
   $("#bFitZoom").addEventListener("click",fitZoom);
   $("#bSnap").addEventListener("click",()=>{ S.cfg.snap=!S.cfg.snap; $("#bSnap").textContent="Snap: "+(S.cfg.snap?"on":"off"); persist(); });
-  $("#awave").addEventListener("click",()=>{ if(!S.audio.buffer){ $$(".tab").forEach(t=>{ if(t.dataset.pane==="audio") t.click(); }); $("#audFile").click(); } });
+  $$(".awave").forEach(l=>l.addEventListener("click",()=>{
+    const k=l.dataset.t;
+    if(!S.au[k].buffer){ $$(".tab").forEach(t=>{ if(t.dataset.pane==="audio") t.click(); }); $("#"+k+"File").click(); }
+  }));
 
   // keyboard
   document.addEventListener("keydown",e=>{
@@ -2672,25 +3172,30 @@ function init(){
     if(meta && e.key.toLowerCase()==="e"){ e.preventDefault(); $("#bExport").click(); return; }
     if(meta && e.key.toLowerCase()==="g"){ e.preventDefault(); $("#bGenAll").click(); return; }
     if(meta && e.key.toLowerCase()==="d"){ e.preventDefault(); dupShot(); return; }
+    if(meta && e.key.toLowerCase()==="z"){ e.preventDefault(); e.shiftKey?redo():undo(); return; }
+    if(meta && e.key.toLowerCase()==="y"){ e.preventDefault(); redo(); return; }
     if(e.key==="Escape"){ $$(".scrim.on").forEach(s=>s.classList.remove("on")); return; }
     if(typing) return;
     const step=1/(+S.cfg.fps||30);
+    // every handled key is consumed: shortcuts that move focus into a field
+    // (N) would otherwise type their own character into it
     switch(e.key){
       case " ": e.preventDefault(); toggle(); break;
       case "ArrowLeft": e.preventDefault(); seek(S.time-(e.shiftKey?1:step)); break;
       case "ArrowRight": e.preventDefault(); seek(S.time+(e.shiftKey?1:step)); break;
       case "ArrowUp": e.preventDefault(); seekToScene(clamp(selIndex()-1,0,S.scenes.length-1)); break;
       case "ArrowDown": e.preventDefault(); seekToScene(clamp(selIndex()+1,0,S.scenes.length-1)); break;
-      case "[": seekToScene(clamp(selIndex()-1,0,S.scenes.length-1)); break;
-      case "]": seekToScene(clamp(selIndex()+1,0,S.scenes.length-1)); break;
-      case "Home": seek(0); break;
-      case "End": seek(total()); break;
-      case "Delete": case "Backspace": delShot(); break;
-      case "n": case "N": addShot(selIndex()<0?null:selIndex()); break;
-      case "g": case "G": { const s=selScene(); if(s) queueScenes([s]); break; }
-      case "f": case "F": fitZoom(); break;
-      case ",": openM("#mdSettings"); break;
-      case "?": openM("#mdHelp"); break;
+      case "[": e.preventDefault(); seekToScene(clamp(selIndex()-1,0,S.scenes.length-1)); break;
+      case "]": e.preventDefault(); seekToScene(clamp(selIndex()+1,0,S.scenes.length-1)); break;
+      case "Home": e.preventDefault(); seek(0); break;
+      case "End": e.preventDefault(); seek(total()); break;
+      case "Delete": case "Backspace": e.preventDefault(); delShot(); break;
+      case "n": case "N": e.preventDefault(); addShot(selIndex()<0?null:selIndex()); break;
+      case "g": case "G": { e.preventDefault(); const s=selScene(); if(s) queueScenes([s]); break; }
+      case "f": case "F": e.preventDefault(); fitZoom(); break;
+      case "j": case "J": e.preventDefault(); openM("#mdJobs"); loadJobs(1); break;
+      case ",": e.preventDefault(); openM("#mdSettings"); break;
+      case "?": e.preventDefault(); openM("#mdHelp"); break;
     }
   });
 
@@ -2704,6 +3209,9 @@ function init(){
     S.sel=S.scenes[0].id;
     S.scenes.forEach(s=>warmScene(s).then(draw));
   }
+  syncAudioUI();
+  restoreTracks();
+  histUI(); genUI();
   sizePreview();
   fitZoom();
   renderAll();
