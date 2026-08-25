@@ -68,14 +68,17 @@ ok('tab B converges too', (await B.evaluate(()=>CFG.channels.length))===5,
 await B.close();
 
 console.log('\n── Rapid typing then instant close (no Save, no blur) ──');
+const liveBefore = await A.evaluate(()=>CFG.channels.length);
 await A.evaluate(()=>nav('settings')); await A.waitForTimeout(400);
 await A.focus('#setChannels');
 await A.evaluate(()=>{document.getElementById('setChannels').value='';});
 await A.type('#setChannels','@rapid1\n@rapid2\n@rapid3', {delay:15});
 await A.waitForTimeout(800);
 await A.reload(); await A.waitForTimeout(900);
-ok('typed-then-refreshed text survived', (await A.evaluate(()=>CFG.channels.length))===3,
-   JSON.stringify(await A.evaluate(()=>CFG.channels)));
+ok('typed-then-refreshed draft survived', (await A.evaluate(()=>draftLines().length))===3,
+   JSON.stringify(await A.evaluate(()=>draftLines())));
+ok('and the live list was never touched', (await A.evaluate(()=>CFG.channels.length))===liveBefore,
+   `${await A.evaluate(()=>CFG.channels.length)} vs ${liveBefore}`);
 
 console.log('\n── Sync repainting mid-edit ──');
 await A.evaluate(()=>nav('settings')); await A.waitForTimeout(300);

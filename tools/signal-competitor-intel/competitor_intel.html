@@ -47,10 +47,26 @@ html[data-theme="light"]{
   --rowline:rgba(10,10,25,.08); --trackbg:rgba(10,10,30,.12);
 }
 html[data-density="compact"]{ --pad:8px; --fs:11.5px; }
+/* Density controls spacing; text size controls type. They were the same knob,
+   which meant reading comfortably cost you screen real estate and vice versa. */
+html[data-text="s"]{ --fs:11.5px; --fs-title:11.5px; }
+html[data-text="m"]{ --fs:12.5px; --fs-title:12.5px; }
+html[data-text="l"]{ --fs:13.5px; --fs-title:13.5px; }
+html[data-text="xl"]{ --fs:15px;  --fs-title:14.5px; }
+:root{ --fs-title:12.5px; }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-body{background:var(--bg);color:var(--t1);min-height:100vh;overflow-x:hidden;font-size:var(--fs)}
+/* No webfont: this file has to work offline, and a network fetch for type is
+   both a hang and a flash of unstyled text. Instead, ask for the best face each
+   platform already ships — Segoe UI Variable on Win11 and SF on macOS are
+   markedly cleaner at small sizes than the generics they fall back to.
+   `optical-sizing` and the tabular-numbers feature make dense metric columns
+   line up instead of shimmering as digits change. */
+html{font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI Variable Text","Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;font-optical-sizing:auto;font-synthesis-weight:none}
+.num,.kpi .v,.mono,td.num,th.num{font-variant-numeric:tabular-nums}
+body{background:var(--bg);color:var(--t1);min-height:100vh;overflow-x:hidden;font-size:var(--fs);line-height:1.5}
 img{display:block;max-width:100%}
 /* inline icons default to a sane size; every sized context below overrides via a class selector */
 svg{width:15px;height:15px;flex-shrink:0}
@@ -193,7 +209,9 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .thumbcell{width:158px;min-width:158px}
 .tt{font-weight:600;color:var(--t1);line-height:1.4;display:block;font-size:13px}
 .tt:hover{color:var(--acc)}
-.vmeta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:5px;font-size:10px;color:var(--t4)}
+.vmeta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:5px;
+  font-size:calc(var(--fs) - 2px);color:var(--t3);font-variant-numeric:tabular-nums}
+.vmeta .vpd{color:var(--t2);font-weight:600}
 .vmeta .sep{opacity:.4}
 .uptime{color:var(--t3);font-weight:600}
 .num{font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -225,6 +243,9 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .chcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--r3);padding:14px;transition:border-color .12s,transform .12s}
 .chcard:hover{border-color:var(--line2);transform:translateY(-2px)}
 .avat{width:42px;height:42px;border-radius:50%;background:var(--panel3);object-fit:cover;flex-shrink:0}
+.dirtybar{padding:11px 13px;margin-bottom:14px;border-radius:var(--r2);
+  background:rgba(245,158,11,.13);border:1px solid rgba(245,158,11,.3);color:var(--t1)}
+.dirtybar svg{color:var(--warn)}
 .empty{text-align:center;padding:44px 18px;color:var(--t4)}
 .empty svg{width:36px;height:36px;opacity:.4;margin-bottom:10px}
 .empty .t{font-size:12.5px;font-weight:600;color:var(--t3);margin-bottom:4px}
@@ -288,6 +309,11 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .mpick-foot{display:block;padding:7px 6px 3px;border-top:1px solid var(--line);margin-top:4px}
 .mpick-foot[hidden]{display:none}
 .avat-sm{width:20px;height:20px}
+.mpick-name{display:block;font-size:calc(var(--fs) - .5px);font-weight:600;line-height:1.3}
+.mpick-sub{display:flex;align-items:center;gap:5px;font-size:calc(var(--fs) - 3px);color:var(--t4);
+  margin-top:2px;font-variant-numeric:tabular-nums}
+.freshdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.lnk-on{color:var(--t1);text-decoration:none;background:var(--hov2);border-radius:4px}
 .mpick-row{display:flex;align-items:center;gap:9px;width:100%;padding:7px 9px;border-radius:7px;
   font-size:12px;color:var(--t3);text-align:left;transition:background .1s,color .1s}
 .mpick-row:hover{background:var(--hov);color:var(--t1)}
@@ -325,7 +351,8 @@ tbody tr{content-visibility:auto;contain-intrinsic-size:auto 74px}
 .boardshort{position:absolute;top:7px;right:7px;background:rgba(0,0,0,.8);color:#fff;font-size:8.5px;
   font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:.4px}
 .boardbody{padding:11px 12px 13px}
-.boardtitle{font-size:12.5px;font-weight:600;line-height:1.42;color:var(--t1);display:-webkit-box;
+.boardtitle{font-size:var(--fs-title);font-weight:600;line-height:1.45;letter-spacing:-.006em;
+  text-wrap:pretty;color:var(--t1);display:-webkit-box;
   -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .boardtitle:hover{color:var(--acc)}
 
@@ -479,7 +506,7 @@ const DEF_CFG = {
 };
 /* Global settings live outside profiles — your API key and chrome shouldn't
    change just because you switched which niche you're looking at. */
-const DEF_GLOBAL = { ytKey:'', theme:'dark', density:'normal', autoSync:true, quota:{date:'',units:0,search:0} };
+const DEF_GLOBAL = { ytKey:'', theme:'dark', density:'normal', textSize:'m', autoSync:true, quota:{date:'',units:0,search:0} };
 const uid = () => 'p'+Math.random().toString(36).slice(2,9);
 
 /* ─── storage health, surfaced in Settings so a silent failure can't stay silent ─── */
@@ -728,16 +755,30 @@ async function withDB(fn){
     return await fn(await idb());
   }
 }
+/* Every readwrite transaction asks for relaxed durability.
+
+   IndexedDB's default is to force the write all the way to disk before the
+   transaction completes, once per transaction. Storing a scraped catalogue means
+   thousands of rows across dozens of transactions, and those forced flushes were
+   almost the entire cost of a sync: 5.6 seconds of a 6.3-second run with the
+   network stubbed out. Relaxed durability keeps the write ordered and atomic and
+   lets the OS decide when it hits the platter — the only thing at risk is the
+   last few seconds of writes in a power cut, and this is a cache of data that a
+   re-sync rebuilds. Browsers that don't know the option ignore it. */
+function rwTx(db, store){
+  try{ return db.transaction(store,'readwrite',{durability:'relaxed'}); }
+  catch(e){ return db.transaction(store,'readwrite'); }
+}
 async function idbPut(store, items){
   const list = Array.isArray(items)?items:[items];
   if(!list.length) return;
   // Chunked so a huge sync can't build one transaction big enough to be
   // aborted wholesale — a partial failure then costs one chunk, not the lot.
-  const CH = 800;
+  const CH = 2000;
   for(let i=0;i<list.length;i+=CH){
     const slice = list.slice(i,i+CH);
     await withDB(db=>new Promise((res,rej)=>{
-      const tx = db.transaction(store,'readwrite'), os = tx.objectStore(store);
+      const tx = rwTx(db, store), os = tx.objectStore(store);
       slice.forEach(it=>os.put(it));
       tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); tx.onabort=()=>rej(tx.error||new Error('aborted'));
     }));
@@ -752,17 +793,17 @@ async function idbAll(store){
 }
 async function idbClear(store){
   return withDB(db=>new Promise((res,rej)=>{
-    const tx = db.transaction(store,'readwrite'); tx.objectStore(store).clear();
+    const tx = rwTx(db, store); tx.objectStore(store).clear();
     tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
   }));
 }
 async function idbDelete(store, keys){
   if(!keys || !keys.length) return;
-  const CH = 800;
+  const CH = 2000;
   for(let i=0;i<keys.length;i+=CH){
     const slice = keys.slice(i,i+CH);
     await withDB(db=>new Promise((res,rej)=>{
-      const tx = db.transaction(store,'readwrite'), os = tx.objectStore(store);
+      const tx = rwTx(db, store), os = tx.objectStore(store);
       slice.forEach(k=>os.delete(k));
       tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); tx.onabort=()=>rej(tx.error||new Error('aborted'));
     }));
@@ -1043,16 +1084,37 @@ async function requestPersistence(){
    silently discarding the other's edits. Now a tab that hears about a newer
    revision adopts it instead of overwriting it. */
 function wireCrossTab(){
+  /* Typing in one tab writes a draft roughly twice a second. The first version
+     answered every one of those by reloading this tab's data and repainting the
+     whole view — two open tabs turned each other's keystrokes into a stutter.
+     Now: coalesce the notifications, and only pay for a reload when something
+     this tab actually displays has changed. A draft belonging to a text box in
+     another window is not that. */
+  let t=null;
+  const dataFingerprint = s => s
+    ? s.active + '|' + (s.profiles||[]).map(p=>
+        p.id+':'+((p.cfg?.channels||[]).length)+':'+(p.cfg?.lastSync||0)).join(',')
+    : '';
   const adopt = async ()=>{
-    let incoming = parseStore(readLSRaw(LS));
+    const incoming = parseStore(readLSRaw(LS));
     if(!incoming) return;
     if((incoming._rev|0) <= (STORE._rev|0)) return;
+    const before = dataFingerprint(STORE);
+    const wasActive = STORE.active;
     STORE = incoming;
-    invalidateBaselines(); await loadAll();
-    renderProfBar(); renderSideNav(); render();
+    if(dataFingerprint(STORE) === before){
+      // settings-only change (a draft, a theme, a quota tick) — nothing to reload
+      if(S.view==='settings') renderDirtyBar();
+      return;
+    }
+    await loadAll();
+    renderProfBar(); renderSideNav();
+    if(STORE.active!==wasActive) toast(`Switched to "${activeProfile().name}" in another tab`);
+    render();
   };
-  if(_bc) _bc.onmessage = e=>{ if(e.data?.t==='store' && e.data.from!==TAB_ID) adopt(); };
-  addEventListener('storage', e=>{ if(e.key===LS) adopt(); });
+  const schedule = ()=>{ clearTimeout(t); t=setTimeout(adopt, 300); };
+  if(_bc) _bc.onmessage = e=>{ if(e.data?.t==='store' && e.data.from!==TAB_ID) schedule(); };
+  addEventListener('storage', e=>{ if(e.key===LS) schedule(); });
 }
 
 /* Last-moment durability. localStorage is synchronous so it always lands; the
@@ -1253,7 +1315,11 @@ function mapVideo(v, channelId){
   const st = v.statistics||{}, sn = v.snippet||{};
   return {
     id: v.id, channelId: channelId||sn.channelId, channelTitle: sn.channelTitle||'',
-    title: sn.title||'', desc: (sn.description||'').slice(0,600),
+    /* 320, not 600: the only thing that ever reads this truncates to 300, so the
+       extra half-kilobyte per row was stored, re-stored on every refresh and
+       read back forever without a single consumer. Across a scraped catalogue
+       that is megabytes of pure write cost. */
+    title: sn.title||'', desc: (sn.description||'').slice(0,320),
     publishedAt: sn.publishedAt, publishedTs: +new Date(sn.publishedAt),
     thumb: (sn.thumbnails?.medium||sn.thumbnails?.default||{}).url||'',
     thumbHi: (sn.thumbnails?.maxres||sn.thumbnails?.standard||sn.thumbnails?.high||sn.thumbnails?.medium||{}).url||'',
@@ -1341,8 +1407,27 @@ async function syncAll(opts={}){
     slog(`▸ Resolved ${chans.length}/${cfg.channels.length} channels`);
     /* Work against this profile's rows read from disk, not against S.*, which
        belongs to whatever profile is on screen and may change under us. */
-    let rows = await idbByPid(STORES.videos, pid);
-    const existing = Object.fromEntries((await idbByPid(STORES.channels, pid)).map(c=>[c.id,c]));
+    const rows = await idbByPid(STORES.videos, pid);
+    const existing = new Map((await idbByPid(STORES.channels, pid)).map(c=>[c.id,c]));
+    /* Indexed once, maintained in place.
+
+       The previous loop rebuilt an entire id->row lookup object for every
+       channel and scanned the whole catalogue three more times per channel to
+       find that channel's videos. At 34 channels over an 8,500-video cache that
+       is roughly a million redundant comparisons and a quarter of a million
+       throwaway allocations before a single byte reaches disk — pure overhead
+       that grows with the square of how much you have scraped, which is exactly
+       backwards for the feature the app exists for. */
+    const byId = new Map(rows.map(v=>[v.id,v]));
+    const byChannel = new Map();
+    for(const v of rows){
+      let a = byChannel.get(v.channelId);
+      if(!a){ a=[]; byChannel.set(v.channelId,a); }
+      a.push(v);
+    }
+    /* Existing snapshots, so a re-sync doesn't rewrite readings it already has. */
+    const snapById = new Map((await idbByPid(STORES.snapshots, pid)).map(s=>[s.key,s]));
+    let skippedV=0, skippedS=0;
     const today = todayPT();
     const snapCutoff = Date.now() - CFG.snapshotDays*864e5;
     let newVids=0, updVids=0, i=0;
@@ -1350,12 +1435,14 @@ async function syncAll(opts={}){
     for(const ch of chans){
       if(S.syncCancel){ slog('▸ Cancelled by user', true); break; }
       i++;
-      const prev = existing[ch.id];
+      const prev = existing.get(ch.id);
       ch.lastScraped = prev?.lastScraped||0;
       setProg(i/chans.length*100, `${ch.title} (${i}/${chans.length})`);
       slog(`  ${ch.title} · ${nf(ch.subs)} subs · ${nfull(ch.videoCount)} videos`);
       try{
-        const known = new Set(rows.filter(v=>v.channelId===ch.id).map(v=>v.id));
+        let mine = byChannel.get(ch.id);
+        if(!mine){ mine=[]; byChannel.set(ch.id, mine); }
+        const known = new Set(mine.map(v=>v.id));
         /* A normal sync used to hard-cap at 100 no matter what depth you'd set,
            so raising the setting did nothing unless you happened to run a deep
            sync. Now: if this channel holds fewer videos than your configured
@@ -1381,26 +1468,50 @@ async function syncAll(opts={}){
         }
         const fresh = ids.filter(id=>!known.has(id));
         // refresh stats for recent videos so velocity/snapshots stay live
-        const refresh = rows.filter(v=>v.channelId===ch.id && v.publishedTs>snapCutoff).map(v=>v.id);
+        const refresh = mine.filter(v=>v.publishedTs>snapCutoff).map(v=>v.id);
         const toFetch = [...new Set([...ids, ...refresh])];
         if(toFetch.length){
           const vids = await fetchVideos(toFetch, ch.id);
           vids.forEach(v=>{ v.channelTitle = v.channelTitle||ch.title; v.pid=pid; v._k=`${pid}::${v.id}`; });
-          await idbPut(STORES.videos, vids);
-          const byId = Object.fromEntries(rows.map(v=>[v.id,v]));
-          vids.forEach(v=>{ if(byId[v.id]) Object.assign(byId[v.id], v); else rows.push(v); });
+          /* Only write what actually moved.
+
+             An incremental sync re-reads every video inside the snapshot window
+             — for a 250-video channel that is most of the catalogue, every run,
+             whether or not a single view count changed. Writing to IndexedDB
+             costs roughly twenty times what reading does, so rewriting an
+             identical row is the most expensive way to do nothing. Comparing
+             first turns a same-day re-sync into almost pure reads. */
+          const dirty = [];
+          for(const v of vids){
+            const cur = byId.get(v.id);
+            const same = cur && cur.views===v.views && cur.likes===v.likes
+              && cur.comments===v.comments && cur.title===v.title
+              && cur.durationSec===v.durationSec && cur.channelTitle===v.channelTitle;
+            if(same){ skippedV++; continue; }
+            dirty.push(v);
+            if(cur) Object.assign(cur, v);
+            else { byId.set(v.id, v); mine.push(v); }
+          }
+          if(dirty.length) await idbPut(STORES.videos, dirty);
           newVids += fresh.length; updVids += vids.length - fresh.length;
-          // daily snapshot for anything inside the snapshot window
-          const snaps = vids.filter(v=>v.publishedTs>snapCutoff).map(v=>({
-            key:`${v.id}_${today}`, _k:`${pid}::${v.id}_${today}`, pid,
-            videoId:v.id, channelId:ch.id, date:today,
-            views:v.views, likes:v.likes, comments:v.comments, ts:Date.now()
-          }));
+          // daily snapshot for anything inside the snapshot window — again, only
+          // when the reading differs from the one already stored for today
+          const snaps = [];
+          for(const v of vids){
+            if(v.publishedTs<=snapCutoff) continue;
+            const key = `${v.id}_${today}`;
+            const prevSnap = snapById.get(key);
+            if(prevSnap && prevSnap.views===v.views && prevSnap.likes===v.likes
+               && prevSnap.comments===v.comments){ skippedS++; continue; }
+            const row = { key, _k:`${pid}::${key}`, pid, videoId:v.id, channelId:ch.id, date:today,
+              views:v.views, likes:v.likes, comments:v.comments, ts:Date.now() };
+            snaps.push(row); snapById.set(key, row);
+          }
           if(snaps.length) await idbPut(STORES.snapshots, snaps);
-          slog(`    +${fresh.length} new, ${vids.length-fresh.length} refreshed, ${snaps.length} snapshots`);
+          slog(`    +${fresh.length} new, ${dirty.length-fresh.length} changed, ${snaps.length} snapshots`);
         } else slog(`    nothing new`);
         ch.lastScraped = Date.now();
-        ch.scrapedCount = rows.filter(v=>v.channelId===ch.id).length;
+        ch.scrapedCount = mine.length;
       }catch(e){ slog(`    ✗ ${e.message}`, true); }
       ch.pid=pid; ch._k=`${pid}::${ch.id}`;
       await idbPut(STORES.channels, ch);
@@ -1421,6 +1532,7 @@ async function syncAll(opts={}){
     }
     prof.cfg.lastSync = Date.now(); saveCfg(); invalidateBaselines();
     const used = CFG.quota.units - unitsBefore;
+    if(skippedV||skippedS) slog(`▸ Skipped ${nfull(skippedV)} unchanged videos and ${nfull(skippedS)} unchanged snapshots`);
     slog(`▸ Done — ${newVids} new videos, ${updVids} refreshed, ${used} quota units used`);
     setProg(100,'Complete');
     const done = `Sync complete — ${newVids} new, ${updVids} refreshed, ${used} units`;
@@ -1618,7 +1730,7 @@ function channelBaselines(){
 function invalidateBaselines(){
   S.dataVer++;
   _baseCache=null; _gapCache=null; _enrichCache=null; _snapIdx=null; _chIdx=null;
-  _chMapCache=null; _topicCache=null; _momCache.clear();
+  _chMapCache=null; _topicCache=null; _boardCache=null; _momCache.clear();
 }
 /* Identity of the current dataset. Anything memoised over S.videos / S.channels
    / S.snapshots keys on this, so a refresh that changes values but not counts
@@ -2055,6 +2167,7 @@ async function switchProfile(pid){
   S.filters={}; S.sort={}; profMenuOpen=false;
   await loadAll();
   document.documentElement.dataset.density = CFG.density;
+  document.documentElement.dataset.text = CFG.textSize||'m';
   renderProfBar(); renderSideNav(); render();
   toast(`Switched to "${activeProfile().name}"`,'ok');
 }
@@ -2183,8 +2296,11 @@ function renderSideNav(){
   document.getElementById('sideNav').innerHTML = VIEWS.map(v=>{
     if(v.sec) return `<div class="nav-sec">${v.sec}</div>`;
     const c = counts[v.id];
+    const pending = v.id==='settings' && dirtyFields().length;
     return `<button class="navbtn ${S.view===v.id?'active':''}" data-nav="${v.id}">
-      ${ic(v.icon)}<span>${v.label}</span>${c?`<span class="cnt">${c>999?'999+':c}</span>`:''}</button>`;
+      ${ic(v.icon)}<span>${v.label}</span>${
+        pending? `<span class="cnt" style="background:var(--warn);color:#1a1205">${pending} unsaved</span>`
+               : (c?`<span class="cnt">${c>999?'999+':c}</span>`:'')}</button>`;
   }).join('');
 }
 function renderQuota(){
@@ -2286,7 +2402,13 @@ function render(){
 function topActions(){
   const sync = `<button class="btn btn-p" data-act="sync">${ic('sync')}Sync now</button>`;
   if(S.view==='trending') return `<button class="btn btn-p" data-act="syncTrending">${ic('sync')}Refresh trending</button>`;
-  if(S.view==='settings') return `<button class="btn btn-p" data-act="saveSettings">${ic('check')}Save</button>`;
+  if(S.view==='settings'){
+    const n = dirtyFields().length;
+    return n
+      ? `<button class="btn btn-o btn-sm" data-act="discardDrafts">${ic('undo')}Discard</button>
+         <button class="btn btn-p" data-act="saveSettings">${ic('check')}Save ${n} change${n===1?'':'s'}</button>`
+      : `<button class="btn btn-o" data-act="saveSettings" disabled>${ic('check')}Saved</button>`;
+  }
   return sync;
 }
 function subrow(){
@@ -2694,7 +2816,12 @@ addEventListener('scroll', positionChPick, {capture:true, passive:true});   // p
 function channelPicker(){
   const s=selIds();
   const counts={}; videosInRange(S.range).forEach(v=>counts[v.channelId]=(counts[v.channelId]||0)+1);
-  const list = S.channels.slice().sort((a,b)=>(counts[b.id]||0)-(counts[a.id]||0)||a.title.localeCompare(b.title));
+  const by = S.filters.chPickSort||'videos';
+  const list = S.channels.slice().sort(
+    by==='subs'  ? (a,b)=>(b.subs||0)-(a.subs||0)
+  : by==='name'  ? (a,b)=>a.title.localeCompare(b.title)
+  : by==='fresh' ? (a,b)=>(b.lastScraped||0)-(a.lastScraped||0)
+  :                (a,b)=>(counts[b.id]||0)-(counts[a.id]||0)||a.title.localeCompare(b.title));
   return `<span class="mpick">
     <button class="field mpick-btn ${s?'act':''}" data-mpick="1">
       ${ic('users')}<span class="grow c1 mpick-label">${esc(selLabel())}</span>${ic('layers')}</button>
@@ -2705,12 +2832,27 @@ function channelPicker(){
         <button class="lnk" data-chsel="__invert">Invert</button>
         <span class="right dim mpick-count s95">${selCount()} of ${S.channels.length}</span>
       </span>
+      <span class="mpick-head" style="border-top:1px solid var(--line)">
+        <span class="dim s10" style="margin-right:2px">sort</span>
+        ${[['videos','videos'],['subs','subs'],['fresh','scraped'],['name','A–Z']].map(([k,l])=>
+          `<button class="lnk ${by===k?'lnk-on':''}" data-chpicksort="${k}">${l}</button>`).join('')}
+      </span>
       ${list.map(c=>{
         const on = isSel(c.id);
-        return `<button class="mpick-row ${on?'on':''}" data-chsel="${c.id}">
+        /* Subscriber count and scrape age live here now. Deciding which
+           competitors to keep tracking is a decision you make from this list,
+           and a bare video count was never enough to make it — a 2M-sub channel
+           with 3 uploads in range is a very different call from a 9K-sub one. */
+        const age = c.lastScraped? (Date.now()-c.lastScraped)/864e5 : null;
+        const dot = age===null? 'var(--err)' : age<2? 'var(--ok)' : age<7? 'var(--warn)' : 'var(--err)';
+        return `<button class="mpick-row ${on?'on':''}" data-chsel="${c.id}"
+            title="${esc(c.title)} · ${nfull(c.subs||0)} subscribers · ${c.lastScraped?'scraped '+ago(c.lastScraped):'never scraped'}">
           <span class="cbox">${on?ic('check'):''}</span>
           <img class="avat avat-sm" loading="lazy" decoding="async" src="${esc(c.thumb)}" alt="">
-          <span class="grow c1">${esc(c.title)}</span>
+          <span class="grow" style="min-width:0">
+            <span class="c1 mpick-name">${esc(c.title)}</span>
+            <span class="mpick-sub"><span class="freshdot" style="background:${dot}"></span>${nf(c.subs||0)} subs · ${c.lastScraped?ago(c.lastScraped):'never'}</span>
+          </span>
           <span class="dim s10">${counts[c.id]||0}</span></button>`;}).join('')}
       <span class="mpick-foot" ${(s && s.length>1)?'':'hidden'}><button class="btn btn-sm btn-p" data-nav="compare">${ic('chart')}<span>Compare these ${s?s.length:0}</span></button></span>
     </span>`:''}
@@ -3212,14 +3354,32 @@ function vOpps(){
 /* The board used to hard-stop at 120 cards with no way to see the rest. It now
    pages exactly like the feed, using the same per-page setting and the same
    pager control, so both views behave identically. */
+const BOARD_SORTS = [['outlier','By outlier'],['views','By views'],['vpd','Views / day'],['recent','Newest']];
+const BOARD_SIZES = [['sm','S'],['md','M'],['lg','L'],['xl','XL']];
+const BOARD_W = {sm:150, md:210, lg:290, xl:390};
+const BOARD_DEFAULT_SIZE = 'lg';
+/* Views/day is the honest comparison when a 3-day-old video sits next to a
+   3-month-old one: raw views reward age, and outlier score is relative to the
+   channel rather than to the shelf you are choosing from. */
+const boardCmp = {
+  recent:  (a,b)=>b.publishedTs-a.publishedTs,
+  views:   (a,b)=>b.views-a.views,
+  vpd:     (a,b)=>b.vpd-a.vpd,
+  outlier: (a,b)=>b.outlier-a.outlier,
+};
+let _boardCache=null, _boardKey='';
 function boardRows(){
   const sortBy = S.filters.boardSort||'outlier';
-  return [...applyQ(enrichedInRange())].sort((a,b)=> sortBy==='recent'? b.publishedTs-a.publishedTs
-    : sortBy==='views'? b.views-a.views : b.outlier-a.outlier);
+  const key = [dataKey(), S.range, CFG.rangeFrom||'', CFG.rangeTo||'', selSig(),
+    S.filters.q||'', CFG.includeShorts?1:0, CFG.minViews||0, sortBy].join('|');
+  if(_boardCache && _boardKey===key) return _boardCache;
+  _boardCache = [...applyQ(enrichedInRange())].sort(boardCmp[sortBy]||boardCmp.outlier);
+  _boardKey = key;
+  return _boardCache;
 }
 function boardGrid(rows){
-  const size = S.filters.boardSize||'md';
-  const W = {sm:150, md:210, lg:290}[size];
+  const size = S.filters.boardSize||BOARD_DEFAULT_SIZE;
+  const W = BOARD_W[size]||BOARD_W[BOARD_DEFAULT_SIZE];
   const per = CFG.perPage || 50;
   const pages = Math.max(1, Math.ceil(rows.length/per));
   const page = Math.min(Math.max(1, S.page.board||1), pages);
@@ -3240,7 +3400,8 @@ function boardGrid(rows){
           <a href="https://youtube.com/watch?v=${v.id}" target="_blank" rel="noopener" class="boardtitle">${esc(v.title)}</a>
           <div class="vmeta" style="margin-top:6px">
             <span class="uptime">${nf(v.views)} views</span><span class="sep">·</span>
-            <span>${esc(v.channelTitle)}</span></div>
+            <span class="vpd" title="Views per day since publication">${nf(v.vpd)}/day</span><span class="sep">·</span>
+            <span class="c1">${esc(v.channelTitle)}</span></div>
           <div class="vmeta"><span>${v.pubDay} ${v.pubTime}</span><span class="sep">·</span>
             <span>${v.ageDays}d</span><span class="sep">·</span><span>${v.engage}% eng</span></div>
         </div></div>`;}).join('')}
@@ -3250,18 +3411,19 @@ function boardGrid(rows){
 function vBoard(){
   const rows = boardRows();
   const sortBy = S.filters.boardSort||'outlier';
-  const size = S.filters.boardSize||'md';
+  const size = S.filters.boardSize||BOARD_DEFAULT_SIZE;
   const per = CFG.perPage || 50;
   const page = Math.min(Math.max(1, S.page.board||1), Math.max(1,Math.ceil(rows.length/per)));
   const shown = Math.min(per, Math.max(0, rows.length-(page-1)*per));
   return `
   <div class="panel" style="margin-bottom:14px"><div class="pad row wrapf" style="gap:10px">
     <div class="seg plain">
-      ${[['outlier','By outlier'],['views','By views'],['recent','Newest']].map(([k,l])=>
+      ${BOARD_SORTS.map(([k,l])=>
         `<button class="${sortBy===k?'on':''}" data-boardsort="${k}">${l}</button>`).join('')}</div>
     <div class="seg plain">
-      ${[['sm','S'],['md','M'],['lg','L']].map(([k,l])=>
-        `<button class="${size===k?'on':''}" data-boardsize="${k}">${l}</button>`).join('')}</div>
+      ${BOARD_SIZES.map(([k,l])=>
+        `<button class="${size===k?'on':''}" data-boardsize="${k}" title="${
+          k==='xl'?'3 per row':k==='lg'?'4 per row':k==='md'?'6 per row':'8 per row'}">${l}</button>`).join('')}</div>
     <div class="grow"></div>
     <span class="dim" style="font-size:11px">Showing ${nfull(shown)} of ${nfull(rows.length)} · ${rangeLabel()}</span>
     <button class="btn btn-sm btn-o" data-act="copyThumbUrls">${ic('copy')}Copy URLs</button>
@@ -3270,6 +3432,16 @@ function vBoard(){
     <button class="btn btn-sm btn-p" data-export="thumbs|zip">${ic('layers')}All</button>
   </div></div>
   <div id="tblhost-board">${boardGrid(rows)}</div>`;
+}
+function repaintBoard(){
+  const host = document.getElementById('tblhost-board');
+  if(!host) return render();
+  const size = S.filters.boardSize||BOARD_DEFAULT_SIZE, sortBy = S.filters.boardSort||'outlier';
+  host.innerHTML = boardGrid(boardRows());
+  document.querySelectorAll('[data-boardsize]').forEach(b=>
+    b.classList.toggle('on', b.dataset.boardsize===size));
+  document.querySelectorAll('[data-boardsort]').forEach(b=>
+    b.classList.toggle('on', b.dataset.boardsort===sortBy));
 }
 
 /* ─────────── CHANNELS ─────────── */
@@ -3881,19 +4053,20 @@ Rules: titles 40-70 chars, statements not questions, max 2 ALL-CAPS words, no em
 /* ─────────── SETTINGS ─────────── */
 function vSettings(){
   return `
+  <div id="dirtyBar">${dirtyBarHTML()}</div>
   <div class="grid2">
     <div class="col" style="gap:14px">
       <div class="panel"><div class="phead">${ic('cog')}YouTube Data API key</div><div class="pad">
         <div class="muted" style="font-size:11.5px;line-height:1.65;margin-bottom:11px">
           Stored in this browser only, sent only to googleapis.com. No AI key is used anywhere in this app.
           Restrict the key by HTTP referrer in Google Cloud Console.</div>
-        <input class="field mono" type="password" id="setKey" placeholder="AIza..." value="${esc(CFG.ytKey)}">
+        <input class="field mono" type="password" id="setKey" placeholder="AIza..." value="${esc(draftValue('ytKey'))}">
         <div class="row" style="gap:8px;margin-top:10px">
           <button class="btn btn-sm btn-o" data-act="testKey">${ic('check')}Test key</button>
           <span id="keyTest" class="dim" style="font-size:11px"></span></div>
       </div></div>
 
-      <div class="panel"><div class="phead">${ic('users')}Competitor channels<span class="right tag" id="chCount">${CFG.channels.length}</span></div><div class="pad">
+      <div class="panel"><div class="phead">${ic('users')}Competitor channels<span class="right tag" id="chCount">${normalizeChannelLines(draftValue('channels')).length}</span></div><div class="pad">
         ${staleNotice()}
         <div class="row" style="gap:8px;padding:9px 11px;background:var(--acc-soft);border-radius:var(--r2);margin-bottom:11px">
           <span class="profdot" style="background:${activeProfile().color}"></span>
@@ -3910,16 +4083,16 @@ function vSettings(){
         <div class="muted" style="font-size:11.5px;line-height:1.6;margin-bottom:10px">
           One per line — channel ID (UC…), @handle, or full URL. Paste as many as you like; resolution is batched 50 at a time (1 unit per batch).
           <b style="color:var(--t1)">Paste</b> also accepts commas, tabs and spreadsheet columns, and skips anything already on the list.</div>
-        <textarea class="field mono" id="setChannels" rows="10" placeholder="@mrbeast&#10;UC_x5XG1OV2P6uZZ5FSM9Ttw&#10;https://youtube.com/@veritasium">${esc(CFG.channels.join('\n'))}</textarea>
+        <textarea class="field mono" id="setChannels" rows="10" placeholder="@mrbeast&#10;UC_x5XG1OV2P6uZZ5FSM9Ttw&#10;https://youtube.com/@veritasium">${esc(draftValue('channels'))}</textarea>
         <div class="row" style="gap:6px;margin-top:8px;font-size:10.5px">
-          <span id="saveState" class="row" style="gap:5px"><span style="color:var(--ok)">${ic('check')}</span><span class="dim">saved</span></span>
-          <span class="dim right">Typing here saves itself — you don't have to press Save.</span>
+          <span id="saveState" class="row" style="gap:5px"><span style="color:var(--ok)">${ic('check')}</span><span class="dim">draft kept</span></span>
+          <span class="dim right">Edits here are kept safely but only take effect when you press <b>Save changes</b>.</span>
         </div>
       </div></div>
 
       <div class="panel"><div class="phead">${ic('copy')}Title patterns</div><div class="pad">
         <div class="muted" style="font-size:11.5px;margin-bottom:10px">Used when generating AI briefing packs.</div>
-        <textarea class="field mono" id="setPatterns" rows="8">${esc(CFG.titlePatterns)}</textarea>
+        <textarea class="field mono" id="setPatterns" rows="8">${esc(draftValue('patterns'))}</textarea>
       </div></div>
     </div>
 
@@ -3946,8 +4119,14 @@ function vSettings(){
           <div class="sw ${CFG.autoSync?'on':''}" data-toggle="autoSync"></div></div>
         <div class="row" style="margin-top:14px;gap:10px">
           <div class="grow"><div style="font-size:12px;font-weight:600">Compact density</div>
-            <div class="dim" style="font-size:10.5px">Tighter rows, smaller type</div></div>
+            <div class="dim" style="font-size:10.5px">Tighter rows and padding</div></div>
           <div class="sw ${CFG.density==='compact'?'on':''}" data-toggle="density"></div></div>
+        <div class="row wrapf" style="margin-top:14px;gap:10px">
+          <div class="grow"><div style="font-size:12px;font-weight:600">Text size</div>
+            <div class="dim" style="font-size:10.5px">Independent of density — read comfortably without losing rows</div></div>
+          <div class="seg plain">${[['s','S'],['m','M'],['l','L'],['xl','XL']].map(([k,l])=>
+            `<button class="${(CFG.textSize||'m')===k?'on':''}" data-textsize="${k}">${l}</button>`).join('')}</div>
+        </div>
       </div></div>
 
       <div class="panel"><div class="phead">${ic('info')}Daily automation — how it actually works</div><div class="pad">
@@ -4070,7 +4249,7 @@ document.addEventListener('click', async e=>{
   let closedPicker=false;
   if(chPickOpen && !e.target.closest('.mpick')){ chPickOpen=false; closedPicker=true; }
 
-  const t = e.target.closest('[data-nav],[data-act],[data-range],[data-thr],[data-toggle],[data-sort],[data-export],[data-cat],[data-chopen],[data-chback],[data-close],[data-brief],[data-copy-brief],[data-dl-brief],[data-pswitch],[data-pact],[data-trendmode],[data-chtab],[data-chexport],[data-chfilter-clear],[data-boardsort],[data-boardsize],[data-tdur],[data-twin],[data-expscope],[data-expthr],[data-minviews],[data-page],[data-perpage],[data-opptab],[data-oppsearch],[data-mpick],[data-chsel],[data-pastemode],[data-restorebak]');
+  const t = e.target.closest('[data-nav],[data-act],[data-range],[data-thr],[data-toggle],[data-sort],[data-export],[data-cat],[data-chopen],[data-chback],[data-close],[data-brief],[data-copy-brief],[data-dl-brief],[data-pswitch],[data-pact],[data-trendmode],[data-chtab],[data-chexport],[data-chfilter-clear],[data-boardsort],[data-boardsize],[data-tdur],[data-twin],[data-expscope],[data-expthr],[data-minviews],[data-page],[data-perpage],[data-opptab],[data-oppsearch],[data-mpick],[data-chsel],[data-pastemode],[data-restorebak],[data-chpicksort],[data-textsize]');
   if(!t){ if(closedPicker) render(); return; }
   const d = t.dataset;
   if(d.page){ const [k,n]=d.page.split('|'); S.page[k]=+n;
@@ -4086,11 +4265,18 @@ document.addEventListener('click', async e=>{
   if(d.trendmode){ CFG.trendMode=d.trendmode; saveCfg(); render(); return; }
   if(d.chtab){ S.filters.chTab=d.chtab; render(); return; }
   if(d.mpick!==undefined){ chPickOpen=!chPickOpen; render(); return; }
+  if(d.textsize){ CFG.textSize=d.textsize; document.documentElement.dataset.text=d.textsize;
+    saveCfg(); render(); return; }
+  if(d.chpicksort){ S.filters.chPickSort=d.chpicksort; renderContentOnly(); positionChPick();
+    document.getElementById('subrow').innerHTML = subrow(); positionChPick(); return; }
   if(d.chsel!==undefined){ toggleChSel(d.chsel); return; }
   if(d.opptab){ S.filters.oppTab=d.opptab; render(); return; }
   if(d.oppsearch){ S.filters.q=d.oppsearch; S.page={}; nav('feed'); return; }
-  if(d.boardsort){ S.filters.boardSort=d.boardsort; S.page={}; render(); return; }
-  if(d.boardsize){ S.filters.boardSize=d.boardsize; render(); return; }
+  /* Both of these only change the grid. Repainting the toolbar, the subrow and
+     the pager as well threw the scroll position away and re-decoded every
+     thumbnail — the jitter you feel when flicking between sizes. */
+  if(d.boardsort){ S.filters.boardSort=d.boardsort; S.page={}; repaintBoard(); return; }
+  if(d.boardsize){ S.filters.boardSize=d.boardsize; repaintBoard(); return; }
   if(d.tdur!==undefined){ const [mn,mx]=d.tdur.split('|').map(Number);
     CFG.trendDurMin=mn; CFG.trendDurMax=mx; saveCfg(); render(); return; }
   if(d.expscope!==undefined){ toggleChSel(d.expscope||'__none'); return; }
@@ -4132,7 +4318,7 @@ document.addEventListener('click', async e=>{
     case 'chClear': return clearChannels();
     case 'chUndo': return undoChannels();
     case 'chExportList': {
-      const list = CFG.channels||[];
+      const list = draftLines();
       if(!list.length){ toast('No channels to export','warn'); return; }
       dl(`signal-channels-${slug(activeProfile().name)}-${todayPT()}.txt`, list.join('\n'));
       return;
@@ -4151,6 +4337,13 @@ document.addEventListener('click', async e=>{
       const removed = await pruneOrphans({force:true, silent:true});
       S.page={}; renderProfBar(); renderSideNav(); render();
       toast(`Cleared cached data for ${removed} channel${removed===1?'':'s'}`,'ok'); return;
+    }
+    case 'discardDrafts': {
+      const fields = dirtyFields();
+      if(!fields.length){ toast('Nothing to discard','warn'); return; }
+      if(!confirm(`Discard unsaved edits to ${fields.map(f=>DRAFT_LABEL[f].toLowerCase()).join(', ')}?\n\nThe boxes go back to what is currently in effect.`)) return;
+      discardDrafts(); chUndoStack=[]; render();
+      toast('Unsaved edits discarded','ok'); return;
     }
     case 'storageScan': return runStorageScan();
     case 'storageBackups': return showBackups();
@@ -4254,7 +4447,8 @@ ${CFG.titlePatterns}`);
 });
 document.addEventListener('input', e=>{
   // every registered settings field persists itself as you type
-  if(e.target.id && AUTOSAVE[e.target.id]){ scheduleAutosave(e.target.id); }
+  // every settings field keeps its draft as you type; none of them apply it
+  if(e.target.id && DRAFT_FIELDS[e.target.id]){ scheduleAutosave(e.target.id); }
   if(e.target.dataset.search!==undefined){
     S.filters.q=e.target.value; S.page={};
     clearTimeout(window._st);
@@ -4270,7 +4464,7 @@ document.addEventListener('input', e=>{
   }
 });
 document.addEventListener('focusout', e=>{
-  if(e.target.id && AUTOSAVE[e.target.id]){ _asDirty.add(e.target.id); flushPendingEdits(); }
+  if(e.target.id && DRAFT_FIELDS[e.target.id]){ _dPending.add(e.target.id); flushPendingEdits(); }
 });
 document.addEventListener('change', e=>{
   const c = e.target.dataset.cfg;
@@ -4538,15 +4732,14 @@ function loosenChannelLines(text){
    mis-click costs a re-sync, so every destructive action drops a restore point. */
 let chUndoStack = [];
 function pushChUndo(label){
-  chUndoStack.push({list:[...(CFG.channels||[])], label, at:Date.now()});
+  chUndoStack.push({list:draftLines(), label, at:Date.now()});
   if(chUndoStack.length>12) chUndoStack.shift();
 }
 function undoChannels(){
   const prev = chUndoStack.pop();
   if(!prev){ toast('Nothing to undo','warn'); return; }
-  CFG.channels = prev.list; refilterChannels(); saveCfg();
-  renderProfBar(); renderSideNav(); render();
-  toast(`Undone — back to ${prev.list.length} channel${prev.list.length===1?'':'s'}`,'ok');
+  setDraftLines(prev.list); render();
+  toast(`Undone — box back to ${prev.list.length} channel${prev.list.length===1?'':'s'}`,'ok');
 }
 
 async function readClipboard(){
@@ -4568,18 +4761,15 @@ function applyPastedChannels(text, mode){
   const incoming = normalizeChannelLines(text);
   if(!incoming.length){ toast('Nothing in the clipboard looked like a channel','warn'); return; }
   pushChUndo('paste');
-  const before = (CFG.channels||[]).length;
-  const merged = mode==='replace' ? incoming : normalizeChannelLines([...(CFG.channels||[]), ...incoming]);
-  CFG.channels = merged;
-  refilterChannels();
-  const saved = saveCfg();
+  const before = draftLines().length;
+  const merged = mode==='replace' ? incoming : normalizeChannelLines([...draftLines(), ...incoming]);
+  setDraftLines(merged);
   const added = merged.length - (mode==='replace'? 0 : before);
   const dupes = incoming.length - (mode==='replace'? incoming.length : added);
-  renderProfBar(); renderSideNav(); render();
-  if(!saved){ toast('Pasted, but the browser refused to save — export a backup now','err'); return; }
+  render();
   toast(mode==='replace'
-    ? `List replaced — ${merged.length} channel${merged.length===1?'':'s'} saved`
-    : `Added ${added} channel${added===1?'':'s'}${dupes>0?` · ${dupes} duplicate${dupes===1?'':'s'} skipped`:''} — saved`, 'ok');
+    ? `List replaced with ${merged.length} channel${merged.length===1?'':'s'} — press Save changes to apply`
+    : `Added ${added} channel${added===1?'':'s'}${dupes>0?` · ${dupes} duplicate${dupes===1?'':'s'} skipped`:''} — press Save changes to apply`, 'ok');
 }
 function pasteFallbackModal(mode){
   document.getElementById('modals').innerHTML = `
@@ -4607,91 +4797,159 @@ function pasteFallbackModal(mode){
   box.focus();
 }
 function copyChannels(){
-  const list = CFG.channels||[];
+  const list = draftLines();
   if(!list.length){ toast('No channels to copy','warn'); return; }
   copyTxt(list.join('\n'));
 }
 function cleanChannels(){
-  const before = (CFG.channels||[]).length;
-  const after = normalizeChannelLines(CFG.channels||[]);
-  if(after.length===before){ toast('Already clean — no duplicates found','ok'); return; }
+  const cur = draftLines();
+  const after = normalizeChannelLines(cur);
+  if(after.length===cur.length){ toast('Already clean — no duplicates found','ok'); return; }
   pushChUndo('clean');
-  CFG.channels = after; refilterChannels(); saveCfg();
-  renderProfBar(); renderSideNav(); render();
-  toast(`Removed ${before-after.length} duplicate/blank line${before-after.length===1?'':'s'}`,'ok');
+  setDraftLines(after); render();
+  toast(`Removed ${cur.length-after.length} duplicate/blank line${cur.length-after.length===1?'':'s'} — press Save changes to apply`,'ok');
 }
 function clearChannels(){
-  const n = (CFG.channels||[]).length;
-  if(!n){ toast('List is already empty','warn'); return; }
-  if(!confirm(`Clear all ${n} channels from this profile's list?\n\nYour cached videos are kept, and Undo will bring the list straight back.`)) return;
+  const n = draftLines().length;
+  if(!n){ toast('Box is already empty','warn'); return; }
   pushChUndo('clear');
-  CFG.channels = []; refilterChannels(); saveCfg();
-  renderProfBar(); renderSideNav(); render();
-  toast(`Cleared ${n} channels — press Undo to restore`,'warn');
+  setDraftLines([]); render();
+  /* No confirm needed any more: this only empties the box. Your live list, and
+     every cached video behind it, stay exactly as they are until you save. */
+  toast(`Box cleared — your ${(CFG.channels||[]).length} saved channels are untouched until you press Save changes`,'warn');
 }
 
 /* ═══════════════════════════════════════════════════════════
-   AUTOSAVE — typed text is persisted, not held hostage by a button
+   DRAFTS — typing is never lost, and never destructive either
    ───────────────────────────────────────────────────────────
-   The Profiles panel has always claimed "everything auto-saves as you work",
-   but the three fields that mattered most — API key, channel list, title
-   patterns — were only read out of the DOM when you happened to press Save.
-   Navigate away, background the tab, let a sync repaint the view, or just
-   refresh, and the text was gone with no warning. Now every one of them
-   commits on a short debounce, on blur, on view change and on page hide.
+   Two failure modes, opposite directions, and both cost real work.
+
+   Originally these fields were only read out of the DOM when you happened to
+   press Save: type a list, refresh, gone. Making them commit as you type fixed
+   that and introduced the worse one — a mis-select and a keystroke silently
+   replaced the live channel list, and pruning followed it.
+
+   A draft separates the two. What you type is written to storage immediately,
+   so a refresh, a crash or a closed tab never loses it. But it stays a draft:
+   the live settings, and everything that reads them, change only when you press
+   Save. Discard puts the box back to what is actually in effect. Nothing you do
+   in a text box can alter your data by accident, and nothing you type can
+   evaporate.
    ═══════════════════════════════════════════════════════════ */
-const AUTOSAVE = {
-  setChannels: {
-    read:  el => loosenChannelLines(el.value),
-    apply: v  => { CFG.channels = v; refilterChannels(); },   // numbers follow the box
-    same:  v  => JSON.stringify(v)===JSON.stringify(CFG.channels||[]),
-    after: ()  => { const t=document.getElementById('chCount'); if(t) t.textContent=(CFG.channels||[]).length;
-                    renderProfBar(); renderSideNav(); },
-  },
-  setKey: {
-    read:  el => el.value.trim(),
-    apply: v  => { CFG.ytKey = v; },
-    same:  v  => v === CFG.ytKey,
-  },
-  setPatterns: {
-    read:  el => el.value,
-    apply: v  => { CFG.titlePatterns = v; },
-    same:  v  => v === CFG.titlePatterns,
-  },
-  trendKw: {
-    read:  el => el.value.split('\n').map(s=>s.trim()).filter(Boolean),
-    apply: v  => { CFG.trendKeywords = v; },
-    same:  v  => JSON.stringify(v)===JSON.stringify(CFG.trendKeywords||[]),
-  },
-};
-let _asTimer=null, _asDirty=new Set();
+const DRAFT_FIELDS = { setChannels:'channels', setKey:'ytKey', setPatterns:'patterns' };
+const DRAFT_LABEL  = { channels:'Channel list', ytKey:'API key', patterns:'Title patterns' };
+function draftBag(){
+  if(!STORE.drafts) STORE.drafts = {};
+  const p = PID();
+  if(!STORE.drafts[p]) STORE.drafts[p] = {};
+  return STORE.drafts[p];
+}
+function liveValue(field){
+  return field==='channels' ? (CFG.channels||[]).join('\n')
+       : field==='ytKey'    ? (CFG.ytKey||'')
+       : (CFG.titlePatterns||'');
+}
+function draftValue(field){
+  const d = draftBag();
+  return d[field]!==undefined ? d[field] : liveValue(field);
+}
+function setDraft(field, text){
+  const d = draftBag();
+  // a draft that matches what is live is not a draft
+  if(text === liveValue(field)) delete d[field]; else d[field] = text;
+  d.at = Date.now();
+  return saveCfg();
+}
+function dirtyFields(){
+  const d = draftBag();
+  return Object.values(DRAFT_FIELDS).filter(f=>d[f]!==undefined && d[f]!==liveValue(f));
+}
+const isDirty = () => dirtyFields().length>0;
+function commitDrafts(){
+  const d = draftBag(), fields = dirtyFields();
+  if(!fields.length) return {fields:[], ok:true};
+  for(const f of fields){
+    if(f==='channels')      CFG.channels = normalizeChannelLines(d.channels);
+    else if(f==='ytKey')    CFG.ytKey = String(d.ytKey).trim();
+    else if(f==='patterns') CFG.titlePatterns = d.patterns;
+    delete d[f];
+  }
+  refilterChannels();
+  return {fields, ok:saveCfg()};
+}
+function discardDrafts(){
+  const d = draftBag(), fields = dirtyFields();
+  fields.forEach(f=>delete d[f]);
+  saveCfg();
+  return fields;
+}
+/* The channel-list buttons edit the draft, not your data — the same rule as
+   typing. Pasting 200 channels or clearing the box is a proposal until you save. */
+function draftLines(){ return loosenChannelLines(draftValue('channels')); }
+function setDraftLines(lines){
+  setDraft('channels', lines.join('\n'));
+  const el = document.getElementById('setChannels');
+  if(el) el.value = draftValue('channels');
+  renderDirtyBar();
+}
+
+let _dTimer=null, _dPending=new Set();
 function scheduleAutosave(id){
-  if(!AUTOSAVE[id]) return;
-  _asDirty.add(id);
+  if(!DRAFT_FIELDS[id]) return;
+  _dPending.add(id);
   markSaveState('pending');
-  clearTimeout(_asTimer);
-  _asTimer = setTimeout(flushPendingEdits, 500);
+  clearTimeout(_dTimer);
+  _dTimer = setTimeout(flushPendingEdits, 400);
 }
 function flushPendingEdits(){
-  clearTimeout(_asTimer);
-  if(!_asDirty.size) return false;
-  let changed=false;
-  for(const id of [..._asDirty]){
-    const spec = AUTOSAVE[id], el = document.getElementById(id);
-    if(!spec || !el) { _asDirty.delete(id); continue; }
-    const v = spec.read(el);
-    if(!spec.same(v)){ spec.apply(v); changed=true; }
-    spec.after && spec.after();
-    _asDirty.delete(id);
+  clearTimeout(_dTimer);
+  if(!_dPending.size) return false;
+  let ok = true;
+  for(const id of [..._dPending]){
+    const field = DRAFT_FIELDS[id], el = document.getElementById(id);
+    _dPending.delete(id);
+    if(!field || !el) continue;
+    if(setDraft(field, el.value)===false) ok = false;
   }
-  if(changed){
-    const ok = saveCfg();
-    markSaveState(ok? 'saved' : 'failed');
-    return ok;
-  }
-  markSaveState('saved');
-  return true;
+  markSaveState(ok? 'saved' : 'failed');
+  renderDirtyBar();
+  return ok;
 }
+/* The unsaved-changes bar. It states exactly what is pending and offers the two
+   ways out, so a draft can never quietly become the thing you are looking at. */
+function dirtyBarHTML(){
+  const fields = dirtyFields();
+  if(!fields.length) return '';
+  const detail = fields.map(f=>{
+    if(f!=='channels') return DRAFT_LABEL[f];
+    const before = (CFG.channels||[]).length;
+    const after = normalizeChannelLines(draftValue('channels')).length;
+    const diff = after-before;
+    return `Channel list (${before} → ${after}${diff?`, ${diff>0?'+':''}${diff}`:''})`;
+  }).join(' · ');
+  const wipesAll = fields.includes('channels')
+    && (CFG.channels||[]).length>0 && !normalizeChannelLines(draftValue('channels')).length;
+  return `<div class="row wrapf dirtybar" style="gap:9px">
+    ${ic('warn')}<span class="grow" style="font-size:11.5px;min-width:200px">
+      <b>Unsaved changes</b> — ${esc(detail)}. Nothing has been applied yet${wipesAll?', and saving this would empty your list':''}.</span>
+    <button class="btn btn-sm btn-o" data-act="discardDrafts">${ic('undo')}Discard</button>
+    <button class="btn btn-sm btn-p" data-act="saveSettings">${ic('check')}Save changes</button>
+  </div>`;
+}
+function renderDirtyBar(){
+  const host = document.getElementById('dirtyBar');
+  if(host) host.innerHTML = dirtyBarHTML();
+  const cnt = document.getElementById('chCount');
+  if(cnt){
+    const n = normalizeChannelLines(draftValue('channels')).length;
+    cnt.textContent = n;
+    cnt.className = isDirty()? 'right tag' : 'right tag';
+  }
+  const ta = document.getElementById('topActions');
+  if(ta && S.view==='settings') ta.innerHTML = topActions();
+  renderSideNav();
+}
+
 /* A quiet, honest indicator. "Saved" here means the write was read back and
    verified, not merely attempted — the whole point is that you can trust it. */
 function markSaveState(state){
@@ -4704,29 +4962,32 @@ function markSaveState(state){
 /* Save is now a confirmation of work already persisted, not the only chance to
    persist it. It still normalises and prunes, because those are the deliberate
    actions you press a button for — but nothing you typed depends on reaching it. */
+/* The only place drafts become real. Everything else is reversible by design. */
 async function saveSettings(){
-  const c=document.getElementById('setChannels');
-  ['setKey','setChannels','setPatterns'].forEach(id=>{ if(document.getElementById(id)) _asDirty.add(id); });
+  Object.keys(DRAFT_FIELDS).forEach(id=>{ if(document.getElementById(id)) _dPending.add(id); });
   flushPendingEdits();
-  if(c) CFG.channels = normalizeChannelLines(c.value);   // explicit save also dedupes
-  refilterChannels();
-  const ok = saveCfg();
+  const {fields, ok} = commitDrafts();
+  if(!fields.length){ toast('Nothing to save','warn'); render(); return; }
   const removed = await pruneOrphans();
   S.page={};
   if(!ok){
     toast('Could not write to browser storage — use Export ALL profiles + data now to keep your work','err');
   }else{
-    toast(removed? `Settings saved — ${removed} removed channel${removed===1?'':'s'} cleared from cache` : 'Settings saved','ok');
+    toast(removed? `Saved — ${removed} removed channel${removed===1?'':'s'} cleared from cache`
+                 : `Saved — ${fields.map(f=>DRAFT_LABEL[f].toLowerCase()).join(', ')} applied`,'ok');
   }
   renderProfBar(); renderSideNav(); render();
 }
 async function testKey(){
   const el=document.getElementById('keyTest'); const k=document.getElementById('setKey').value.trim();
   if(!k){ el.textContent='Enter a key first'; return; }
-  CFG.ytKey=k; saveCfg(); el.textContent='Testing…';
+  /* Tests the key in the box without committing it — the draft rule holds here
+     too, so a typo you are checking never replaces the key that works. */
+  const live = CFG.ytKey; CFG.ytKey = k; el.textContent='Testing…';
   try{ const j=await yt('videos',{part:'snippet',chart:'mostPopular',regionCode:'US',maxResults:1},1);
     el.innerHTML = j.items?.length? '<span style="color:var(--ok)">✓ Key works</span>' : '<span style="color:var(--warn)">Key accepted but returned nothing</span>';
   }catch(e){ el.innerHTML = `<span style="color:var(--err)">✗ ${esc(e.message)}</span>`; }
+  finally{ CFG.ytKey = live; }
 }
 async function wipe(){
   const p = activeProfile();
@@ -4965,6 +5226,7 @@ function refilterChannels(){
 async function boot(){
   document.documentElement.dataset.theme = CFG.theme;
   document.documentElement.dataset.density = CFG.density;
+  document.documentElement.dataset.text = CFG.textSize||'m';
   /* Order is the fix, not a detail:
        1. ask for eviction protection BEFORE writing anything,
        2. reconcile BEFORE the first save, so a boot that started with an empty
@@ -4995,6 +5257,7 @@ async function boot(){
 
   document.documentElement.dataset.theme = CFG.theme;
   document.documentElement.dataset.density = CFG.density;
+  document.documentElement.dataset.text = CFG.textSize||'m';
   ensureDay();
   wireCrossTab(); wireFlush();
   renderProfBar(); renderSideNav();

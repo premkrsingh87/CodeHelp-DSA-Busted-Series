@@ -109,6 +109,83 @@ the channel lookup map is built once per data change instead of once per
 `enrich()` call, and `channelTrend` reads the pre-sorted channel index instead of
 re-filtering and re-sorting the whole catalogue per channel.
 
+## Save model, board, and sync-speed revision
+
+### Autosave was destroying work
+
+Making the settings fields commit as you type fixed one failure (type a list,
+refresh, gone) and introduced a worse one: a mis-select and a keystroke silently
+replaced the live channel list, with pruning following it.
+
+These are now **drafts**. What you type is written to storage immediately, so a
+refresh, a crash or a closed tab never loses it — but it stays a draft. The live
+settings, and everything that reads them, change only when you press **Save
+changes**. An unsaved-changes bar states exactly what is pending
+(`Channel list (14 -> 2, -12)`) and offers Discard. The sidebar shows an unsaved
+badge from anywhere in the app. Paste, Clean, Clear and Undo all edit the draft,
+so none of them can alter your data on their own; Clear no longer even needs a
+confirm, because it only empties the box. Testing an API key uses the value in
+the box without committing it.
+
+### Syncing a large catalogue froze for ~20 seconds
+
+With the network stubbed out entirely, a routine re-sync of 34 channels x 250
+videos spent **19.4 seconds** in pure processing and storage. Three causes:
+
+1. Every refreshed video row was rewritten whether or not a single figure had
+   changed - and an incremental sync re-reads everything inside the snapshot
+   window, which is most of a channel's catalogue. IndexedDB writes cost roughly
+   twenty times what reads do, so rewriting an identical row is the most
+   expensive way to do nothing. Rows and snapshots are now compared first and
+   only written when something actually moved.
+2. The loop rebuilt a full id->row lookup object for every channel and scanned
+   the whole catalogue three more times per channel - about a million redundant
+   comparisons at 34 channels. Indexed once, maintained in place.
+3. Video descriptions were stored at 600 characters while the only consumer
+   truncates to 300. Now stored at 320.
+
+Transactions also request relaxed durability, which keeps writes ordered and
+atomic without forcing a disk flush per transaction.
+
+| sync (34 channels x 250 videos, network stubbed) | original | this revision |
+|---|---|---|
+| first sync, everything new | 7.3s | 7.4s |
+| re-sync, nothing changed | 19.4s | **0.8s** |
+| daily sync, 10% of stats moved | 24.0s | **1.7s** |
+| worst case, everything moved | 29.2s | **10.2s** |
+
+### Thumbnail board
+
+Four sizes (S / M / L / XL) with **L as the default** - 4 per row at 1500px, 3
+at XL. A fourth sort, **Views / day**, alongside By outlier, By views and Newest:
+the honest comparison when a 3-day-old video sits next to a 3-month-old one,
+since raw views reward age and outlier score is relative to the channel rather
+than to the shelf you are choosing from. Every card now shows views/day. Changing
+size or sort repaints only the grid, so the scroll position holds and thumbnails
+are not re-decoded.
+
+### Channel picker
+
+Each row now carries the subscriber count and how long ago the channel was
+scraped, with a freshness dot (green under 2 days, amber under a week, red
+beyond). Sortable by videos, subs, scraped or A-Z. A bare video count was never
+enough to decide which competitors to keep tracking.
+
+### Typography
+
+A platform-native stack that asks for the best face each OS actually ships
+(Segoe UI Variable, SF) rather than falling through to generics, plus optical
+sizing and tabular figures so metric columns stop shimmering as digits change.
+Card titles use `text-wrap: pretty` and tighter tracking. A new **Text size**
+control (S / M / L / XL) is independent of density, so reading comfortably no
+longer costs rows on screen.
+
+### Multi-tab
+
+Cross-tab notifications are coalesced, and a tab now reloads only when something
+it displays has actually changed - a draft or a theme change in another window
+no longer triggers a full data reload and repaint.
+
 ## Tests
 
 Requires Playwright and a Chromium binary.
@@ -119,7 +196,9 @@ Requires Playwright and a Chromium binary.
     node torture.mjs   # 17 — wiped/corrupted storage, two tabs, mid-edit repaint
     node accuracy.mjs  # 29 — listed-vs-cached coherence, stale caches,
                        #      cross-profile sync, concurrency, load speed
-    node bench.mjs <file>   # timings against a 15,000-row database
+    node features.mjs  # 21 - board sizes/sorts, channel picker, text size
+    node bench.mjs <file>     # load timings against a 15,000-row database
+    node syncprof.mjs <file>  # sync timings, network stubbed out
 
 The suites point at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`; change
 `executablePath` at the top of each file to match your install.

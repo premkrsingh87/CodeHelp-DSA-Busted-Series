@@ -24,18 +24,46 @@ ok('backup slot written', await page.evaluate(()=>!!localStorage.getItem('signal
 ok('IndexedDB mirror written', await page.evaluate(async()=>{
   const m=(await idbAll('misc')).find(x=>x.k==='store_mirror'); return !!(m&&m.json); }));
 
-console.log('\n── 2. Autosave: typing persists WITHOUT pressing Save ──');
+console.log('\n── 2. Drafts: typing is kept, but never applied until you press Save ──');
 await page.evaluate(()=>nav('settings'));
 await page.waitForTimeout(300);
 await page.fill('#setChannels', '@mrbeast\nUC_x5XG1OV2P6uZZ5FSM9Ttw\nhttps://youtube.com/@veritasium');
 await page.dispatchEvent('#setChannels','input');
-await page.waitForTimeout(900);   // debounce is 500ms
-ok('CFG updated from typing alone', (await page.evaluate(()=>CFG.channels.length))===3);
+await page.waitForTimeout(800);   // debounce is 400ms
+ok('typing does NOT touch the live list', (await page.evaluate(()=>CFG.channels.length))===0,
+   'live='+await page.evaluate(()=>JSON.stringify(CFG.channels)));
+ok('the draft is held', (await page.evaluate(()=>draftLines().length))===3);
+ok('the app reports unsaved changes', await page.evaluate(()=>isDirty()));
 const pidBefore = await page.evaluate(()=>PID());
 await boot();   // hard reload, no Save ever pressed
-ok('survives refresh without pressing Save', (await page.evaluate(()=>CFG.channels.length))===3,
-   'got '+await page.evaluate(()=>JSON.stringify(CFG.channels)));
+ok('draft survives refresh (nothing typed is lost)', (await page.evaluate(()=>draftLines().length))===3,
+   'got '+await page.evaluate(()=>JSON.stringify(draftLines())));
+ok('live list still untouched after refresh', (await page.evaluate(()=>CFG.channels.length))===0);
+await page.evaluate(()=>nav('settings')); await page.waitForTimeout(300);
+ok('the box shows the draft, not the live list',
+   (await page.evaluate(()=>document.getElementById('setChannels').value.split('\n').filter(Boolean).length))===3);
+ok('unsaved bar is on screen', await page.evaluate(()=>!!document.querySelector('.dirtybar')));
+await page.evaluate(()=>saveSettings()); await page.waitForTimeout(600);
+ok('Save applies the draft', (await page.evaluate(()=>CFG.channels.length))===3);
+ok('and clears the dirty state', !(await page.evaluate(()=>isDirty())));
+await boot();
+ok('applied list survives refresh', (await page.evaluate(()=>CFG.channels.length))===3);
 ok('profile id is stable across reload', (await page.evaluate(()=>PID()))===pidBefore);
+
+console.log('\n── 2b. An accidental edit cannot destroy the saved list ──');
+await page.evaluate(()=>nav('settings')); await page.waitForTimeout(300);
+await page.fill('#setChannels','');                       // select-all + delete
+await page.dispatchEvent('#setChannels','input');
+await page.waitForTimeout(800);
+ok('emptying the box leaves the live list alone', (await page.evaluate(()=>CFG.channels.length))===3);
+ok('cached channels untouched', (await page.evaluate(()=>S.channels.length))===(await page.evaluate(()=>S.channels.length)));
+await boot();
+ok('and still alone after a refresh', (await page.evaluate(()=>CFG.channels.length))===3);
+await page.evaluate(()=>nav('settings')); await page.waitForTimeout(300);
+await page.evaluate(()=>discardDrafts());
+await page.evaluate(()=>render()); await page.waitForTimeout(200);
+ok('Discard restores the box to the live list',
+   (await page.evaluate(()=>document.getElementById('setChannels').value.split('\n').filter(Boolean).length))===3);
 
 console.log('\n── 3. THE BUG: localStorage wiped, IndexedDB intact ──');
 // seed real cached rows for this profile, exactly as a sync would
@@ -90,18 +118,25 @@ const pruned = await page.evaluate(()=>pruneOrphans());
 ok('empty list does not delete cached channels', pruned===0);
 ok('cached channels untouched', (await page.evaluate(()=>S.channels.length))===3);
 
-console.log('\n── 6. Paste / copy / clean / undo ──');
-await page.evaluate(()=>{ CFG.channels=[]; saveCfg(); render(); });
-await page.waitForTimeout(200);
+console.log('\n── 6. Paste / copy / clean / undo (all draft-scoped) ──');
+await page.evaluate(()=>{ CFG.channels=[]; discardDrafts(); saveCfg(); nav('settings'); });
+await page.waitForTimeout(300);
 await page.evaluate(()=>applyPastedChannels('@a, @b\t@c\nhttps://youtube.com/@d\n@a\n\n#comment\n1. @e', 'add'));
-const list = await page.evaluate(()=>CFG.channels);
+const list = await page.evaluate(()=>draftLines());
 ok('paste parses commas/tabs/newlines/URLs', list.length===5, JSON.stringify(list));
 ok('paste drops duplicates', new Set(list.map(x=>x.toLowerCase())).size===list.length, JSON.stringify(list));
 ok('paste strips list numbering', list.some(x=>x==='@e'), JSON.stringify(list));
+ok('paste did NOT apply on its own', (await page.evaluate(()=>CFG.channels.length))===0);
 await page.evaluate(()=>applyPastedChannels('@z','replace'));
-ok('paste & replace swaps the list', (await page.evaluate(()=>CFG.channels.length))===1);
+ok('paste & replace swaps the draft', (await page.evaluate(()=>draftLines().length))===1);
 await page.evaluate(()=>undoChannels());
-ok('undo restores the previous list', (await page.evaluate(()=>CFG.channels.length))===5);
+ok('undo restores the previous draft', (await page.evaluate(()=>draftLines().length))===5);
+await page.evaluate(()=>clearChannels());
+ok('Clear empties the box only', (await page.evaluate(()=>draftLines().length))===0);
+ok('Clear left the live list alone', (await page.evaluate(()=>CFG.channels.length))===0);
+await page.evaluate(()=>undoChannels());
+await page.evaluate(()=>saveSettings()); await page.waitForTimeout(500);
+ok('Save applies what the box holds', (await page.evaluate(()=>CFG.channels.length))===5);
 ok('canonical dedupe collapses URL forms', await page.evaluate(()=>
   normalizeChannelLines('@mrbeast\nhttps://www.youtube.com/@MrBeast?x=1\nyoutube.com/@mrbeast').length===1));
 
