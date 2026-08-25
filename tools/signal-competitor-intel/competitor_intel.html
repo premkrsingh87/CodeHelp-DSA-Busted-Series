@@ -703,8 +703,8 @@ function idb(){
 }
 const keyOf = (r, idField) => `${r.pid}::${r[idField]}`;
 async function migrateV1(){
-  const flag = (await idbAll('misc')).find(x=>x.k==='migrated_v2');
-  if(flag) return;
+  const flag = await idbGet('misc','migrated_v2');
+  if(flag) return 0;
   const first = STORE.profiles[0].id;
   let moved=0;
   for(const [logical, oldName] of Object.entries(OLD)){
@@ -717,6 +717,7 @@ async function migrateV1(){
   }
   await idbPut('misc',{k:'migrated_v2', v:true, movedRows:moved, at:Date.now()});
   if(moved) console.info(`[signal] migrated ${moved} rows into profile-scoped stores`);
+  return moved;
 }
 /* One transparent reopen-and-retry. An IndexedDB call that fails because the
    handle went stale is the single most common way a "saved" write isn't. */
@@ -768,21 +769,121 @@ async function idbDelete(store, keys){
   }
 }
 
+
+/* ─── indexed reads ──────────────────────────────────────────
+   Every profile-scoped store already carries a `pid` index, and nothing used it.
+   loadAll() called getAll() on each store — pulling every row belonging to every
+   profile into memory — and then discarded most of it with a `.filter()`. With
+   five profiles that is five times the reading, five times the deserialisation
+   and five times the garbage on every boot and every profile switch. That is
+   the slow refresh. Reading through the index touches only this profile's rows.
+
+   The same applies to single records: fetching one `comments_<pid>` blob used to
+   getAll() the misc store, which drags every profile's comment payload and all
+   twelve settings snapshots through memory to find one key. */
+function _hasIndex(os, name){ try{ return Array.from(os.indexNames).includes(name); }catch(e){ return false; } }
+async function idbByPid(store, pid){
+  return withDB(db=>new Promise((res,rej)=>{
+    if(!db.objectStoreNames.contains(store)) return res([]);
+    const os = db.transaction(store,'readonly').objectStore(store);
+    if(_hasIndex(os,'pid')){
+      const r = os.index('pid').getAll(pid);
+      r.onsuccess=()=>res(r.result||[]); r.onerror=()=>rej(r.error);
+    }else{                                   // pre-index database: one-time full read
+      const r = os.getAll();
+      r.onsuccess=()=>res((r.result||[]).filter(x=>x&&x.pid===pid)); r.onerror=()=>rej(r.error);
+    }
+  }));
+}
+async function idbCountByPid(store, pid){
+  return withDB(db=>new Promise((res,rej)=>{
+    if(!db.objectStoreNames.contains(store)) return res(0);
+    const os = db.transaction(store,'readonly').objectStore(store);
+    if(!_hasIndex(os,'pid')){
+      const r = os.getAll();
+      r.onsuccess=()=>res((r.result||[]).filter(x=>x&&x.pid===pid).length); r.onerror=()=>rej(r.error);
+      return;
+    }
+    const r = os.index('pid').count(pid);    // counted in the index, no records read
+    r.onsuccess=()=>res(r.result||0); r.onerror=()=>rej(r.error);
+  }));
+}
+async function idbGet(store, key){
+  return withDB(db=>new Promise((res,rej)=>{
+    if(!db.objectStoreNames.contains(store)) return res(null);
+    const r = db.transaction(store,'readonly').objectStore(store).get(key);
+    r.onsuccess=()=>res(r.result||null); r.onerror=()=>rej(r.error);
+  }));
+}
+/* All four stores probed inside a single readonly transaction. Opening one
+   transaction per store was most of the cost — the walks themselves are trivial
+   because they only visit distinct index keys and never touch a record. */
+async function distinctPidsAll(){
+  const names = Object.values(STORES);
+  return withDB(db=>new Promise((res,rej)=>{
+    const present = names.filter(n=>db.objectStoreNames.contains(n));
+    if(!present.length) return res(new Set());
+    const tx = db.transaction(present,'readonly');
+    const out = new Set();
+    for(const n of present){
+      const os = tx.objectStore(n);
+      if(!_hasIndex(os,'pid')) continue;
+      const c = os.index('pid').openKeyCursor(null,'nextunique');
+      c.onsuccess = e=>{ const cur=e.target.result; if(!cur) return; out.add(cur.key); cur.continue(); };
+    }
+    tx.oncomplete=()=>res(out); tx.onerror=()=>rej(tx.error); tx.onabort=()=>rej(tx.error);
+  }));
+}
+/* Walks distinct index keys only — no record is ever deserialised. This is what
+   makes the integrity check affordable: finding which profiles own data used to
+   mean reading all of it. */
+async function distinctPids(store){
+  return withDB(db=>new Promise((res,rej)=>{
+    if(!db.objectStoreNames.contains(store)) return res([]);
+    const os = db.transaction(store,'readonly').objectStore(store);
+    if(!_hasIndex(os,'pid')){
+      const r = os.getAll();
+      r.onsuccess=()=>res([...new Set((r.result||[]).map(x=>x&&x.pid).filter(Boolean))]);
+      r.onerror=()=>rej(r.error); return;
+    }
+    const out=[];
+    const c = os.index('pid').openKeyCursor(null,'nextunique');
+    c.onsuccess=e=>{ const cur=e.target.result; if(!cur) return res(out); out.push(cur.key); cur.continue(); };
+    c.onerror=()=>rej(c.error);
+  }));
+}
+
 /* ─── reconcile & repair ─────────────────────────────────────
    Runs once, before the first render, and is the reason "0 channels" cannot
    survive a refresh any more. */
+/* Boot asks one question of the database: which profiles own data, and how
+   much. The first version answered it by reading every row of every store —
+   tens of thousands of video records deserialised on every single load, just to
+   count them. That was most of the slow refresh.
+
+   Now: distinct profile ids come from an index key walk (no records read),
+   counts come from index counts (no records read), and only the channels store
+   is read in full — it holds a few dozen rows per profile and its contents are
+   what rebuilding a lost list actually needs. */
 async function scanPids(){
   const seen = new Map();
-  for(const [logical, st] of Object.entries(STORES)){
-    let rows=[]; try{ rows = await idbAll(st); }catch(e){ continue; }
-    for(const r of rows){
-      if(!r || !r.pid) continue;
-      let e = seen.get(r.pid);
-      if(!e){ e={pid:r.pid, videos:0, channels:0, snapshots:0, trending:0, chanRows:[]}; seen.set(r.pid,e); }
-      e[logical]++;
-      if(logical==='channels') e.chanRows.push(r);
-    }
+  const touch = p => { let e=seen.get(p);
+    if(!e){ e={pid:p, videos:0, channels:0, snapshots:0, trending:0, chanRows:[]}; seen.set(p,e); }
+    return e; };
+  for(const st of Object.values(STORES)){
+    let list=[]; try{ list = await distinctPids(st); }catch(e){ continue; }
+    (list||[]).forEach(p=>{ if(p) touch(p); });
   }
+  let chAll=[]; try{ chAll = await idbAll(STORES.channels); }catch(e){}
+  for(const c of chAll){ if(c && c.pid){ const e=touch(c.pid); e.chanRows.push(c); e.channels++; } }
+  await Promise.all([...seen.values()].map(async e=>{
+    const [v,s,t] = await Promise.all([
+      idbCountByPid(STORES.videos, e.pid),
+      idbCountByPid(STORES.snapshots, e.pid),
+      idbCountByPid(STORES.trending, e.pid),
+    ]);
+    e.videos=v; e.snapshots=s; e.trending=t;
+  }));
   return seen;
 }
 /* Cached channel rows carry the channel's UC id, which is exactly what the
@@ -797,19 +898,34 @@ function linesFromChanRows(rows){
   });
   return out;
 }
+/* Recovery must not be a tax on every healthy load.
+
+   The first version of this ran the full repair path unconditionally: thirteen
+   IndexedDB round-trips for the mirror and its backup ring, then a scan that
+   counted every row of every store, then a second scan for the channel-list
+   heal. On a five-profile install that turned a 300ms boot into a 670ms one —
+   trading the slow refresh being fixed here for a slower one somewhere else.
+
+   Now there are two paths. If localStorage handed over a usable settings
+   record, boot does one cheap integrity probe — an index key walk per store,
+   which reads no records at all — and stops there. The mirror, the backup ring,
+   the counts and the heal only run when that probe finds something wrong, or
+   when there was no usable record to begin with. A newer mirror (another tab,
+   a restore) is still adopted, just after first paint instead of before it. */
 async function reconcileStore(){
   const notes = [];
-  // 1. best of every place a settings record could be hiding
   let best = parseStore(readLSRaw(LS));
   best = betterStore(best, parseStore(readLSRaw(LS_BAK)));
-  let misc=[]; try{ misc = await idbAll('misc'); }catch(e){}
-  const mirror = misc.find(m=>m.k==='store_mirror');
-  if(mirror && mirror.json) best = betterStore(best, parseStore(mirror.json));
-  misc.filter(m=>/^store_bak_\d+$/.test(m.k)).forEach(m=>{
-    if(m.json) best = betterStore(best, parseStore(m.json));
-  });
-
   const hadNothing = !!STORE._provisional;
+
+  if(hadNothing || !best){                 // ── recovery path: consult everything
+    const [mirror, ...baks] = await Promise.all([
+      idbGet('misc','store_mirror'),
+      ...[...Array(12)].map((_,i)=>idbGet('misc','store_bak_'+i)),
+    ]);
+    if(mirror && mirror.json) best = betterStore(best, parseStore(mirror.json));
+    for(const m of baks){ if(m && m.json) best = betterStore(best, parseStore(m.json)); }
+  }
   if(best && (hadNothing || storeScore(best) > storeScore(STORE))){
     if(hadNothing) notes.push('settings restored from the database mirror');
     STORE = best;
@@ -817,9 +933,19 @@ async function reconcileStore(){
   STORE_READY = true;
   delete STORE._provisional;
 
-  // 2. reconcile against what IndexedDB actually holds
-  const seen = await scanPids();
+  /* A boot that loaded a usable settings record has nothing to prove before it
+     paints. The integrity probe still runs — just after the first render, where
+     130ms of index walking costs the user nothing instead of delaying the app.
+     The one case that cannot wait is a boot that found no settings at all:
+     there, repair has to happen before anything is written. */
+  if(!hadNothing){
+    HEALTH.recovered = null;
+    return notes;
+  }
+
+  // ── repair path ──
   const known = new Set(STORE.profiles.map(p=>p.id));
+  const seen = await scanPids();
 
   //   2a. profile exists, but its channel list was lost while its rows survived
   //       — this is the "0 channels · N videos" case, verbatim.
@@ -860,6 +986,42 @@ async function reconcileStore(){
   saveCfg();                                  // first legal write of the session
   await flushMirror();
   return notes;
+}
+
+/* The fast boot path trusts localStorage and never opens the mirror. That is
+   right nearly always, and wrong in one case: another tab (or a restore) wrote
+   a newer revision while this tab's localStorage lagged. Checking after first
+   paint keeps boot fast and still converges — and because the fast path writes
+   nothing, the mirror's revision is still comparable when we get here. */
+async function verifyMirrorLater(){
+  try{
+    const m = await idbGet('misc','store_mirror');
+    const inc = m && parseStore(m.json);
+    if(inc && (inc._rev|0) > (STORE._rev|0)){
+      STORE = inc;
+      await loadAll();
+      renderProfBar(); renderSideNav(); render();
+      console.info('[signal] adopted newer settings revision #'+(inc._rev|0)+' from the database mirror');
+    }
+  }catch(e){}
+  try{ await integrityCheckLater(); }catch(e){}
+}
+/* The post-paint half of reconcile: does any row on disk belong to a profile
+   that no longer exists, or does a profile own channel rows while its list is
+   empty? Both are cheap to ask and only expensive to answer, so the answer is
+   only computed when the question comes back yes. */
+async function integrityCheckLater(){
+  const owners = await distinctPidsAll();
+  const known = new Set(STORE.profiles.map(p=>p.id));
+  const orphans = [...owners].filter(p=>!known.has(p));
+  const stunted = STORE.profiles.filter(p=>!(p.cfg?.channels||[]).length && owners.has(p.id));
+  if(!orphans.length && !stunted.length) return;
+  const notes = await repairFromScan();
+  if(notes.length){
+    HEALTH.recovered = notes;
+    notes.slice(0,3).forEach((n,i)=>setTimeout(()=>toast('Recovered — '+n,'ok'), i*900));
+    console.info('[signal] recovery:', notes);
+  }
 }
 
 /* Ask the browser to stop treating this origin as disposable. Without it,
@@ -905,8 +1067,17 @@ function wireFlush(){
 }
 
 /* in-memory mirror for fast rendering */
-const S = { channels:[], videos:[], snapshots:[], trending:[], comments:null, range:'90', view:'dash',
-  sort:{}, filters:{}, page:{}, syncing:false };
+const S = { channels:[], staleChannels:[], videos:[], snapshots:[], trending:[], comments:null,
+  allChannels:[], allVideos:[], allSnapshots:[],
+  range:'90', view:'dash', sort:{}, filters:{}, page:{}, syncing:false, syncPids:new Set(),
+  /* Monotonic data version. Every derived cache in the app used to key on
+     `S.videos.length`, which is not a fingerprint: a sync that refreshes 200
+     videos' view counts without adding any leaves the length identical, so the
+     memoised baselines, outliers, topics and momentum all kept serving numbers
+     computed from the previous figures. Trimming N videos and adding N in the
+     same sync collapses to the same length too. Bumping a counter on every
+     mutation makes staleness impossible to express. */
+  dataVer: 0 };
 
 /* ═══════════════════════════════════════════════════════════
    UTILS
@@ -1137,19 +1308,41 @@ async function fetchVideos(ids, channelId){
   return out;
 }
 
+/* A sync is bound to the profile that started it. Every row it writes is
+   stamped with that profile's id, captured once, up front.
+
+   It used to read PID() live, at write time, inside a loop that awaits the
+   network for each channel. Switch profiles while a sync was running — the one
+   thing five profiles invites you to do — and the remaining channels' videos,
+   snapshots and channel rows were written into whichever profile you had just
+   opened, and pushed into its in-memory arrays too. Silent cross-profile
+   corruption, visible later only as counts and medians that make no sense.
+
+   Binding the id also makes concurrent syncs safe, so a sync running on one
+   profile no longer stops you working in another. */
 async function syncAll(opts={}){
-  if(S.syncing){ toast('Sync already running','warn'); return; }
+  const pid = PID(), prof = activeProfile();
+  if(S.syncPids.has(pid)){ toast('This profile is already syncing','warn'); return; }
   if(!CFG.ytKey){ toast('Add your YouTube API key in Settings first','err'); nav('settings'); return; }
   if(!CFG.channels.length){ toast('Add competitor channels in Settings first','err'); nav('settings'); return; }
+  const cfg = {                                  // snapshot of the settings this run uses
+    channels: [...CFG.channels], scrapeDepth: CFG.scrapeDepth,
+    snapshotDays: CFG.snapshotDays, deep: !!opts.deep,
+  };
+  const onProfile = () => PID()===pid;           // are we still looking at this profile?
+  S.syncPids.add(pid);
   S.syncing=true; S.syncCancel=false; S.syncJustDone=null; S.syncPct=0; S.syncLabel='starting…';
-  syncLog=[]; const deep = !!opts.deep;
+  syncLog=[]; const deep = cfg.deep;
   const unitsBefore = CFG.quota.units;
   renderSyncStrip();
   try{
     slog(`▸ ${deep?'DEEP':'INCREMENTAL'} sync starting — ${CFG.channels.length} channels`);
-    const chans = await resolveChannels(CFG.channels);
-    slog(`▸ Resolved ${chans.length}/${CFG.channels.length} channels`);
-    const existing = Object.fromEntries(S.channels.map(c=>[c.id,c]));
+    const chans = await resolveChannels(cfg.channels);
+    slog(`▸ Resolved ${chans.length}/${cfg.channels.length} channels`);
+    /* Work against this profile's rows read from disk, not against S.*, which
+       belongs to whatever profile is on screen and may change under us. */
+    let rows = await idbByPid(STORES.videos, pid);
+    const existing = Object.fromEntries((await idbByPid(STORES.channels, pid)).map(c=>[c.id,c]));
     const today = todayPT();
     const snapCutoff = Date.now() - CFG.snapshotDays*864e5;
     let newVids=0, updVids=0, i=0;
@@ -1162,7 +1355,7 @@ async function syncAll(opts={}){
       setProg(i/chans.length*100, `${ch.title} (${i}/${chans.length})`);
       slog(`  ${ch.title} · ${nf(ch.subs)} subs · ${nfull(ch.videoCount)} videos`);
       try{
-        const known = new Set(S.videos.filter(v=>v.channelId===ch.id).map(v=>v.id));
+        const known = new Set(rows.filter(v=>v.channelId===ch.id).map(v=>v.id));
         /* A normal sync used to hard-cap at 100 no matter what depth you'd set,
            so raising the setting did nothing unless you happened to run a deep
            sync. Now: if this channel holds fewer videos than your configured
@@ -1170,7 +1363,7 @@ async function syncAll(opts={}){
            so it can reach past what's already cached). Once it's at depth, syncs
            go back to being cheap and incremental. */
         const cached = known.size;
-        const want = CFG.scrapeDepth;
+        const want = cfg.scrapeDepth;
         /* If a previous full pull hit the end of the uploads playlist we know
            the channel's real ceiling, so asking for more than it has must not
            re-pull the whole catalogue on every sync forever. */
@@ -1188,18 +1381,18 @@ async function syncAll(opts={}){
         }
         const fresh = ids.filter(id=>!known.has(id));
         // refresh stats for recent videos so velocity/snapshots stay live
-        const refresh = S.videos.filter(v=>v.channelId===ch.id && v.publishedTs>snapCutoff).map(v=>v.id);
+        const refresh = rows.filter(v=>v.channelId===ch.id && v.publishedTs>snapCutoff).map(v=>v.id);
         const toFetch = [...new Set([...ids, ...refresh])];
         if(toFetch.length){
           const vids = await fetchVideos(toFetch, ch.id);
-          vids.forEach(v=>{ v.channelTitle = v.channelTitle||ch.title; v.pid=PID(); v._k=`${PID()}::${v.id}`; });
+          vids.forEach(v=>{ v.channelTitle = v.channelTitle||ch.title; v.pid=pid; v._k=`${pid}::${v.id}`; });
           await idbPut(STORES.videos, vids);
-          const byId = Object.fromEntries(S.videos.map(v=>[v.id,v]));
-          vids.forEach(v=>{ if(byId[v.id]) Object.assign(byId[v.id], v); else S.videos.push(v); });
+          const byId = Object.fromEntries(rows.map(v=>[v.id,v]));
+          vids.forEach(v=>{ if(byId[v.id]) Object.assign(byId[v.id], v); else rows.push(v); });
           newVids += fresh.length; updVids += vids.length - fresh.length;
           // daily snapshot for anything inside the snapshot window
           const snaps = vids.filter(v=>v.publishedTs>snapCutoff).map(v=>({
-            key:`${v.id}_${today}`, _k:`${PID()}::${v.id}_${today}`, pid:PID(),
+            key:`${v.id}_${today}`, _k:`${pid}::${v.id}_${today}`, pid,
             videoId:v.id, channelId:ch.id, date:today,
             views:v.views, likes:v.likes, comments:v.comments, ts:Date.now()
           }));
@@ -1207,29 +1400,37 @@ async function syncAll(opts={}){
           slog(`    +${fresh.length} new, ${vids.length-fresh.length} refreshed, ${snaps.length} snapshots`);
         } else slog(`    nothing new`);
         ch.lastScraped = Date.now();
-        ch.scrapedCount = S.videos.filter(v=>v.channelId===ch.id).length;
+        ch.scrapedCount = rows.filter(v=>v.channelId===ch.id).length;
       }catch(e){ slog(`    ✗ ${e.message}`, true); }
-      ch.pid=PID(); ch._k=`${PID()}::${ch.id}`;
+      ch.pid=pid; ch._k=`${pid}::${ch.id}`;
       await idbPut(STORES.channels, ch);
     }
-    S.channels = mine(await idbAll(STORES.channels));
-    S.snapshots = mine(await idbAll(STORES.snapshots));
-    // prune snapshots outside the window
-    const stale = S.snapshots.filter(s=>+new Date(s.date) < Date.now()-CFG.snapshotDays*864e5).map(s=>s._k);
-    if(stale.length){ await idbDelete(STORES.snapshots, stale); S.snapshots = S.snapshots.filter(s=>!stale.includes(s._k)); }
-    const pruned = await pruneOrphans();
-    if(pruned) slog(`▸ Cleared ${pruned} channel(s) no longer in your list`);
-    // incremental pulls add new uploads, so hold each channel at the configured depth
-    const trimmed = await trimToDepth();
-    if(trimmed) slog(`▸ Trimmed ${trimmed} video(s) beyond the ${nfull(CFG.scrapeDepth)} depth`);
-    CFG.lastSync = Date.now(); saveCfg(); invalidateBaselines();
+    // prune snapshots outside the window — scoped to this profile
+    const snapRows = await idbByPid(STORES.snapshots, pid);
+    const stale = snapRows.filter(s=>+new Date(s.date) < Date.now()-cfg.snapshotDays*864e5).map(s=>s._k);
+    if(stale.length) await idbDelete(STORES.snapshots, stale);
+    if(onProfile()) await loadAll();
+    /* Prune and trim edit this profile's cache, so they only run while it is
+       still the one on screen — S.* is what they operate on. Skipping them is
+       safe: they are housekeeping, and the next sync on this profile does them. */
+    if(onProfile()){
+      const pruned = await pruneOrphans({silent:true});
+      if(pruned) slog(`▸ Cleared ${pruned} channel(s) no longer in your list`);
+      const trimmed = await trimToDepth();
+      if(trimmed) slog(`▸ Trimmed ${trimmed} video(s) beyond the ${nfull(cfg.scrapeDepth)} depth`);
+    }
+    prof.cfg.lastSync = Date.now(); saveCfg(); invalidateBaselines();
     const used = CFG.quota.units - unitsBefore;
     slog(`▸ Done — ${newVids} new videos, ${updVids} refreshed, ${used} quota units used`);
     setProg(100,'Complete');
-    S.syncJustDone = `Sync complete — ${newVids} new, ${updVids} refreshed, ${used} units`;
-    toast(S.syncJustDone,'ok');
-  }catch(e){ slog('✗ '+e.message,true); S.syncJustDone='Sync failed — '+e.message; toast(e.message,'err'); }
-  S.syncing=false; S.syncCancel=false;
+    const done = `Sync complete — ${newVids} new, ${updVids} refreshed, ${used} units`;
+    if(onProfile()){ S.syncJustDone = done; toast(done,'ok'); }
+    else toast(`"${prof.name}": ${done}`,'ok');   // finished in the background
+  }catch(e){ slog('✗ '+e.message,true);
+    if(onProfile()) S.syncJustDone='Sync failed — '+e.message;
+    toast((onProfile()?'':`"${prof.name}": `)+e.message,'err'); }
+  S.syncPids.delete(pid);
+  S.syncing = S.syncPids.size>0; S.syncCancel=false;
   renderSyncStrip(); renderProfBar(); renderSideNav(); renderSyncStatus(); render();
   setTimeout(()=>{ if(!S.syncing){ S.syncJustDone=null; renderSyncStrip(); } }, 12000);
 }
@@ -1279,6 +1480,7 @@ function trendDateBounds(){
 }
 async function syncTrending(){
   if(!CFG.ytKey){ toast('Add your YouTube API key first','err'); return; }
+  const pid = PID();                       // bound, like syncAll — see the note there
   const mode = CFG.trendMode||'charts';
   try{
     const all=[]; let label='';
@@ -1314,7 +1516,7 @@ async function syncTrending(){
     }
     if(!all.length){ toast('No results returned','warn'); return; }
     const ts=Date.now();
-    const snap = {ts, _k:`${PID()}::${ts}`, pid:PID(), region:CFG.region, mode, label, videos:all};
+    const snap = {ts, _k:`${pid}::${ts}`, pid, region:CFG.region, mode, label, videos:all};
     await idbPut(STORES.trending, snap);
     S.trending = mine(await idbAll(STORES.trending)).sort((a,b)=>a.ts-b.ts);
     const old = S.trending.filter(t=>t.ts<=Date.now()-14*864e5);
@@ -1356,9 +1558,12 @@ function rangeLabel(r){
 function videosInRange(r, chId){
   const {from,to} = rangeBounds(r);
   const sel = selIds();
+  // a Set, not Array.includes — this predicate runs once per cached video on
+  // every range change, and includes() made it O(videos x selected channels)
+  const selSet = sel? new Set(sel) : null;
   return S.videos.filter(v=>v.publishedTs>=from && v.publishedTs<=to
     && (!chId||v.channelId===chId)
-    && (!sel || sel.includes(v.channelId))
+    && (!selSet || selSet.has(v.channelId))
     && (CFG.includeShorts||!v.isShort));
 }
 // stable signature of the current selection, for cache keys
@@ -1376,7 +1581,7 @@ const BASELINE_DAYS = 180, MIN_BASE = 8;
    then both read it instead of each sorting the same lists again. */
 let _chIdx=null, _chIdxKey='';
 function channelIndex(){
-  const key = S.videos.length+':'+PID();
+  const key = dataKey();
   if(_chIdx && _chIdxKey===key) return _chIdx;
   const m = new Map();
   for(const v of S.videos){
@@ -1396,7 +1601,7 @@ function baselineFor(sortedDesc){
 }
 let _baseCache=null, _baseKey='';
 function channelBaselines(){
-  const key = S.videos.length+':'+PID();
+  const key = dataKey();
   if(_baseCache && _baseKey===key) return _baseCache;
   const out={};
   channelIndex().forEach((list,cid)=>{
@@ -1410,14 +1615,22 @@ function channelBaselines(){
   });
   _baseCache=out; _baseKey=key; return out;
 }
-function invalidateBaselines(){ _baseCache=null; _gapCache=null; _enrichCache=null; _snapIdx=null; _chIdx=null; _momCache.clear(); }
+function invalidateBaselines(){
+  S.dataVer++;
+  _baseCache=null; _gapCache=null; _enrichCache=null; _snapIdx=null; _chIdx=null;
+  _chMapCache=null; _topicCache=null; _momCache.clear();
+}
+/* Identity of the current dataset. Anything memoised over S.videos / S.channels
+   / S.snapshots keys on this, so a refresh that changes values but not counts
+   still invalidates. */
+const dataKey = () => S.dataVer+':'+PID();
 /* Every view asks for "the enriched videos in the current range". Computing that
    once per render instead of once per call site is the other half of the fix. */
 let _enrichCache=null, _enrichKey='';
 function enrichedInRange(r){
   const range = r || S.range;
   const key = [range, CFG.rangeFrom||'', CFG.rangeTo||'', CFG.includeShorts?1:0,
-    S.videos.length, PID(), selSig()].join('|');   // selection is part of the identity
+    dataKey(), selSig()].join('|');   // selection is part of the identity
   if(r && r!==S.range) return enrich(videosInRange(r));   // one-off range, don't pollute the cache
   if(_enrichCache && _enrichKey===key) return _enrichCache;
   _enrichCache = enrich(videosInRange(range)); _enrichKey = key;
@@ -1459,19 +1672,26 @@ function uploadGaps(){
   return gaps;
 }
 let _gapCache=null, _gapKey='';
-function gapMap(){ const k=S.videos.length+':'+PID();
+function gapMap(){ const k=dataKey();
   if(_gapCache && _gapKey===k) return _gapCache;
   _gapCache=uploadGaps(); _gapKey=k; return _gapCache; }
 /* Per-video memo keyed on the inputs that actually affect the result. A sync that
    touches 20 videos then only rebuilds those 20, instead of the whole catalogue. */
 const _encache = new Map();
+let _chMapCache=null;
+function channelMap(){
+  if(_chMapCache) return _chMapCache;
+  _chMapCache = new Map(S.channels.map(c=>[c.id,c]));
+  return _chMapCache;
+}
+const EMPTY_CH = {};
 function enrich(vids){
   const bl = channelBaselines(), gaps = gapMap();
-  const chMap = Object.fromEntries(S.channels.map(c=>[c.id,c]));
+  const chMap = channelMap();   // built once per data change, not once per call
   if(_encache.size>20000) _encache.clear();
   return vids.map(v=>{
-    const ch = chMap[v.channelId]||{};
-    const b = bl[v.channelId]||{};
+    const ch = chMap.get(v.channelId)||EMPTY_CH;
+    const b = bl[v.channelId]||EMPTY_CH;
     const med = (v.isShort ? (b.short||b.all) : (b.long||b.all)) || 1;
     const ck = `${v.updatedAt}|${med}|${gaps[v.id]}|${ch.subs}`;
     const hit = _encache.get(v.id);
@@ -1527,7 +1747,7 @@ function extractTopics(title){
 }
 let _topicCache=null, _topicKey='';
 function topicStats(vids){
-  const key = vids.length+':'+S.range+':'+PID()+':'+S.videos.length+':'+selSig();
+  const key = vids.length+':'+S.range+':'+dataKey()+':'+selSig();
   if(_topicCache && _topicKey===key) return _topicCache;
   const now=Date.now(), recentCut=now-7*864e5, priorCut=now-28*864e5;
   const m = new Map();
@@ -1589,8 +1809,10 @@ function projectViews(v){
 /* Is a channel on the way up or sliding? Median of their last 10 uploads
    against the 10 before that. Nothing in the API says this directly. */
 function channelTrend(chId){
-  const list = S.videos.filter(v=>v.channelId===chId && !v.isShort)
-    .sort((a,b)=>b.publishedTs-a.publishedTs);
+  // channelIndex() is already grouped and sorted newest-first; the old version
+  // filtered and re-sorted the entire catalogue once per channel, so the
+  // Channels view alone cost O(channels x videos log videos) per render
+  const list = (channelIndex().get(chId)||[]).filter(v=>!v.isShort);
   if(list.length<8) return null;
   const n = Math.min(10, Math.floor(list.length/2));
   const recent = median(list.slice(0,n).map(v=>v.views));
@@ -1604,7 +1826,7 @@ function channelTrend(chId){
    biggest source of render lag in the app. */
 let _snapIdx=null, _snapKey='';
 function snapIndex(){
-  const k = S.snapshots.length+':'+PID();
+  const k = dataKey();
   if(_snapIdx && _snapKey===k) return _snapIdx;
   const m = new Map();
   for(const s of S.snapshots){
@@ -1871,7 +2093,7 @@ async function profileAction(act){
     if(STORE.profiles.length<2) return;
     if(!confirm(`Delete profile "${p.name}" and all of its cached videos, channels and snapshots?\n\nOther profiles are untouched.`)) { renderProfBar(); return; }
     for(const st of Object.values(STORES)){
-      const rows = (await idbAll(st)).filter(r=>r.pid===p.id);
+      const rows = await idbByPid(st, p.id);
       if(rows.length) await idbDelete(st, rows.map(r=>r._k));
     }
     STORE.profiles = STORE.profiles.filter(x=>x.id!==p.id);
@@ -1975,9 +2197,14 @@ function renderQuota(){
 function renderSyncStatus(){
   const el=document.getElementById('syncStatus'); if(!el) return;
   if(S.syncing){
+    /* Syncs are bound to a profile and keep running when you switch away, so the
+       status has to say whose sync this is rather than implying it is yours. */
+    const here = S.syncPids.has(PID());
+    const others = [...S.syncPids].filter(p=>p!==PID())
+      .map(p=>STORE.profiles.find(x=>x.id===p)?.name).filter(Boolean);
     el.innerHTML = `<div class="row" style="gap:6px;margin-bottom:4px">
         <span class="spin" style="width:10px;height:10px;border-width:1.5px"></span>
-        <span class="grow c1" style="color:var(--t2);font-weight:600">${esc(S.syncLabel||'syncing…')}</span>
+        <span class="grow c1" style="color:var(--t2);font-weight:600">${here? esc(S.syncLabel||'syncing…') : esc('syncing '+others.join(', '))}</span>
         <button class="lnk" data-act="showSyncLog">log</button>
         <button class="lnk" data-act="cancelSync">stop</button>
       </div>
@@ -1986,6 +2213,7 @@ function renderSyncStatus(){
   }
   el.innerHTML = (CFG.lastSync ? `Last sync ${ago(CFG.lastSync)} · ${nfull(S.videos.length)} videos cached`
     : 'Never synced · press <b>S</b> to sync')
+    + ((S.staleChannels||[]).length? ` · <span style="color:var(--warn)">${S.staleChannels.length} delisted cached</span>`:'')
     + (S.syncJustDone? ` <button class="lnk" data-act="showSyncLog">log</button>`:'');
 }
 function nav(id){
@@ -2108,7 +2336,11 @@ function vDash(){
   const medNow = median(vids.map(v=>v.views)), medPrev = median(prevVids.map(v=>v.views));
   const kpis = [
     {v:nfull(selCount()), k:isFiltered()?'Channels selected':'Channels tracked', i:'users',
-      d: isFiltered()? `<span style="color:var(--acc)">filtered of ${S.channels.length}</span>`:''},
+      /* Listed-but-never-synced channels are called out rather than silently
+         making this tile disagree with the list in Settings. */
+      d: isFiltered()? `<span style="color:var(--acc)">filtered of ${S.channels.length}</span>`
+        : (CFG.channels.length>S.channels.length
+            ? `<span class="dim">${CFG.channels.length-S.channels.length} listed, not yet synced</span>` : '')},
     {v:nfull(vids.length), k:`Videos · ${rangeLabel()}`, i:'film', d:delta(vids.length, prevVids.length)},
     {v:nf(totalViews), k:'Combined views', i:'eye', d:delta(totalViews, prevViews)},
     {v:nf(Math.round(medNow)), k:'Median views / video', i:'chart', d:delta(medNow, medPrev)},
@@ -2126,6 +2358,7 @@ function vDash(){
   }).sort((a,b)=>b.value-a.value).slice(0,10);
 
   return `
+  ${staleNotice()}
   ${CFG.lastSync? '' : `<div class="hero" style="margin-bottom:14px">
     <div style="font-size:17px;font-weight:800;margin-bottom:6px">Ready to pull your first dataset</div>
     <div class="muted" style="font-size:12px;max-width:560px;line-height:1.6">You've got ${CFG.channels.length} channel${CFG.channels.length===1?'':'s'} queued. A deep sync pulls their full upload history (up to ${CFG.scrapeDepth} videos each) with every metric the API exposes — then every range below is instant and free.</div>
@@ -3296,6 +3529,7 @@ function cmPanel(title, icon, items){
     </div>`).join('') : '<div class="dim" style="font-size:11px">Nothing detected.</div>'}</div></div>`;
 }
 async function mineComments(){
+  const pid = PID();                       // bound, like syncAll — see the note there
   const raw = document.getElementById('cmIds').value;
   S.filters.cmIds = raw;
   const ids = raw.split(/[\n,\s]+/).map(s=>s.trim()).filter(Boolean)
@@ -3326,8 +3560,9 @@ async function mineComments(){
     const entities = Object.entries(freq).filter(([,c])=>c>=3).sort((a,b)=>b[1]-a[1]).slice(0,25)
       .map(([n,c])=>({text:n, likes:c, author:c+' mentions'}));
     const reactions = [...all].sort((a,b)=>b.likes-a.likes).slice(0,20);
-    S.comments = {ts:Date.now(), total:all.length, videoIds:ids, data:{requests,questions,entities,reactions}};
-    await idbPut('misc',{k:'comments_'+PID(), v:S.comments});
+    const mined = {ts:Date.now(), total:all.length, videoIds:ids, data:{requests,questions,entities,reactions}};
+    await idbPut('misc',{k:'comments_'+pid, v:mined});
+    if(PID()===pid) S.comments = mined;    // don't write another profile's findings into this one
     push(`▸ Done — ${all.length} comments, ${requests.length} requests, ${questions.length} questions, ${entities.length} entities`);
     toast(`${all.length} comments analysed`,'ok'); render();
   }catch(e){ push('✗ '+e.message,true); toast(e.message,'err'); }
@@ -3659,6 +3894,7 @@ function vSettings(){
       </div></div>
 
       <div class="panel"><div class="phead">${ic('users')}Competitor channels<span class="right tag" id="chCount">${CFG.channels.length}</span></div><div class="pad">
+        ${staleNotice()}
         <div class="row" style="gap:8px;padding:9px 11px;background:var(--acc-soft);border-radius:var(--r2);margin-bottom:11px">
           <span class="profdot" style="background:${activeProfile().color}"></span>
           <span style="font-size:11.5px">These channels belong to profile <b>${esc(activeProfile().name)}</b>. Other profiles keep their own separate lists and data.</span></div>
@@ -3908,6 +4144,14 @@ document.addEventListener('click', async e=>{
       document.getElementById('modals').innerHTML='';
       applyPastedChannels(txt, mode); return;
     }
+    case 'pruneStale': {
+      const n = (S.staleChannels||[]).length;
+      if(!n){ toast('Nothing to clear','warn'); return; }
+      if(!confirm(`Permanently delete cached videos and snapshots for ${n} delisted channel${n===1?'':'s'}?\n\nThey are already excluded from every metric. This frees the disk space.`)) return;
+      const removed = await pruneOrphans({force:true, silent:true});
+      S.page={}; renderProfBar(); renderSideNav(); render();
+      toast(`Cleared cached data for ${removed} channel${removed===1?'':'s'}`,'ok'); return;
+    }
     case 'storageScan': return runStorageScan();
     case 'storageBackups': return showBackups();
     case 'storageRepair': return repairStorage();
@@ -4102,17 +4346,71 @@ document.getElementById('importFile').onchange = e=>{
   r.readAsText(f);
 };
 
-/* Removing a channel from the list has to remove its cached rows too, otherwise
-   its videos keep showing up in every view and quietly skew medians and totals. */
-function channelMatchesList(c, lines){
-  const id=(c.id||'').toLowerCase(), handle=(c.handle||'').replace(/^@/,'').toLowerCase(),
-        title=(c.title||'').toLowerCase();
-  return lines.some(line=>{
-    const p = parseChLine(line); if(!p) return false;
-    if(p.type==='id') return p.value.toLowerCase()===id;
-    const h = p.value.replace(/^@/,'').toLowerCase();
-    return h===handle || h===title || h===title.replace(/\s+/g,'');
-  });
+/* ═══════════════════════════════════════════════════════════
+   WHICH CHANNELS COUNT — one answer, used everywhere
+   ───────────────────────────────────────────────────────────
+   The list in Settings is the single source of truth for what is being tracked.
+   Cached rows for a channel you have since removed stay on disk — deleting data
+   behind your back is how people lose it — but they must not reach a single
+   metric.
+
+   They used to. The header read `CFG.channels.length` while the dashboard,
+   the channel picker, every median and every outlier baseline read
+   `S.channels`, which is whatever happens to be cached. Remove six channels
+   from the list and you get a header saying "23 channels" above a dashboard
+   saying "29 CHANNELS TRACKED", with six delisted channels' videos silently
+   inside every total, every median and every baseline. Two independent answers
+   to the same question, and the wrong one feeding the numbers.
+
+   Now the split happens once, at load, and everything downstream reads the
+   filtered arrays. The delisted rows are kept in S.staleChannels so they can be
+   reported and cleaned up deliberately, never silently.
+   ═══════════════════════════════════════════════════════════ */
+/* Canonical keys, so matching is a set lookup instead of re-parsing every line
+   for every channel. Same rules as before — id, handle, title, title without
+   spaces — just resolved once. */
+function listKeySet(lines){
+  const s = new Set();
+  for(const l of lines){ const k = canonCh(l); if(k) s.add(k); }
+  return s;
+}
+function channelKeys(c){
+  const out = [];
+  if(c.id) out.push('id:'+c.id, 'h:'+String(c.id).toLowerCase());
+  if(c.handle) out.push('h:'+String(c.handle).replace(/^@/,'').toLowerCase());
+  if(c.title){
+    const t = String(c.title).toLowerCase();
+    out.push('h:'+t, 'h:'+t.replace(/\s+/g,''));
+  }
+  return out;
+}
+function channelMatchesKeys(c, keys){ return channelKeys(c).some(k=>keys.has(k)); }
+/* Kept for callers that still work line-by-line (prune, sync logging). */
+function channelMatchesList(c, lines){ return channelMatchesKeys(c, listKeySet(lines)); }
+/* Cached data for channels you have removed is kept, but it is excluded from
+   every number and said out loud. Silence here is what made the totals wrong:
+   the rows kept counting while the list said otherwise. */
+function staleNotice(){
+  const n = (S.staleChannels||[]).length;
+  if(!n) return '';
+  const names = S.staleChannels.slice(0,4).map(c=>esc(c.title||c.id)).join(', ');
+  return `<div class="row wrapf" style="gap:9px;padding:10px 12px;background:rgba(245,158,11,.12);border-radius:var(--r2);margin-bottom:11px">
+    ${ic('warn')}<span class="grow" style="font-size:11.5px;min-width:200px">
+      <b>${n} cached channel${n===1?'':'s'} no longer on your list</b> — ${names}${n>4?` and ${n-4} more`:''}.
+      Their videos are excluded from every metric. The data is still on disk until you clear it.</span>
+    <button class="btn btn-sm btn-o" data-act="pruneStale">${ic('trash')}Clear cached data</button>
+  </div>`;
+}
+/* An empty list means "nothing configured yet", not "track nothing" — blanking
+   the app because a textarea is momentarily empty is the failure mode this
+   whole area is being hardened against. */
+function splitByList(rows){
+  const lines = (CFG.channels||[]).filter(Boolean);
+  if(!lines.length) return {active:rows.slice(), stale:[]};
+  const keys = listKeySet(lines);
+  const active=[], stale=[];
+  for(const c of rows) (channelMatchesKeys(c, keys)? active : stale).push(c);
+  return {active, stale};
 }
 /* Lowering the depth setting used to do nothing — it only ever controlled how
    far a sync reached, never what was already cached, so the counts stayed at the
@@ -4135,9 +4433,8 @@ async function trimToDepth(){
   if(!doomed.length) return 0;
   const gone = new Set(doomed.map(v=>v.id));
   await idbDelete(STORES.videos, doomed.map(v=>v._k));
-  const snaps = (await idbAll(STORES.snapshots)).filter(s=>s.pid===PID() && gone.has(s.videoId));
+  const snaps = (await idbByPid(STORES.snapshots, PID())).filter(s=>gone.has(s.videoId));
   if(snaps.length) await idbDelete(STORES.snapshots, snaps.map(s=>s._k));
-  invalidateBaselines();
   await loadAll();
   return doomed.length;
 }
@@ -4164,26 +4461,36 @@ async function applyDepthChange(){
 async function pruneOrphans(opts={}){
   const lines = (CFG.channels||[]).filter(Boolean);
   if(!lines.length){
-    if(S.channels.length && !opts.force){
-      console.warn('[signal] refusing to prune: channel list is empty but', S.channels.length, 'channels are cached');
+    if((S.allChannels||[]).length && !opts.force){
+      console.warn('[signal] refusing to prune: channel list is empty but',
+        (S.allChannels||[]).length, 'channels are cached');
       return 0;
     }
     return 0;
   }
-  const orphans = S.channels.filter(c=>!channelMatchesList(c, lines));
+  /* Re-derive rather than trusting a cached field: prune is destructive, and it
+     must never act on a stale idea of what is delisted. refilterChannels() is
+     the same single algorithm the rest of the app reads, so this stays one
+     definition of "orphan" — just a freshly evaluated one. */
+  refilterChannels();
+  const orphans = S.staleChannels||[];
   if(!orphans.length) return 0;
-  if(orphans.length === S.channels.length && S.channels.length > 1 && !opts.force && !opts.silent){
-    if(!confirm(`Saving this list would drop ALL ${S.channels.length} cached channels and their videos.\n\nThat usually means the list got cleared by accident. Continue?`)){
+  const total = (S.allChannels||[]).length;
+  if(orphans.length === total && total > 1 && !opts.force && !opts.silent){
+    if(!confirm(`This would drop ALL ${total} cached channels and their videos.\n\nThat usually means the list got cleared by accident. Continue?`)){
       return 0;
     }
   }
   const gone = new Set(orphans.map(c=>c.id));
-  const vids  = (await idbAll(STORES.videos)).filter(v=>v.pid===PID() && gone.has(v.channelId));
-  const snaps = (await idbAll(STORES.snapshots)).filter(s=>s.pid===PID() && gone.has(s.channelId));
+  const pid = PID();
+  const [allVids, allSnaps] = await Promise.all([
+    idbByPid(STORES.videos, pid), idbByPid(STORES.snapshots, pid),
+  ]);
+  const vids  = allVids.filter(v=>gone.has(v.channelId));
+  const snaps = allSnaps.filter(s=>gone.has(s.channelId));
   await idbDelete(STORES.channels, orphans.map(c=>c._k));
   if(vids.length)  await idbDelete(STORES.videos,  vids.map(v=>v._k));
   if(snaps.length) await idbDelete(STORES.snapshots, snaps.map(s=>s._k));
-  invalidateBaselines();
   await loadAll();
   return orphans.length;
 }
@@ -4237,8 +4544,8 @@ function pushChUndo(label){
 function undoChannels(){
   const prev = chUndoStack.pop();
   if(!prev){ toast('Nothing to undo','warn'); return; }
-  CFG.channels = prev.list; saveCfg();
-  renderProfBar(); render();
+  CFG.channels = prev.list; refilterChannels(); saveCfg();
+  renderProfBar(); renderSideNav(); render();
   toast(`Undone — back to ${prev.list.length} channel${prev.list.length===1?'':'s'}`,'ok');
 }
 
@@ -4264,6 +4571,7 @@ function applyPastedChannels(text, mode){
   const before = (CFG.channels||[]).length;
   const merged = mode==='replace' ? incoming : normalizeChannelLines([...(CFG.channels||[]), ...incoming]);
   CFG.channels = merged;
+  refilterChannels();
   const saved = saveCfg();
   const added = merged.length - (mode==='replace'? 0 : before);
   const dupes = incoming.length - (mode==='replace'? incoming.length : added);
@@ -4308,7 +4616,7 @@ function cleanChannels(){
   const after = normalizeChannelLines(CFG.channels||[]);
   if(after.length===before){ toast('Already clean — no duplicates found','ok'); return; }
   pushChUndo('clean');
-  CFG.channels = after; saveCfg();
+  CFG.channels = after; refilterChannels(); saveCfg();
   renderProfBar(); renderSideNav(); render();
   toast(`Removed ${before-after.length} duplicate/blank line${before-after.length===1?'':'s'}`,'ok');
 }
@@ -4317,7 +4625,7 @@ function clearChannels(){
   if(!n){ toast('List is already empty','warn'); return; }
   if(!confirm(`Clear all ${n} channels from this profile's list?\n\nYour cached videos are kept, and Undo will bring the list straight back.`)) return;
   pushChUndo('clear');
-  CFG.channels = []; saveCfg();
+  CFG.channels = []; refilterChannels(); saveCfg();
   renderProfBar(); renderSideNav(); render();
   toast(`Cleared ${n} channels — press Undo to restore`,'warn');
 }
@@ -4335,9 +4643,10 @@ function clearChannels(){
 const AUTOSAVE = {
   setChannels: {
     read:  el => loosenChannelLines(el.value),
-    apply: v  => { CFG.channels = v; },
+    apply: v  => { CFG.channels = v; refilterChannels(); },   // numbers follow the box
     same:  v  => JSON.stringify(v)===JSON.stringify(CFG.channels||[]),
-    after: ()  => { const t=document.getElementById('chCount'); if(t) t.textContent=(CFG.channels||[]).length; },
+    after: ()  => { const t=document.getElementById('chCount'); if(t) t.textContent=(CFG.channels||[]).length;
+                    renderProfBar(); renderSideNav(); },
   },
   setKey: {
     read:  el => el.value.trim(),
@@ -4400,6 +4709,7 @@ async function saveSettings(){
   ['setKey','setChannels','setPatterns'].forEach(id=>{ if(document.getElementById(id)) _asDirty.add(id); });
   flushPendingEdits();
   if(c) CFG.channels = normalizeChannelLines(c.value);   // explicit save also dedupes
+  refilterChannels();
   const ok = saveCfg();
   const removed = await pruneOrphans();
   S.page={};
@@ -4422,10 +4732,10 @@ async function wipe(){
   const p = activeProfile();
   if(!confirm(`Delete cached channels, videos and snapshots for "${p.name}"?\n\nSettings, your API key and other profiles are kept.`)) return;
   for(const st of Object.values(STORES)){
-    const rows = (await idbAll(st)).filter(r=>r.pid===p.id);
+    const rows = await idbByPid(st, p.id);
     if(rows.length) await idbDelete(st, rows.map(r=>r._k));
   }
-  CFG.lastSync=0; saveCfg(); invalidateBaselines(); await loadAll();
+  CFG.lastSync=0; saveCfg(); await loadAll();
   toast(`Data wiped for "${p.name}"`,'ok'); render();
 }
 
@@ -4463,8 +4773,8 @@ async function runStorageScan(){
   const orphans = rows.filter(r=>!r.profile && r.total);
   const stunted = rows.filter(r=>r.profile && !(r.profile.cfg?.channels||[]).length && r.chanRows.length);
   let est=null; try{ est = await navigator.storage?.estimate?.(); }catch(e){}
-  let misc=[]; try{ misc = await idbAll('misc'); }catch(e){}
-  const baks = misc.filter(m=>/^store_bak_\d+$/.test(m.k)).sort((a,b)=>(b.rev|0)-(a.rev|0));
+  const baks = (await Promise.all([...Array(12)].map((_,i)=>idbGet('misc','store_bak_'+i))))
+    .filter(Boolean).sort((a,b)=>(b.rev|0)-(a.rev|0));
 
   document.getElementById('modals').innerHTML = `
   <div class="mbg"><div class="modal" style="width:660px">
@@ -4509,7 +4819,9 @@ async function runStorageScan(){
     </div></div></div>`;
 }
 
-async function repairStorage(){
+/* The repair itself, shared by the post-paint integrity check and the manual
+   Scan & repair button, so both can only ever behave identically. */
+async function repairFromScan(){
   const notes = [];
   notes.push(...await healChannelLists());
   const seen = await scanPids();
@@ -4525,8 +4837,31 @@ async function repairStorage(){
     adopted++;
     notes.push(`adopted ${nfull(total)} orphaned records`);
   }
-  saveCfg(); await flushMirror();
-  invalidateBaselines(); await loadAll();
+  /* An adopted profile you can't get to is no better than an orphan. Only move
+     when the profile you are on owns nothing at all — if it has data, that is a
+     deliberate choice and switching under you would be its own kind of wrong. */
+  if(adopted){
+    const cur = seen.get(STORE.active);
+    const curEmpty = !cur || !(cur.videos+cur.channels+cur.snapshots+cur.trending);
+    if(curEmpty){
+      const richest = [...seen.entries()].sort((a,b)=>
+        (b[1].videos+b[1].channels)-(a[1].videos+a[1].channels))[0];
+      if(richest && richest[1].videos+richest[1].channels){
+        STORE.active = richest[0];
+        notes.push(`switched to "${activeProfile().name}", which holds your data`);
+      }
+    }
+  }
+  if(!STORE.profiles.find(p=>p.id===STORE.active)) STORE.active = STORE.profiles[0].id;
+  if(notes.length){
+    saveCfg(); await flushMirror();
+    await loadAll();
+    renderProfBar(); renderSideNav(); render();
+  }
+  return notes;
+}
+async function repairStorage(){
+  const notes = await repairFromScan();
   document.getElementById('modals').innerHTML='';
   renderProfBar(); renderSideNav(); render();
   toast(notes.length? `Repaired — ${notes.join('; ')}` : 'Nothing needed repairing','ok');
@@ -4535,8 +4870,8 @@ async function repairStorage(){
 /* Every verified save leaves a restore point behind. These are settings and
    channel lists only — small, and precisely the part that goes missing. */
 async function showBackups(){
-  let misc=[]; try{ misc = await idbAll('misc'); }catch(e){}
-  const baks = misc.filter(m=>/^store_bak_\d+$/.test(m.k) && m.json)
+  const baks = (await Promise.all([...Array(12)].map((_,i)=>idbGet('misc','store_bak_'+i))))
+    .filter(m=>m && m.json)
     .map(m=>({...m, parsed:parseStore(m.json)}))
     .filter(m=>m.parsed)
     .sort((a,b)=>(b.rev|0)-(a.rev|0));
@@ -4563,8 +4898,7 @@ async function showBackups(){
   </div></div>`;
 }
 async function restoreBackup(key){
-  let misc=[]; try{ misc = await idbAll('misc'); }catch(e){}
-  const m = misc.find(x=>x.k===key);
+  const m = await idbGet('misc', key);
   const parsed = m && parseStore(m.json);
   if(!parsed){ toast('That recovery point could not be read','err'); return; }
   const chans = (parsed.profiles||[]).reduce((n,p)=>n+((p.cfg?.channels||[]).length),0);
@@ -4584,13 +4918,49 @@ async function restoreBackup(key){
    BOOT
    ═══════════════════════════════════════════════════════════ */
 const mine = rows => rows.filter(r=>r.pid===PID());
+/* Reads this profile's rows through the pid index, all five in parallel, then
+   applies the one filter that decides what counts. Everything downstream — every
+   view, every metric, every export — reads S.channels / S.videos and is
+   therefore consistent by construction rather than by each call site
+   remembering to filter. */
 async function loadAll(){
-  S.channels = mine(await idbAll(STORES.channels));
-  S.videos = mine(await idbAll(STORES.videos));
-  S.snapshots = mine(await idbAll(STORES.snapshots));
-  S.trending = mine(await idbAll(STORES.trending)).sort((a,b)=>a.ts-b.ts);
-  const m = (await idbAll('misc')).find(x=>x.k==='comments_'+PID());
-  S.comments = m? m.v : null;
+  const pid = PID();
+  const [chRows, vidRows, snapRows, trRows, comm] = await Promise.all([
+    idbByPid(STORES.channels, pid),
+    idbByPid(STORES.videos, pid),
+    idbByPid(STORES.snapshots, pid),
+    idbByPid(STORES.trending, pid),
+    idbGet('misc', 'comments_'+pid),
+  ]);
+  // a profile switch that landed while these were in flight must not overwrite
+  // the newer profile's state with this one's
+  if(PID() !== pid) return;
+
+  /* Everything this profile owns, kept as the master copy. The arrays the app
+     actually reads are derived from these, so putting a channel back on the
+     list is a pure recompute rather than another trip to disk. */
+  S.allChannels = chRows;
+  S.allVideos = vidRows;
+  S.allSnapshots = snapRows;
+  S.trending = trRows.sort((a,b)=>a.ts-b.ts);
+  S.comments = comm? comm.v : null;
+  refilterChannels();
+}
+/* Applies the one filter that decides what counts, as a view over the masters.
+   Editing the list changes every number immediately — the numbers can never
+   describe a different set of channels than the list on screen, which is what
+   let the header say 23 while the dashboard said 29. */
+function refilterChannels(){
+  const {active, stale} = splitByList(S.allChannels||[]);
+  S.channels = active;
+  S.staleChannels = stale;
+  /* Drop only what is known to be delisted. A video whose channel row is
+     missing entirely still counts — hiding it would under-report, which is the
+     same error in the other direction. */
+  const dropped = new Set(stale.map(c=>c.id));
+  S.videos    = dropped.size? (S.allVideos||[]).filter(v=>!dropped.has(v.channelId))  : (S.allVideos||[]);
+  S.snapshots = dropped.size? (S.allSnapshots||[]).filter(s=>!dropped.has(s.channelId)) : (S.allSnapshots||[]);
+  invalidateBaselines();
 }
 async function boot(){
   document.documentElement.dataset.theme = CFG.theme;
@@ -4604,14 +4974,28 @@ async function boot(){
           profile id rather than a freshly invented one,
        4. heal again afterwards, in case that migration is what brought the
           channel rows in. */
-  await requestPersistence();
+  /* Persistence is a policy request, not a precondition for a correct write —
+     awaiting it just delayed first paint. */
+  const persistP = requestPersistence();
+  /* When localStorage handed over a usable record the active profile is already
+     known, so the actual data read starts now and overlaps the integrity probe
+     instead of queueing behind it. If the probe turns out to change which
+     profile is active, or a v1 migration brings rows in, the read is simply
+     redone — which only happens on the rare recovery path. */
+  const optimisticPid = STORE._provisional? null : PID();
+  const loadP = optimisticPid? loadAll().catch(()=>null) : null;
+
   const notes = await reconcileStore();
-  await migrateV1();
-  notes.push(...await healChannelLists());
+  const moved = await migrateV1();
+  if(moved) notes.push(...await healChannelLists());
+
+  if(loadP) await loadP;
+  if(!optimisticPid || PID()!==optimisticPid || moved) await loadAll();
+  else if(notes.length) refilterChannels();   // a rebuilt list changes what counts
+
   document.documentElement.dataset.theme = CFG.theme;
   document.documentElement.dataset.density = CFG.density;
   ensureDay();
-  await loadAll();
   wireCrossTab(); wireFlush();
   renderProfBar(); renderSideNav();
   // only worth a placeholder on very large catalogues — below that the first
@@ -4629,13 +5013,18 @@ async function boot(){
     notes.slice(0,3).forEach((n,i)=>setTimeout(()=>toast('Recovered — '+n,'ok'), 600+i*900));
     console.info('[signal] recovery:', notes);
   }
-  if(HEALTH.persisted===false){
-    console.warn('[signal] storage is best-effort — the browser may evict this data under pressure');
-  }
+  window.__ready = true;
+  /* Everything below is after first paint: it must never delay the app being
+     usable, and none of it changes what is on screen unless something is wrong. */
+  persistP.then(()=>{
+    if(HEALTH.persisted===false) console.warn('[signal] storage is best-effort — the browser may evict this data under pressure');
+    if(S.view==='settings') render();
+  });
+  verifyMirrorLater();
   if(CFG.autoSync && CFG.ytKey && CFG.channels.length && Date.now()-CFG.lastSync > 20*36e5){
     setTimeout(()=>{ toast('Auto-syncing — 20h+ since last run'); syncAll(); }, 1200);
   }
-  setInterval(()=>{ if(CFG.autoSync && CFG.ytKey && CFG.channels.length && !S.syncing) syncAll(); }, 6*36e5);
+  setInterval(()=>{ if(CFG.autoSync && CFG.ytKey && CFG.channels.length && !S.syncPids.has(PID())) syncAll(); }, 6*36e5);
 }
 /* A crash in boot used to leave a blank page with no explanation and no way
    back to your data. Fail loudly, and keep the export path reachable. */
