@@ -74,15 +74,22 @@ That's the whole point, so there are a lot of ways in:
 * **Audio / Silence** — decodes the audio and cuts on speech pauses.
 * **Fixed interval**, **equal parts**, **pasted timestamps** (`00:00-00:41` per line).
 
-Then refine: **drag across empty timeline to carve out a clip**, drag clips to move them, drag
-their edges to trim. Edges snap to the playhead and to neighbouring cuts. Click a red ● handle to
-merge two clips, nudge by ±1 frame, or untick the ones you don't want. **Ripple edges** (on by
-default) keeps neighbouring clips joined when you drag a shared boundary — turn it off to move
-clips freely.
+Then refine on the timeline, which behaves like the scene-splitter reference:
+
+* **Drag anywhere to move the playhead.** That is the primary gesture — press and the head jumps
+  there and follows your mouse.
+* **Drag a red ● to move that cut**; both neighbouring clips follow. **Click it to merge** the two.
+* **Drag a band** to move a clip, **its edges** to trim. Edges snap to the playhead and to
+  neighbouring cuts.
+* **Shift+drag** carves a brand-new clip out of an empty stretch.
+* **Ctrl+wheel** zooms at the cursor, **Shift+wheel** scrolls.
+
+Clips are drawn as translucent colour bands so the ruler and waveform stay readable and the cut
+markers remain what your eye goes to.
 
 The picture sits directly above the timeline and is capped to the viewport height, so the frame,
-the cut you are making and the transport controls are all on screen at once — no scrolling between
-them. Hovering the timeline pops a scrub preview above the cursor without moving the playhead.
+the cut you are making and the transport controls are all on screen at once. Hovering the timeline
+pops a scrub preview above the cursor without moving the playhead.
 
 ### Keyboard
 
