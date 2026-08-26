@@ -74,11 +74,15 @@ That's the whole point, so there are a lot of ways in:
 * **Audio / Silence** — decodes the audio and cuts on speech pauses.
 * **Fixed interval**, **equal parts**, **pasted timestamps** (`00:00-00:41` per line).
 
-Then refine: drag clips, drag their edges, nudge by ±1 frame, click a red ✂ diamond to merge two
-clips, or untick the ones you don't want. **Ripple edges** (on by default) keeps neighbouring clips
-joined when you drag a shared boundary — turn it off to move clips freely.
+Then refine: **drag across empty timeline to carve out a clip**, drag clips to move them, drag
+their edges to trim. Edges snap to the playhead and to neighbouring cuts. Click a red ● handle to
+merge two clips, nudge by ±1 frame, or untick the ones you don't want. **Ripple edges** (on by
+default) keeps neighbouring clips joined when you drag a shared boundary — turn it off to move
+clips freely.
 
-Hovering anywhere on the timeline scrub-previews that frame below it without moving the playhead.
+The picture sits directly above the timeline and is capped to the viewport height, so the frame,
+the cut you are making and the transport controls are all on screen at once — no scrolling between
+them. Hovering the timeline pops a scrub preview above the cursor without moving the playhead.
 
 ### Keyboard
 

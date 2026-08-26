@@ -5,6 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ClipForge Pro — YouTube Scene Splitter &amp; Clip Extractor</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23ef4444%22%2F%3E%3Cstop%20offset%3D%220.5%22%20stop-color%3D%22%237c5cfc%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%2300d4aa%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2215%22%20fill%3D%22url(%23g)%22%2F%3E%3Cg%20stroke%3D%22%23fff%22%20stroke-width%3D%224.5%22%20stroke-linecap%3D%22round%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M20%2016%20L44%2046%22%2F%3E%3Cpath%20d%3D%22M44%2016%20L20%2046%22%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%2219%22%20cy%3D%2249%22%20r%3D%226.5%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%224.5%22%2F%3E%3Ccircle%20cx%3D%2245%22%20cy%3D%2249%22%20r%3D%226.5%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%224.5%22%2F%3E%3C%2Fsvg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23ef4444%22%2F%3E%3Cstop%20offset%3D%220.5%22%20stop-color%3D%22%237c5cfc%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%2300d4aa%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2215%22%20fill%3D%22url(%23g)%22%2F%3E%3Cg%20stroke%3D%22%23fff%22%20stroke-width%3D%224.5%22%20stroke-linecap%3D%22round%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M20%2016%20L44%2046%22%2F%3E%3Cpath%20d%3D%22M44%2016%20L20%2046%22%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%2219%22%20cy%3D%2249%22%20r%3D%226.5%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%224.5%22%2F%3E%3Ccircle%20cx%3D%2245%22%20cy%3D%2249%22%20r%3D%226.5%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%224.5%22%2F%3E%3C%2Fsvg%3E">
+    <meta name="theme-color" content="#06060c">
+    <meta name="description"
+        content="Pick clips from a YouTube video on a low-res proxy, then export only those seconds at full quality.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -706,15 +711,26 @@
         }
 
         /* ============ PLAYER ============ */
+        /* The picture is capped by viewport height so the timeline underneath is
+           always on screen - no scrolling between the frame and the cut you are
+           making. On tall displays the cap never kicks in. */
         .video-wrap {
             position: relative;
             width: 100%;
-            padding-bottom: 56.25%;
-            height: 0;
+            aspect-ratio: 16 / 9;
+            max-width: calc(46vh * 16 / 9);
+            margin-inline: auto;
             overflow: hidden;
             border-radius: 12px;
             background: #000;
             border: 1px solid var(--border);
+        }
+
+        @supports not (aspect-ratio: 16 / 9) {
+            .video-wrap {
+                height: 0;
+                padding-bottom: 56.25%;
+            }
         }
 
         .video-wrap>video,
@@ -849,7 +865,7 @@
 
         .timeline-container {
             position: relative;
-            height: 132px;
+            height: 148px;
             cursor: crosshair;
             min-width: 100%;
             background: var(--bg-secondary);
@@ -902,8 +918,8 @@
         /* --- clip blocks on the timeline --- */
         .tl-clip {
             position: absolute;
-            top: 8px;
-            height: calc(100% - 46px);
+            top: 10px;
+            height: calc(100% - 50px);
             border-radius: 8px;
             cursor: grab;
             z-index: 6;
@@ -1022,15 +1038,85 @@
         .tl-cut::after {
             content: '';
             position: absolute;
-            top: -6px;
-            left: -5px;
-            width: 13px;
-            height: 13px;
+            top: -9px;
+            left: -8px;
+            width: 19px;
+            height: 19px;
             background: var(--danger);
-            border-radius: 3px;
-            transform: rotate(45deg);
-            border: 2px solid var(--bg-primary);
-            box-shadow: 0 0 10px rgba(248, 113, 113, 0.65);
+            border-radius: 50%;
+            border: 3px solid var(--bg-primary);
+            box-shadow: 0 0 12px rgba(248, 113, 113, 0.7);
+            transition: transform 0.15s ease, background 0.15s ease;
+        }
+
+        .tl-cut-hit:hover ~ * ,
+        .tl-cut:hover::after {
+            transform: scale(1.22);
+            background: #ff5555;
+        }
+
+        /* time bubble on the cut handle, the way SceneCut shows it */
+        .tl-cut-hit::after {
+            content: attr(data-t);
+            position: absolute;
+            top: -34px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(248, 113, 113, 0.96);
+            color: #fff;
+            padding: 3px 10px;
+            border-radius: 7px;
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.12s ease;
+            box-shadow: 0 4px 14px rgba(248, 113, 113, 0.45);
+        }
+
+        .tl-cut-hit:hover::after {
+            opacity: 1;
+        }
+
+        /* drag across empty timeline to carve out a clip */
+        .tl-range {
+            position: absolute;
+            top: 0;
+            height: calc(100% - 28px);
+            background: rgba(124, 92, 252, 0.22);
+            border-left: 2px solid var(--accent-light);
+            border-right: 2px solid var(--accent-light);
+            z-index: 18;
+            pointer-events: none;
+        }
+
+        .tl-range::after {
+            content: attr(data-len);
+            position: absolute;
+            top: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: #fff;
+            padding: 2px 9px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .snap-line {
+            position: absolute;
+            top: 0;
+            width: 1px;
+            height: calc(100% - 28px);
+            background: var(--warning);
+            z-index: 19;
+            pointer-events: none;
+            box-shadow: 0 0 6px rgba(251, 191, 36, 0.8);
         }
 
         /* --- playhead --- */
@@ -1401,13 +1487,30 @@
         }
 
         /* ============ FRAME PREVIEW ============ */
+        /* Scrub preview follows the cursor instead of owning a strip of the
+           page, so the picture, the timeline and the transport all stay on
+           screen together. */
         .frame-preview-panel {
-            position: relative;
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            background: var(--bg-secondary);
+            position: fixed;
+            z-index: 400;
+            width: 268px;
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            background: rgba(14, 14, 24, 0.97);
+            backdrop-filter: blur(10px);
             overflow: hidden;
-            transition: all 0.3s ease;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65);
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(6px);
+            transition: opacity 0.12s ease, transform 0.12s ease;
+            display: none;
+        }
+
+        .frame-preview-panel.showing {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .frame-preview-panel.hover-active {
@@ -1437,17 +1540,15 @@
         }
 
         .frame-preview-inner {
-            display: flex;
-            align-items: stretch;
+            display: block;
         }
 
         .frame-preview-canvas-wrap {
             position: relative;
-            width: 300px;
-            height: 169px;
-            flex-shrink: 0;
+            width: 100%;
+            height: 151px;
             background: #000;
-            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
             overflow: hidden;
         }
 
@@ -1476,12 +1577,10 @@
         }
 
         .frame-preview-info {
-            flex: 1;
-            min-width: 0;
-            padding: 12px 16px;
+            padding: 8px 11px;
             display: flex;
-            flex-direction: column;
-            justify-content: center;
+            align-items: center;
+            justify-content: space-between;
             gap: 8px;
         }
 
@@ -1505,11 +1604,7 @@
         }
 
         .frame-preview-nav {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 0 12px;
-            border-left: 1px solid var(--border);
+            display: none;
         }
 
         .fp-nav-btn {
@@ -1529,25 +1624,7 @@
             border-color: rgba(124, 92, 252, 0.3);
         }
 
-        @media (max-width: 900px) {
-            .frame-preview-inner {
-                flex-direction: column;
-            }
 
-            .frame-preview-canvas-wrap {
-                width: 100%;
-                height: 200px;
-                border-right: none;
-                border-bottom: 1px solid var(--border);
-            }
-
-            .frame-preview-nav {
-                border-left: none;
-                border-top: 1px solid var(--border);
-                padding: 8px 12px;
-                justify-content: center;
-            }
-        }
 
         /* ============ CLIP CARDS ============ */
         .clip-card {
@@ -2351,10 +2428,10 @@
     <main class="max-w-[1800px] mx-auto px-4 sm:px-6 py-5 space-y-5">
 
         <!-- ============ ROW 1 : QUEUE / PLAYER / SOURCE ============ -->
-        <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-stretch">
 
             <!-- ---------- Video queue ---------- -->
-            <section class="xl:col-span-3 card p-4 fade-in flex flex-col" style="min-height:420px;">
+            <section class="xl:col-span-3 card p-4 fade-in flex flex-col">
                 <div class="flex items-center gap-2 mb-3">
                     <div
                         class="w-6 h-6 rounded-lg bg-[var(--yt)] flex items-center justify-center text-white font-bold text-[11px]">
@@ -2374,7 +2451,7 @@
                 </p>
 
                 <div id="queueList" class="flex-1 overflow-y-auto scrollbar-thin space-y-2 pr-1"
-                    style="max-height:360px;">
+                    style="min-height:180px;">
                     <div class="text-center py-10 text-[var(--text-secondary)]">
                         <p class="text-3xl mb-2 opacity-40">📼</p>
                         <p class="text-xs">No videos yet</p>
@@ -2428,6 +2505,117 @@
                             lightweight <b class="text-[var(--success)]">240p proxy copy</b> so you can scrub and split
                             it here — the full video is never downloaded.</p>
                     </div>
+                </div>
+
+
+                <!-- ===== TIMELINE, directly under the picture ===== -->
+                <div id="timelineSection" class="mt-3">
+        <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest">Timeline</span>
+                <span class="text-[13px] mono text-[var(--accent-light)] font-bold" id="currentTime">0:00.000</span>
+                <span class="text-[10px] text-[var(--text-secondary)]">/</span>
+                <span class="text-[11px] mono text-[var(--text-secondary)]" id="totalDuration">0:00</span>
+                <span class="badge-pill bg-[var(--success)]/10 text-[var(--success)] ml-1" id="tlInOut"
+                    style="display:none;">IN — OUT</span>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+                <button class="fs-ctrl" id="rippleBtn" onclick="toggleRipple()"
+                    title="When on, dragging a shared edge moves both neighbouring clips (classic scene-split behaviour)">🔗
+                    Ripple edges</button>
+                <button class="fs-ctrl" id="waveBtn" onclick="toggleWaveform()"
+                    title="Draw the audio waveform behind the timeline">🔊 Waveform</button>
+                <button class="fs-ctrl" id="fsEnableBtn" onclick="toggleFilmstripEnabled()"
+                    title="Filmstrip is off (saves memory). Click to build one for this video.">🎞 Filmstrip
+                    OFF</button>
+                <button class="fs-ctrl" onclick="openShortcuts()" title="Keyboard shortcuts (?)">⌨ Keys</button>
+                <div class="h-4 w-px bg-[var(--border)]"></div>
+                <span class="text-[10px] text-[var(--text-secondary)]">Zoom</span>
+                <button class="zoom-btn" onclick="zoomTimeline(-1)" title="Zoom out">−</button>
+                <span class="text-[11px] mono text-[var(--accent-light)] w-12 text-center font-bold"
+                    id="zoomLabel">1x</span>
+                <button class="zoom-btn" onclick="zoomTimeline(1)" title="Zoom in">+</button>
+                <button class="zoom-btn !w-auto !px-2.5 text-[10px] font-semibold" onclick="zoomTimeline(0)"
+                    title="Fit to view">Fit</button>
+            </div>
+        </div>
+
+        <!-- filmstrip -->
+        <div id="filmstripContainer" class="mb-2" style="display:none;">
+            <div class="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span
+                        class="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">📽 Filmstrip</span>
+                    <span class="text-[9px] text-[var(--text-secondary)] mono" id="filmstripInfo"></span>
+                </div>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    <select id="filmstripInterval" class="fs-select" onchange="rebuildFilmstrip()"
+                        title="Seconds between frames">
+                        <option value="0.5">0.5s</option>
+                        <option value="1">1s</option>
+                        <option value="2">2s</option>
+                        <option value="5" selected>5s</option>
+                        <option value="10">10s</option>
+                        <option value="30">30s</option>
+                    </select>
+                    <button class="fs-ctrl" onclick="rebuildFilmstrip()">🔄 Rebuild</button>
+                    <button class="fs-ctrl" id="fsFollowBtn" onclick="toggleFilmstripFollow()"
+                        title="Keep the strip scrolled to the playhead">🔗 Follow</button>
+                    <button class="fs-ctrl active" id="fsToggleBtn" onclick="toggleFilmstrip()">▼ Show</button>
+                </div>
+            </div>
+            <div class="filmstrip-outer" id="filmstripOuter">
+                <div class="filmstrip-scroll" id="filmstripScroll">
+                    <div class="filmstrip-strip" id="filmstripStrip">
+                        <div class="filmstrip-generating" id="filmstripGenerating">
+                            <div class="mini-spinner"></div>
+                            <span>Building preview frames…</span>
+                            <span class="mono text-[var(--accent-light)]" id="filmstripPct">0%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="filmstrip-progress" id="filmstripProgress" style="width:0%"></div>
+            </div>
+        </div>
+
+        <!-- the timeline itself -->
+        <div class="timeline-outer">
+            <div class="timeline-scroll" id="timelineScroll">
+                <div class="timeline-container" id="timeline" onmousedown="timelineMouseDown(event)">
+                    <canvas class="timeline-waveform-canvas" id="waveformCanvas"></canvas>
+                    <div class="timeline-hover-cursor" id="hoverCursor">
+                        <div class="hover-time-tooltip" id="hoverTooltip">0:00</div>
+                    </div>
+                    <div class="playhead" id="playhead" style="left:0%">
+                        <div class="playhead-tooltip" id="playheadTooltip">0:00.000</div>
+                    </div>
+                    <div class="timeline-ruler" id="timelineRuler"></div>
+                </div>
+            </div>
+        </div>
+
+        <p class="text-[10px] text-[var(--text-secondary)] mt-2 leading-relaxed">
+            <b class="text-[var(--accent-light)]">Drag across empty timeline to carve out a clip</b> · click to seek ·
+            drag a clip to move it, its edges to trim · edges snap to the playhead and neighbouring cuts ·
+            click a red ● handle to merge · <span class="key-hint">Ctrl</span>+wheel zooms at the cursor.
+        </p>
+
+        <!-- frame preview -->
+        <div class="frame-preview-panel" id="framePreview">
+            <div class="fp-hover-indicator">👁 SCRUB</div>
+            <div class="frame-preview-inner">
+                <div class="frame-preview-canvas-wrap">
+                    <canvas id="fpCanvas" width="640" height="360"></canvas>
+                    <div class="frame-preview-time-badge" id="fpTimeBadge">0:00</div>
+                </div>
+                <div class="frame-preview-info">
+                    <span class="text-[10px] truncate" id="fpClipInfo">No clips yet</span>
+                    <span id="fpClipBadge"></span>
+                    <span class="fp-badge hidden-imp" id="fpPos">0:00.000</span>
+                    <span class="fp-badge hidden-imp" id="fpPct">0%</span>
+                </div>
+            </div>
+        </div>
                 </div>
 
                 <!-- transport -->
@@ -2487,7 +2675,7 @@
             </section>
 
             <!-- ---------- Source + split methods ---------- -->
-            <section class="xl:col-span-3 space-y-4 fade-in">
+            <section class="xl:col-span-3 flex flex-col gap-4 fade-in">
 
                 <!-- proxy engine -->
                 <div class="card p-4">
@@ -2637,133 +2825,6 @@
             </section>
         </div>
 
-        <!-- ============ ROW 2 : TIMELINE ============ -->
-        <section class="card p-4 fade-in" id="timelineSection">
-            <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
-                <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest">Timeline</span>
-                    <span class="text-[13px] mono text-[var(--accent-light)] font-bold" id="currentTime">0:00.000</span>
-                    <span class="text-[10px] text-[var(--text-secondary)]">/</span>
-                    <span class="text-[11px] mono text-[var(--text-secondary)]" id="totalDuration">0:00</span>
-                    <span class="badge-pill bg-[var(--success)]/10 text-[var(--success)] ml-1" id="tlInOut"
-                        style="display:none;">IN — OUT</span>
-                </div>
-                <div class="flex items-center gap-2 flex-wrap">
-                    <button class="fs-ctrl" id="rippleBtn" onclick="toggleRipple()"
-                        title="When on, dragging a shared edge moves both neighbouring clips (classic scene-split behaviour)">🔗
-                        Ripple edges</button>
-                    <button class="fs-ctrl" id="waveBtn" onclick="toggleWaveform()"
-                        title="Draw the audio waveform behind the timeline">🔊 Waveform</button>
-                    <button class="fs-ctrl" id="fsEnableBtn" onclick="toggleFilmstripEnabled()"
-                        title="Filmstrip is off (saves memory). Click to build one for this video.">🎞 Filmstrip
-                        OFF</button>
-                    <button class="fs-ctrl" onclick="openShortcuts()" title="Keyboard shortcuts (?)">⌨ Keys</button>
-                    <div class="h-4 w-px bg-[var(--border)]"></div>
-                    <span class="text-[10px] text-[var(--text-secondary)]">Zoom</span>
-                    <button class="zoom-btn" onclick="zoomTimeline(-1)" title="Zoom out">−</button>
-                    <span class="text-[11px] mono text-[var(--accent-light)] w-12 text-center font-bold"
-                        id="zoomLabel">1x</span>
-                    <button class="zoom-btn" onclick="zoomTimeline(1)" title="Zoom in">+</button>
-                    <button class="zoom-btn !w-auto !px-2.5 text-[10px] font-semibold" onclick="zoomTimeline(0)"
-                        title="Fit to view">Fit</button>
-                </div>
-            </div>
-
-            <!-- filmstrip -->
-            <div id="filmstripContainer" class="mb-2" style="display:none;">
-                <div class="flex items-center justify-between mb-1.5 flex-wrap gap-2">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span
-                            class="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">📽 Filmstrip</span>
-                        <span class="text-[9px] text-[var(--text-secondary)] mono" id="filmstripInfo"></span>
-                    </div>
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                        <select id="filmstripInterval" class="fs-select" onchange="rebuildFilmstrip()"
-                            title="Seconds between frames">
-                            <option value="0.5">0.5s</option>
-                            <option value="1">1s</option>
-                            <option value="2">2s</option>
-                            <option value="5" selected>5s</option>
-                            <option value="10">10s</option>
-                            <option value="30">30s</option>
-                        </select>
-                        <button class="fs-ctrl" onclick="rebuildFilmstrip()">🔄 Rebuild</button>
-                        <button class="fs-ctrl" id="fsFollowBtn" onclick="toggleFilmstripFollow()"
-                            title="Keep the strip scrolled to the playhead">🔗 Follow</button>
-                        <button class="fs-ctrl active" id="fsToggleBtn" onclick="toggleFilmstrip()">▼ Show</button>
-                    </div>
-                </div>
-                <div class="filmstrip-outer" id="filmstripOuter">
-                    <div class="filmstrip-scroll" id="filmstripScroll">
-                        <div class="filmstrip-strip" id="filmstripStrip">
-                            <div class="filmstrip-generating" id="filmstripGenerating">
-                                <div class="mini-spinner"></div>
-                                <span>Building preview frames…</span>
-                                <span class="mono text-[var(--accent-light)]" id="filmstripPct">0%</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="filmstrip-progress" id="filmstripProgress" style="width:0%"></div>
-                </div>
-            </div>
-
-            <!-- the timeline itself -->
-            <div class="timeline-outer">
-                <div class="timeline-scroll" id="timelineScroll">
-                    <div class="timeline-container" id="timeline" onmousedown="timelineMouseDown(event)">
-                        <canvas class="timeline-waveform-canvas" id="waveformCanvas"></canvas>
-                        <div class="timeline-hover-cursor" id="hoverCursor">
-                            <div class="hover-time-tooltip" id="hoverTooltip">0:00</div>
-                        </div>
-                        <div class="playhead" id="playhead" style="left:0%">
-                            <div class="playhead-tooltip" id="playheadTooltip">0:00.000</div>
-                        </div>
-                        <div class="timeline-ruler" id="timelineRuler"></div>
-                    </div>
-                </div>
-            </div>
-
-            <p class="text-[10px] text-[var(--text-secondary)] mt-2">
-                Click empty space to seek · drag a clip to move it · drag its edges to trim · click a red ✂ diamond to
-                merge two clips · hover anywhere to scrub-preview below.
-            </p>
-
-            <!-- frame preview -->
-            <div class="frame-preview-panel mt-2" id="framePreview" style="display:none;">
-                <div class="fp-hover-indicator">👁 HOVER PREVIEW</div>
-                <div class="frame-preview-inner">
-                    <div class="frame-preview-canvas-wrap">
-                        <canvas id="fpCanvas" width="640" height="360"></canvas>
-                        <div class="frame-preview-time-badge" id="fpTimeBadge">0:00</div>
-                    </div>
-                    <div class="frame-preview-info">
-                        <div>
-                            <div class="fp-label">🎬 Frame under cursor</div>
-                            <div class="text-[11px] font-medium mt-1" id="fpClipInfo">No clips yet</div>
-                        </div>
-                        <div>
-                            <div class="fp-label">Position</div>
-                            <div class="flex gap-1.5 mt-1 flex-wrap">
-                                <span class="fp-badge"
-                                    style="background:rgba(0,212,170,0.1);color:var(--success);border:1px solid rgba(0,212,170,0.2);"
-                                    id="fpPos">0:00.000</span>
-                                <span class="fp-badge"
-                                    style="background:rgba(124,92,252,0.1);color:var(--accent-light);border:1px solid rgba(124,92,252,0.2);"
-                                    id="fpPct">0%</span>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="fp-label">Clip</div>
-                            <div class="mt-1" id="fpClipBadge"></div>
-                        </div>
-                    </div>
-                    <div class="frame-preview-nav">
-                        <button class="fp-nav-btn" onclick="seekRelative(-1/30)" title="Previous frame">◀</button>
-                        <button class="fp-nav-btn" onclick="seekRelative(1/30)" title="Next frame">▶</button>
-                    </div>
-                </div>
-            </div>
-        </section>
 
         <!-- ============ AUTO DETECT PANEL ============ -->
         <section id="autoPanel" class="card p-5 fade-in hidden">
@@ -3703,7 +3764,7 @@ start_bridge.bat
                 initFramePreview();
                 rebuildFilmstrip();
             } else {
-                D.framePreview.style.display = 'none';
+                hideScrubPopover();
                 D.filmstripContainer.style.display = 'none';
             }
             zoomTimeline(0);
@@ -3809,7 +3870,7 @@ start_bridge.bat
             updateChaptersUI(); updateProxyUI(); syncProxyPanel();
             regenerateScript(); updateStats();
             D.filmstripContainer.style.display = 'none';
-            D.framePreview.style.display = 'none';
+            hideScrubPopover();
             if (canReadFrames()) { initFramePreview(); rebuildFilmstrip(); }
         }
 
@@ -4350,6 +4411,7 @@ start_bridge.bat
             if (!tl) return;
             _tlNodes.forEach(function (n) { if (n.parentNode) n.parentNode.removeChild(n); });
             _tlNodes = [];
+            hideSnapLine();
 
             var d = duration();
             var v = V();
@@ -4401,9 +4463,11 @@ start_bridge.bat
                 cut.className = 'tl-cut';
                 cut.style.cssText = 'left:' + (list[i].end / d * 100) + '%;pointer-events:none;';
                 var hit = document.createElement('div');
-                hit.style.cssText = 'position:absolute;top:-10px;left:-10px;width:23px;height:23px;'
+                hit.className = 'tl-cut-hit';
+                hit.style.cssText = 'position:absolute;top:-13px;left:-13px;width:29px;height:29px;'
                     + 'pointer-events:auto;cursor:pointer;border-radius:50%;';
-                hit.title = 'Merge clip ' + (i + 1) + ' and ' + (i + 2) + '  ·  ' + fmtMs(list[i].end);
+                hit.setAttribute('data-t', '✕ ' + fmtMs(list[i].end));
+                hit.title = 'Click to merge clip ' + (i + 1) + ' and ' + (i + 2);
                 (function (idx) {
                     hit.addEventListener('mousedown', function (ev) { ev.stopPropagation(); });
                     hit.addEventListener('click', function (ev) { ev.stopPropagation(); mergeAtBoundary(idx); });
@@ -4529,9 +4593,98 @@ start_bridge.bat
             if (event.target === D.playhead || D.playhead.contains(event.target)) return;
             var d = duration();
             if (!d) { notify('Load a preview (or set a duration) first', 'warning'); return; }
+            event.preventDefault();
+            beginRangeDrag(event);      // click = seek, drag = carve out a clip
+        }
+
+        /* ---- snapping: edges land on the playhead and neighbouring cuts ---- */
+        var SNAP_PX = 7;
+
+        function snapTime(t, excludeIdx) {
+            var v = V(), d = duration();
+            if (!v || !d) return t;
+            var px = D.timeline.offsetWidth || 1;
+            var tol = (SNAP_PX / px) * d;
+            var best = null, bestD = tol;
+            var cands = [0, d];
+            if (P.mode !== 'none') cands.push(P.time());
+            if (inPoint !== null) cands.push(inPoint);
+            if (outPoint !== null) cands.push(outPoint);
+            v.clips.forEach(function (c, i) {
+                if (i === excludeIdx) return;
+                cands.push(c.start); cands.push(c.end);
+            });
+            cands.forEach(function (x) {
+                var dd = Math.abs(x - t);
+                if (dd < bestD) { bestD = dd; best = x; }
+            });
+            return best === null ? t : best;
+        }
+
+        function showSnapLine(t) {
+            var d = duration(); if (!d) return;
+            var el = $('snapLine');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'snapLine';
+                el.className = 'snap-line';
+                D.timeline.appendChild(el);
+            }
+            el.style.display = '';
+            el.style.left = (t / d * 100) + '%';
+        }
+        function hideSnapLine() {
+            var el = $('snapLine');
+            if (el) el.style.display = 'none';
+        }
+
+        /* ---- drag across empty timeline to carve out a clip ---- */
+        var rangeDrag = null;
+
+        function beginRangeDrag(event) {
+            var d = duration();
             var rect = D.timeline.getBoundingClientRect();
-            var pct = clamp((event.clientX - rect.left) / rect.width, 0, 1);
-            P.seek(pct * d);
+            var t0 = clamp((event.clientX - rect.left) / rect.width, 0, 1) * d;
+            rangeDrag = { rect: rect, d: d, t0: t0, t1: t0, moved: false, el: null };
+
+            function move(ev) {
+                if (!rangeDrag) return;
+                var t = clamp((ev.clientX - rangeDrag.rect.left) / rangeDrag.rect.width, 0, 1) * rangeDrag.d;
+                if (Math.abs(ev.clientX - event.clientX) > 4) rangeDrag.moved = true;
+                rangeDrag.t1 = t;
+                if (!rangeDrag.moved) return;
+                var a = Math.min(rangeDrag.t0, rangeDrag.t1), b = Math.max(rangeDrag.t0, rangeDrag.t1);
+                if (!rangeDrag.el) {
+                    rangeDrag.el = document.createElement('div');
+                    rangeDrag.el.className = 'tl-range';
+                    D.timeline.appendChild(rangeDrag.el);
+                }
+                rangeDrag.el.style.left = (a / rangeDrag.d * 100) + '%';
+                rangeDrag.el.style.width = ((b - a) / rangeDrag.d * 100) + '%';
+                rangeDrag.el.setAttribute('data-len', fmtDur(b - a));
+                D.currentTime.textContent = fmtMs(t);
+            }
+
+            function up() {
+                document.removeEventListener('mousemove', move);
+                document.removeEventListener('mouseup', up);
+                if (!rangeDrag) return;
+                var moved = rangeDrag.moved;
+                var a = snapTime(Math.min(rangeDrag.t0, rangeDrag.t1));
+                var b = snapTime(Math.max(rangeDrag.t0, rangeDrag.t1));
+                if (rangeDrag.el && rangeDrag.el.parentNode) rangeDrag.el.parentNode.removeChild(rangeDrag.el);
+                rangeDrag = null;
+                if (moved && b - a > 0.15) {
+                    pushUndo();
+                    addClip(a, b, null, true);
+                    afterClipsChanged();
+                    notify('Clip added · ' + fmt(a) + ' → ' + fmt(b) + '  (' + fmtDur(b - a) + ')', 'success');
+                } else {
+                    P.seek(a);
+                }
+            }
+            document.addEventListener('mousemove', move);
+            document.addEventListener('mouseup', up);
         }
 
         /* ---- clip move / resize ---- */
@@ -4602,9 +4755,15 @@ start_bridge.bat
             if (s.mode === 'move') {
                 var len = s.orig.end - s.orig.start;
                 var ns = clamp(s.orig.start + deltaSec, 0, d - len);
+                var snapped = snapTime(ns, s.idx);
+                if (Math.abs(snapped - ns) > 1e-6 && snapped + len <= d) { ns = snapped; showSnapLine(ns); }
+                else hideSnapLine();
                 clip.start = ns; clip.end = ns + len;
             } else if (s.mode === 'left') {
                 var ns2 = clamp(s.orig.start + deltaSec, 0, clip.end - MIN);
+                var sn2 = snapTime(ns2, s.idx);
+                if (sn2 < clip.end - MIN) { if (Math.abs(sn2 - ns2) > 1e-6) showSnapLine(sn2); else hideSnapLine(); ns2 = sn2; }
+                else hideSnapLine();
                 if (rippleEdges && s.touchLeft && s.origNeighbourLeft) {
                     ns2 = Math.max(ns2, s.origNeighbourLeft.start + MIN);
                     v.clips[s.idx - 1].end = ns2;
@@ -4612,6 +4771,9 @@ start_bridge.bat
                 clip.start = ns2;
             } else if (s.mode === 'right') {
                 var ne = clamp(s.orig.end + deltaSec, clip.start + MIN, d);
+                var sn3 = snapTime(ne, s.idx);
+                if (sn3 > clip.start + MIN) { if (Math.abs(sn3 - ne) > 1e-6) showSnapLine(sn3); else hideSnapLine(); ne = sn3; }
+                else hideSnapLine();
                 if (rippleEdges && s.touchRight && s.origNeighbourRight) {
                     ne = Math.min(ne, s.origNeighbourRight.end - MIN);
                     v.clips[s.idx + 1].start = ne;
@@ -4648,6 +4810,7 @@ start_bridge.bat
             document.removeEventListener('mousemove', onClipDragMove);
             document.removeEventListener('mouseup', onClipDragEnd);
             hideDragTooltip();
+            hideSnapLine();
             var idx = dragState.idx;
             dragState = null;
 
@@ -6079,13 +6242,29 @@ start_bridge.bat
         function initFramePreview() {
             var v = V();
             fpBusy = false; fpQueued = null;
-            if (!v || !canReadFrames() || !v.mediaUrl) { D.framePreview.style.display = 'none'; return; }
-            D.framePreview.style.display = '';
+            hideScrubPopover();
+            if (!v || !canReadFrames() || !v.mediaUrl) return;
             var entry = acquireMedia(v);
             if (entry) entry.ready.then(function () { drawFramePreview(P.time()); }).catch(function () { });
         }
 
-        function destroyFramePreview() { fpBusy = false; fpQueued = null; }
+        /** Park the scrub preview just above the cursor, clamped to the window. */
+        function showScrubPopover(clientX, clientY) {
+            if (!canReadFrames()) return;
+            var el = D.framePreview;
+            el.classList.add('showing');
+            var w = el.offsetWidth || 268, h = el.offsetHeight || 190;
+            var x = clamp(clientX - w / 2, 8, window.innerWidth - w - 8);
+            var y = clientY - h - 18;
+            if (y < 8) y = clientY + 24;          // flip below when short on room
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+        }
+        function hideScrubPopover() {
+            if (D.framePreview) D.framePreview.classList.remove('showing');
+        }
+
+        function destroyFramePreview() { fpBusy = false; fpQueued = null; hideScrubPopover(); }
 
         /** Coalescing preview draw on the shared decoder. Only the newest
          *  request survives, so fast mouse movement never queues up work. */
@@ -6138,25 +6317,26 @@ start_bridge.bat
             var tl = D.timeline;
             tl.addEventListener('mousemove', function (e) {
                 var d = duration();
-                if (!d || dragState || draggingPlayhead) return;
+                if (!d || dragState || draggingPlayhead || rangeDrag) return;
                 var rect = tl.getBoundingClientRect();
                 var pct = clamp((e.clientX - rect.left) / rect.width, 0, 1);
                 var t = pct * d;
                 D.hoverCursor.style.left = (pct * 100) + '%';
                 D.hoverCursor.classList.add('visible');
                 D.hoverTooltip.textContent = fmtMs(t);
-                D.framePreview.classList.add('hover-active');
+                showScrubPopover(e.clientX, tl.getBoundingClientRect().top);
                 updateFramePreviewInfo(t);
                 clearTimeout(fpHoverTimer);
                 fpHoverTimer = setTimeout(function () { drawFramePreview(t); }, 55);
             });
             tl.addEventListener('mouseleave', function () {
                 D.hoverCursor.classList.remove('visible');
-                D.framePreview.classList.remove('hover-active');
+                hideScrubPopover();
                 clearTimeout(fpHoverTimer);
-                var t = P.time();
-                updateFramePreviewInfo(t);
-                fpHoverTimer = setTimeout(function () { drawFramePreview(t); }, 120);
+            });
+            // dragging a clip or the playhead should not leave a stale popover
+            document.addEventListener('mouseup', function () {
+                if (!D.timeline.matches(':hover')) hideScrubPopover();
             });
         }
 
@@ -7625,6 +7805,7 @@ start_bridge.bat
             ]],
             ['Cutting', [
                 ['Split at playhead', ['M']],
+                ['Drag empty timeline', ['carve a clip']],
                 ['Set IN / OUT', ['I', 'O']],
                 ['Add IN→OUT as a clip', ['Enter']],
                 ['Trim clip start / end to playhead', ['[', ']']],
