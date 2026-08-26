@@ -1581,7 +1581,7 @@
            right. It follows the playhead live while you drag. */
         .frame-preview-panel {
             position: relative;
-            margin-top: 8px;
+            margin-top: 6px;
             border: 1px solid var(--border);
             border-radius: 14px;
             background: var(--bg-secondary);
@@ -1625,10 +1625,30 @@
             gap: 0;
         }
 
+        .frame-preview-panel {
+            --fp-w: 320px;
+            --fp-h: 180px;
+        }
+
+        .frame-preview-panel[data-size="s"] {
+            --fp-w: 240px;
+            --fp-h: 135px;
+        }
+
+        .frame-preview-panel[data-size="l"] {
+            --fp-w: 448px;
+            --fp-h: 252px;
+        }
+
+        .frame-preview-panel[data-size="xl"] {
+            --fp-w: 576px;
+            --fp-h: 324px;
+        }
+
         .frame-preview-canvas-wrap {
             position: relative;
-            width: 224px;
-            height: 126px;
+            width: var(--fp-w);
+            height: var(--fp-h);
             flex-shrink: 0;
             background: #000;
             border-right: 1px solid var(--border);
@@ -1730,7 +1750,7 @@
 
             .frame-preview-canvas-wrap {
                 width: 100%;
-                height: 180px;
+                height: var(--fp-h);
                 border-right: none;
                 border-bottom: 1px solid var(--border);
             }
@@ -2638,14 +2658,12 @@
             </div>
             <div class="flex items-center gap-2 flex-wrap">
                 <button class="fs-ctrl" id="rippleBtn" onclick="toggleRipple()"
-                    title="When on, dragging a shared edge moves both neighbouring clips (classic scene-split behaviour)">🔗
-                    Ripple edges</button>
+                    title="When on, dragging a shared edge moves both neighbouring clips (classic scene-split behaviour)">🔗 Ripple</button>
                 <button class="fs-ctrl" id="waveBtn" onclick="toggleWaveform()"
-                    title="Draw the audio waveform behind the timeline">🔊 Waveform</button>
+                    title="Draw the audio waveform behind the timeline">🔊 Wave</button>
                 <button class="fs-ctrl" id="fsEnableBtn" onclick="toggleFilmstripEnabled()"
-                    title="Filmstrip is off (saves memory). Click to build one for this video.">🎞 Filmstrip
-                    OFF</button>
-                <button class="fs-ctrl" onclick="openShortcuts()" title="Keyboard shortcuts (?)">⌨ Keys</button>
+                    title="Filmstrip is off (saves memory). Click to build one for this video.">🎞 Film ✕</button>
+                <button class="fs-ctrl" onclick="openShortcuts()" title="Keyboard shortcuts (?)">⌨</button>
                 <div class="h-4 w-px bg-[var(--border)]"></div>
                 <span class="text-[10px] text-[var(--text-secondary)]">Zoom</span>
                 <button class="zoom-btn" onclick="zoomTimeline(-1)" title="Zoom out">−</button>
@@ -2711,7 +2729,7 @@
             </div>
         </div>
 
-        <p class="text-[10px] text-[var(--text-secondary)] mt-1 truncate">
+        <p class="text-[10px] text-[var(--text-secondary)] mt-0.5 truncate">
             Drag to move the playhead · drag a red ● to move that cut, click it to merge · clip edges trim ·
             <span class="key-hint">⇧</span>drag carves · <span class="key-hint">⌥</span>drag slides ·
             <span class="key-hint">Ctrl</span>+wheel zooms
@@ -2722,7 +2740,7 @@
             <div class="fp-hover-indicator">👁 Hover preview</div>
             <div class="frame-preview-inner">
                 <div class="frame-preview-canvas-wrap">
-                    <canvas id="fpCanvas" width="448" height="252"></canvas>
+                    <canvas id="fpCanvas" width="640" height="360"></canvas>
                     <div class="frame-preview-time-badge" id="fpTimeBadge">0:00</div>
                 </div>
                 <div class="frame-preview-info">
@@ -2747,6 +2765,8 @@
                 <div class="frame-preview-nav">
                     <button class="fp-nav-btn" onclick="seekRelative(-1/30)" title="Previous frame (Shift+←)">◀</button>
                     <button class="fp-nav-btn" onclick="seekRelative(1/30)" title="Next frame (Shift+→)">▶</button>
+                    <button class="fp-nav-btn" id="fpSizeBtn" onclick="cycleFramePreviewSize()"
+                        title="Preview size — small / medium / large / huge (,)">⤢</button>
                 </div>
             </div>
         </div>
@@ -2967,7 +2987,8 @@
                 <div>
                     <h3 class="font-bold text-sm">Auto Scene Detection</h3>
                     <p class="text-[11px] text-[var(--text-secondary)]">Two-pass frame analysis on the low-res proxy —
-                        coarse scan, then frame-precise refinement. Runs in the background; keep working.</p>
+                        coarse scan, then frame-precise refinement. Every video gets its own job: queue the whole
+                        list, keep cutting while they run.</p>
                 </div>
             </div>
 
@@ -2999,12 +3020,31 @@
                             <option value="high">High (480×270)</option>
                         </select>
                     </div>
+                    <div>
+                        <label class="text-xs text-[var(--text-secondary)] font-semibold">Videos analysed at
+                            once</label>
+                        <select id="detectMax" class="input-field !py-2 !text-sm mt-1"
+                            onchange="setDetectConcurrency(this.value)">
+                            <option value="1">1 · gentlest</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4 · fastest</option>
+                        </select>
+                    </div>
                     <div class="flex gap-2">
                         <button onclick="startAutoDetect()" class="btn-primary flex-1 text-sm !py-2.5" id="detectBtn">🤖
                             Detect Scenes</button>
                         <button onclick="cancelDetect()" class="btn-danger !py-2.5 !px-4 hidden" id="detectCancelBtn">✕
                             Cancel</button>
                     </div>
+                    <div class="flex gap-2">
+                        <button onclick="detectAllVideos()" class="btn-secondary flex-1 text-sm !py-2.5"
+                            id="detectAllBtn" title="Queue every video that has a proxy — they run in the background while you keep cutting">🤖🤖
+                            Detect every video</button>
+                        <button onclick="cancelAllDetects()" class="btn-danger !py-2.5 !px-4 hidden"
+                            id="detectCancelAllBtn">✕ All</button>
+                    </div>
+                    <p class="text-[10px] text-[var(--text-secondary)]" id="detectSummary">Nothing running</p>
                 </div>
 
                 <div class="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-3 flex flex-col gap-2">
@@ -3459,12 +3499,23 @@ start_bridge.bat
             setTimeout(function () { div.remove(); }, 3300);
         }
 
-        /** Background-safe yield (setTimeout is throttled to 1s in hidden tabs). */
+        /** Background-safe yield (setTimeout is throttled to 1s in hidden tabs).
+         *  Waiters are queued rather than sharing one handler: with several
+         *  background jobs running, a single onmessage slot means the last
+         *  writer wins and every earlier waiter is stranded for good. */
         var _yieldChan = typeof MessageChannel !== 'undefined' ? new MessageChannel() : null;
+        var _yieldQueue = [];
+        if (_yieldChan) {
+            _yieldChan.port1.onmessage = function () {
+                var r = _yieldQueue.shift();
+                if (r) r();
+            };
+            _yieldChan.port1.start();
+        }
         function yieldToUI() {
             return new Promise(function (resolve) {
                 if (_yieldChan) {
-                    _yieldChan.port1.onmessage = function () { resolve(); };
+                    _yieldQueue.push(resolve);
                     _yieldChan.port2.postMessage(null);
                 } else { setTimeout(resolve, 0); }
             });
@@ -3895,6 +3946,7 @@ start_bridge.bat
             renderClips();
             regenerateScript();
             initFramePreview();
+            scheduleCache();
             if (canReadFrames()) rebuildFilmstrip();
             else D.filmstripContainer.style.display = 'none';
             zoomTimeline(0);
@@ -4000,7 +4052,10 @@ start_bridge.bat
             updateChaptersUI(); updateProxyUI(); syncProxyPanel();
             regenerateScript(); updateStats();
             D.filmstripContainer.style.display = 'none';
+            cacheClear();
             initFramePreview();
+            scheduleCache();
+            renderDetectPanel();
             if (canReadFrames()) rebuildFilmstrip();
         }
 
@@ -4010,8 +4065,9 @@ start_bridge.bat
             if (v && v.clips.length && !confirm('Remove "' + (v.title || v.id || v.fileName) + '" and its '
                 + v.clips.length + ' clip(s)?')) return;
             if (v && v.mediaUrl && v.mediaUrl.startsWith('blob:')) URL.revokeObjectURL(v.mediaUrl);
+            if (v) dropDetect(v.uid);
             videos.splice(i, 1);
-            if (videos.length === 0) { cur = -1; P.teardown(); }
+            if (videos.length === 0) { cur = -1; P.teardown(); cacheClear(); }
             else if (cur >= videos.length) cur = videos.length - 1;
             if (cur >= 0) selectVideo(cur); else { updatePlayerUI(); renderQueue(); renderClips(); }
             updateStats(); regenerateScript(); persist();
@@ -4022,9 +4078,11 @@ start_bridge.bat
             if (!confirm('Clear the whole queue (' + videos.length + ' video(s))?')) return;
             videos.forEach(function (v) {
                 if (v.mediaUrl && v.mediaUrl.startsWith('blob:')) URL.revokeObjectURL(v.mediaUrl);
+                dropDetect(v.uid);
             });
             videos = []; cur = -1; selClip = -1;
             P.teardown();
+            cacheClear();
             renderQueue(); renderClips(); updatePlayerUI(); updateStats(); regenerateScript(); persist();
             notify('Queue cleared', 'success');
         }
@@ -4051,6 +4109,9 @@ start_bridge.bat
                 var sel = v.clips.filter(function (c) { return c.sel; }).length;
                 var job = jobForVideo(v.uid);
                 if (job) { tagClass = 'loading'; tagText = '⏳ ' + (job.pct || 0).toFixed(0) + '%'; }
+                var dj = detectJob(v.uid);
+                var djBusy = dj && (dj.state === 'queued' || dj.state === 'running');
+                var bar = job ? (job.pct || 0) : (djBusy ? dj.pct : 0);
                 return '<div class="queue-item ' + (i === cur ? 'active' : '') + '" data-uid="' + v.uid
                     + '" onclick="selectVideo(' + i + ')">'
                     + '<div class="flex items-start gap-2.5">'
@@ -4067,9 +4128,16 @@ start_bridge.bat
                     + '<span class="src-tag ' + tagClass + '">' + tagText + '</span>'
                     + '<span class="text-[9.5px] text-[var(--accent-light)] font-bold">' + v.clips.length + ' clip'
                     + (v.clips.length === 1 ? '' : 's') + (v.clips.length ? ' · ' + sel + ' on' : '') + '</span>'
+                    + (djBusy
+                        ? '<span class="src-tag loading">🤖 ' + (dj.state === 'queued'
+                            ? 'queued' : dj.pct.toFixed(0) + '%') + '</span>'
+                        : (dj && dj.state === 'done'
+                            ? '<span class="src-tag" style="background:rgba(0,212,170,0.12);color:var(--success);'
+                            + 'border:1px solid rgba(0,212,170,0.25)">🤖 ' + (dj.cuts ? dj.cuts.length : 0) + ' cuts</span>'
+                            : ''))
                     + '</div>'
-                    + '<div class="queue-progress" style="display:' + (job ? '' : 'none') + '">'
-                    + '<div class="queue-progress-fill" style="width:' + (job ? (job.pct || 0) : 0) + '%"></div>'
+                    + '<div class="queue-progress" style="display:' + (job || djBusy ? '' : 'none') + '">'
+                    + '<div class="queue-progress-fill" style="width:' + bar.toFixed(1) + '%"></div>'
                     + '</div>'
                     + '</div>'
                     + '<button onclick="removeVideo(' + i + ',event)" class="text-[var(--text-secondary)] hover:text-[var(--danger)] p-1 text-xs" title="Remove">✕</button>'
@@ -4486,6 +4554,7 @@ start_bridge.bat
             renderTimeline();
             syncFilmstripWidth();
             centreScrollOnPlayhead();
+            scheduleCache();
         }
 
         function centreScrollOnPlayhead() {
@@ -4642,11 +4711,14 @@ start_bridge.bat
 
         /* ---- playhead drag ---- */
         /* Scrubbing rule: the bar must follow the cursor at screen rate, but the
-           decoder must NOT be asked to seek at screen rate. A seek on a long
-           video costs 25-150ms, so 60/sec guarantees the picture falls behind
-           and the whole UI feels laggy. Visual position updates every frame;
-           the actual decode is throttled and uses fastSeek where available. */
-        var SCRUB_SEEK_MS = 70;
+           decoder must NOT be asked to seek at screen rate.
+
+           Rather than guess a throttle, the seek loop is a pump: it issues the
+           next seek the instant the previous one presents a frame. On a fast
+           machine that is 30-40 previews a second; on a slow one it simply does
+           fewer, and never queues work it cannot finish. Nothing waits on a
+           timer, so the picture is only ever one decode behind the cursor. */
+        var scrubWant = null, scrubBusy = false, scrubGen = 0;
 
         function scrubSeek(t, force) {
             var el = D.localVideo;
@@ -4657,6 +4729,159 @@ start_bridge.bat
             } else {
                 try { el.fastSeek(t); } catch (e) { try { el.currentTime = t; } catch (e2) { } }
             }
+        }
+
+        /** Ask for a frame at t. Coalescing: only the newest request survives,
+         *  and exactly one seek is ever in flight. */
+        function scrubRequest(t) {
+            if (P.mode !== 'html5') { scrubSeek(t, false); return; }
+            scrubWant = t;
+            if (!scrubBusy) scrubPump();
+        }
+
+        function scrubPump() {
+            if (scrubWant === null) { scrubBusy = false; return; }
+            var el = D.localVideo, t = scrubWant, gen = ++scrubGen;
+            scrubWant = null; scrubBusy = true;
+
+            if (Math.abs(el.currentTime - t) < 0.008) {   // already there
+                drawFramePreviewFromPlayer();
+                scrubPump();
+                return;
+            }
+            var settled = false;
+            function done() {
+                if (settled) return;
+                settled = true;
+                clearTimeout(to);
+                el.removeEventListener('seeked', done);
+                if (gen !== scrubGen) return;         // a newer request already owns the pump
+                drawFramePreviewFromPlayer();
+                scrubPump();
+            }
+            var to = setTimeout(done, 400);               // a wedged decoder must not stall the pump
+            el.addEventListener('seeked', done);
+            scrubSeek(t, false);
+        }
+
+        function scrubPumpStop() { scrubWant = null; scrubBusy = false; scrubGen++; }
+
+        /* ==========================================================
+         *  SCRUB CACHE
+         *  Seeking a decoder costs 25-150ms; blitting a bitmap costs
+         *  nothing. So the frames across whatever slice of the timeline is
+         *  on screen are decoded once, in the background, and a drag shows
+         *  the nearest one instantly while the real decode catches up
+         *  behind it. Zoom in and the cache re-cuts itself finer, which is
+         *  exactly where frame-accurate cutting happens.
+         * ========================================================== */
+        var Cache = {
+            uid: null, from: 0, to: 0, times: [], bmps: [],
+            token: 0, building: false, video: null, pending: null
+        };
+
+        function cacheClear() {
+            Cache.bmps.forEach(function (b) { if (b && b.close) try { b.close(); } catch (e) { } });
+            Cache.times = []; Cache.bmps = []; Cache.uid = null;
+            Cache.token++;
+            if (Cache.video) {
+                Cache.video.removeAttribute('src');
+                try { Cache.video.load(); } catch (e) { }
+                Cache.video = null;
+            }
+        }
+
+        /** Which slice of the video is actually on screen right now. */
+        function visibleSpan() {
+            var d = duration(); if (!d) return null;
+            var sc = D.timelineScroll, w = D.timeline.offsetWidth || 1;
+            var from = clamp(sc.scrollLeft / w, 0, 1) * d;
+            var to = clamp((sc.scrollLeft + sc.offsetWidth) / w, 0, 1) * d;
+            if (to - from < 0.05) return null;
+            return { from: from, to: to, px: sc.offsetWidth };
+        }
+
+        function scheduleCache() {
+            clearTimeout(Cache.pending);
+            Cache.pending = setTimeout(buildScrubCache, 220);
+        }
+
+        async function buildScrubCache() {
+            var v = V();
+            if (!v || !canReadFrames() || !v.mediaUrl) { cacheClear(); return; }
+            var span = visibleSpan(); if (!span) return;
+
+            // one frame per ~26px of timeline, so the cache is as fine as the
+            // picture the user can actually point at, and never bigger
+            var n = clamp(Math.round(span.px / 26), 10, 40);
+            var covered = Cache.uid === v.uid && Cache.times.length === n
+                && Math.abs(Cache.from - span.from) < (span.to - span.from) / (n * 4)
+                && Math.abs(Cache.to - span.to) < (span.to - span.from) / (n * 4);
+            if (covered || Cache.building) return;
+
+            var token = ++Cache.token;
+            Cache.building = true;
+            try {
+                if (!Cache.video || Cache.uid !== v.uid) {
+                    if (Cache.video) { Cache.video.removeAttribute('src'); try { Cache.video.load(); } catch (e) { } }
+                    Cache.video = makeWorkerVideo(v);
+                    await new Promise(function (res, rej) {
+                        Cache.video.onloadedmetadata = res;
+                        Cache.video.onerror = function () { rej(new Error('no media')); };
+                        setTimeout(rej, 20000);
+                    });
+                }
+                if (token !== Cache.token) return;
+
+                var old = Cache.bmps;
+                var times = [], bmps = [];
+                var step = (span.to - span.from) / (n - 1);
+                for (var i = 0; i < n; i++) times.push(span.from + i * step);
+                Cache.uid = v.uid; Cache.from = span.from; Cache.to = span.to;
+                Cache.times = times; Cache.bmps = bmps;
+
+                for (var j = 0; j < n; j++) {
+                    if (token !== Cache.token) break;
+                    // never compete with the gesture the cache exists to serve
+                    while (draggingPlayhead) { await sleep(40); if (token !== Cache.token) return; }
+                    try {
+                        await seekVideoAsync(Cache.video, times[j], 2500);
+                        bmps[j] = await createImageBitmap(Cache.video, {
+                            resizeWidth: 320, resizeHeight: 180, resizeQuality: 'low'
+                        });
+                    } catch (e) { bmps[j] = null; }
+                    await yieldToUI();
+                }
+                old.forEach(function (b) { if (b && b.close) try { b.close(); } catch (e) { } });
+            } catch (e) {
+                /* no cache is a slower scrub, never a broken one */
+            } finally {
+                Cache.building = false;
+            }
+        }
+
+        function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+        /** Blit the closest cached frame. Returns true if it drew something
+         *  close enough to be honest about where the cursor is. */
+        function drawCachedFrame(t) {
+            var v = V();
+            if (!v || Cache.uid !== v.uid || !Cache.times.length) return false;
+            var lo = 0, hi = Cache.times.length - 1;
+            while (lo < hi) {
+                var mid = (lo + hi) >> 1;
+                if (Cache.times[mid] < t) lo = mid + 1; else hi = mid;
+            }
+            if (lo > 0 && Math.abs(Cache.times[lo - 1] - t) < Math.abs(Cache.times[lo] - t)) lo--;
+            var bmp = Cache.bmps[lo];
+            if (!bmp) return false;
+            var slack = (Cache.to - Cache.from) / Math.max(1, Cache.times.length - 1);
+            if (Math.abs(Cache.times[lo] - t) > slack) return false;
+            try {
+                var cv = D.fpCanvas;
+                cv.getContext('2d', { alpha: false }).drawImage(bmp, 0, 0, cv.width, cv.height);
+                return true;
+            } catch (e) { return false; }
         }
 
         /* Scrubbing works from anywhere on the timeline, not only from the
@@ -4672,7 +4897,7 @@ start_bridge.bat
             var rect = D.timeline.getBoundingClientRect();
             var wasPlaying = !P.paused();
             var pending = clamp((event.clientX - rect.left) / rect.width, 0, 1) * d;
-            var lastSeek = 0, timer = null;
+            var raf = 0, painted = -1;
 
             draggingPlayhead = true;
             previewStopAt = null;
@@ -4681,36 +4906,34 @@ start_bridge.bat
             document.body.style.userSelect = 'none';
             document.body.style.cursor = 'ew-resize';
 
-            function paint(t) {
-                var pct = clamp(t / d, 0, 1);
-                ph.style.left = (pct * 100) + '%';
-                var str = fmtMs(t);
-                D.currentTime.textContent = str;
-                D.playheadTooltip.textContent = str;
-                updateFilmstripPlayhead(t);
-                trackFramePreview(t);      // the preview answers the drag
-            }
-
-            function throttledSeek(t) {
-                var now = performance.now();
-                if (now - lastSeek >= SCRUB_SEEK_MS) {
-                    lastSeek = now;
-                    scrubSeek(t, false);
-                } else if (!timer) {
-                    timer = setTimeout(function () {
-                        timer = null;
-                        if (draggingPlayhead) { lastSeek = performance.now(); scrubSeek(pending, false); }
-                    }, SCRUB_SEEK_MS - (now - lastSeek));
+            /* One paint per animation frame, no matter how many mousemove
+               events the OS delivers. The cached frame goes up immediately so
+               there is always a picture under the cursor; the real decode
+               overwrites it a moment later. */
+            function frame() {
+                raf = 0;
+                if (!draggingPlayhead) return;
+                if (pending !== painted) {
+                    painted = pending;
+                    var pct = clamp(pending / d, 0, 1);
+                    ph.style.left = (pct * 100) + '%';
+                    var str = fmtMs(pending);
+                    D.currentTime.textContent = str;
+                    D.playheadTooltip.textContent = str;
+                    updateFilmstripPlayhead(pending);
+                    updateFramePreviewInfo(pending);
+                    drawCachedFrame(pending);      // instant, then the decode lands over it
+                    scrubRequest(pending);
                 }
             }
+            function schedule() { if (!raf) raf = requestAnimationFrame(frame); }
 
-            if (jumpFirst) { paint(pending); throttledSeek(pending); }
+            if (jumpFirst) schedule();
 
             function move(ev) {
                 if (!draggingPlayhead) return;
                 pending = clamp((ev.clientX - rect.left) / rect.width, 0, 1) * d;
-                paint(pending);
-                throttledSeek(pending);
+                schedule();
             }
             function up() {
                 draggingPlayhead = false;
@@ -4719,14 +4942,31 @@ start_bridge.bat
                 document.body.style.cursor = '';
                 document.removeEventListener('mousemove', move);
                 document.removeEventListener('mouseup', up);
-                if (timer) { clearTimeout(timer); timer = null; }
+                if (raf) { cancelAnimationFrame(raf); raf = 0; }
+                scrubPumpStop();
                 scrubSeek(pending, true);        // land exactly, not on a keyframe
                 syncPlayhead(pending);
-                setTimeout(function () { trackFramePreview(pending, true); }, 90);
                 if (wasPlaying) P.play();
+                else waitForFrame(function () { trackFramePreview(pending, true); });
+                scheduleCache();
             }
             document.addEventListener('mousemove', move);
             document.addEventListener('mouseup', up);
+        }
+
+        /** Run fn once the player has actually presented a new frame. */
+        function waitForFrame(fn) {
+            var el = D.localVideo;
+            if (P.mode !== 'html5' || !el) { fn(); return; }
+            if (typeof el.requestVideoFrameCallback === 'function') {
+                var done = false;
+                el.requestVideoFrameCallback(function () { if (!done) { done = true; fn(); } });
+                setTimeout(function () { if (!done) { done = true; fn(); } }, 400);
+                return;
+            }
+            var h = function () { el.removeEventListener('seeked', h); clearTimeout(to); fn(); };
+            var to = setTimeout(function () { el.removeEventListener('seeked', h); fn(); }, 400);
+            el.addEventListener('seeked', h);
         }
 
         function initPlayheadDrag() {
@@ -5109,7 +5349,10 @@ start_bridge.bat
                     e.preventDefault();
                     D.timelineScroll.scrollLeft += e.deltaY;
                 }
+                scheduleCache();
             }, { passive: false });
+            // any scroll changes which slice of the video is on screen
+            D.timelineScroll.addEventListener('scroll', function () { scheduleCache(); }, { passive: true });
         }
 
         /** While playing zoomed in, keep the playhead on screen. */
@@ -6009,9 +6252,28 @@ start_bridge.bat
         /* ==========================================================
          *  AUTO SCENE DETECTION  (2-pass, runs on the proxy)
          * ========================================================== */
-        var isDetecting = false, detectCancelled = false;
+        /* Detection is a registry, not a mode. Every video gets its own job
+           with its own progress and its own live thumbnail, several run at
+           once, and none of them care which video you happen to be looking
+           at - so you can queue the whole list and keep cutting while it
+           works. */
+        var Detects = {};
+        var detectOrder = [];
+        var DETECT_MAX = 2;
 
-        function cancelDetect() { detectCancelled = true; }
+        function detectMaxDefault() {
+            var c = navigator.hardwareConcurrency || 4;
+            return c >= 12 ? 4 : c >= 8 ? 3 : 2;
+        }
+
+        function detectJob(uid) { return Detects[uid] || null; }
+        function detectRunning() {
+            return detectOrder.filter(function (u) { return Detects[u] && Detects[u].state === 'running'; }).length;
+        }
+        function detectQueued() {
+            return detectOrder.filter(function (u) { return Detects[u] && Detects[u].state === 'queued'; }).length;
+        }
+        function detectActive() { return detectRunning() + detectQueued(); }
 
         function detectThreshold(sensitivity) {
             var maxT = 0.35, minT = 0.006;
@@ -6027,54 +6289,171 @@ start_bridge.bat
             return total / (count * 3 * 255);
         }
 
-        function resetDetectUI() {
-            isDetecting = false;
-            $('detectBtn').disabled = false;
-            $('detectBtn').textContent = '🤖 Detect Scenes';
-            $('detectCancelBtn').classList.add('hidden');
+        function detectSettings() {
+            var sens = parseInt($('sensSlider').value, 10);
+            var res = $('analysisRes').value;
+            return {
+                sens: sens,
+                threshold: detectThreshold(sens),
+                minGap: parseFloat($('minGapInput').value) || 1.5,
+                aw: res === 'fast' ? 160 : res === 'high' ? 480 : 320,
+                ah: res === 'fast' ? 90 : res === 'high' ? 270 : 180
+            };
         }
 
-        async function startAutoDetect() {
+        function canDetect(v) { return !!(v && v.mediaUrl && (v.source === 'proxy' || v.source === 'file')); }
+
+        /* ---- queueing ---- */
+
+        function makeDetectJob(v, opts, replace) {
+            var pv = document.createElement('canvas');
+            pv.width = 160; pv.height = 90;
+            var job = {
+                uid: v.uid, title: v.title || v.id || v.fileName || 'Video',
+                state: 'queued', pct: 0, status: 'Queued', detail: 'Waiting for a slot',
+                found: '', cancelled: false, replace: !!replace, opts: opts,
+                preview: pv, cuts: null, started: 0
+            };
+            Detects[v.uid] = job;
+            if (detectOrder.indexOf(v.uid) < 0) detectOrder.push(v.uid);
+            return job;
+        }
+
+        function startAutoDetect() {
             var v = V();
             if (!v) { notify('Select a video first', 'warning'); return; }
-            if (!canReadFrames() || !v.mediaUrl) {
-                notify('Auto-detect needs a proxy copy or a local file', 'error');
+            if (!canDetect(v)) { notify('Auto-detect needs a proxy copy or a local file', 'error'); return; }
+            var ex = detectJob(v.uid);
+            if (ex && (ex.state === 'queued' || ex.state === 'running')) {
+                notify('Already detecting this video', 'warning'); return;
+            }
+            if (v.clips.length && !confirm('Replace the existing ' + v.clips.length
+                + ' clip(s) in this video with detected scenes?')) return;
+            makeDetectJob(v, detectSettings(), v.clips.length > 0);
+            pumpDetects();
+            renderDetectPanel(); renderQueue();
+        }
+
+        /** Queue every video that can be analysed - the whole list at once. */
+        function detectAllVideos() {
+            var eligible = videos.filter(function (v) {
+                var j = detectJob(v.uid);
+                return canDetect(v) && !(j && (j.state === 'queued' || j.state === 'running'));
+            });
+            if (!eligible.length) {
+                notify(videos.length ? 'Every video is already queued or has no proxy' : 'Add some videos first',
+                    'warning');
                 return;
             }
-            if (isDetecting) return;
-            isDetecting = true; detectCancelled = false;
+            var withClips = eligible.filter(function (v) { return v.clips.length; }).length;
+            if (withClips && !confirm('Detect scenes in ' + eligible.length + ' video(s)?\n\n'
+                + withClips + ' of them already have clips, which will be replaced.')) return;
+            var opts = detectSettings();
+            eligible.forEach(function (v) { makeDetectJob(v, opts, v.clips.length > 0); });
+            pumpDetects();
+            renderDetectPanel(); renderQueue();
+            notify('Detecting ' + eligible.length + ' video(s) · ' + DETECT_MAX + ' at a time', 'success');
+        }
 
-            var btn = $('detectBtn');
-            btn.disabled = true; btn.textContent = '⏳ Pass 1 · coarse scan…';
-            $('detectCancelBtn').classList.remove('hidden');
-            $('detectLive').classList.remove('hidden');
-            $('detectIdle').classList.add('hidden');
+        function cancelDetect() {
+            var v = V(); if (!v) return;
+            var job = detectJob(v.uid);
+            if (!job || (job.state !== 'queued' && job.state !== 'running')) return;
+            job.cancelled = true;
+            if (job.state === 'queued') { job.state = 'cancelled'; job.status = 'Cancelled'; }
+            renderDetectPanel(); renderQueue();
+        }
 
-            var sens = parseInt($('sensSlider').value, 10);
-            var threshold = detectThreshold(sens);
-            var minGap = parseFloat($('minGapInput').value) || 1.5;
-            var res = $('analysisRes').value;
-            var aw = res === 'fast' ? 160 : res === 'high' ? 480 : 320;
-            var ah = res === 'fast' ? 90 : res === 'high' ? 270 : 180;
+        function cancelAllDetects() {
+            var n = 0;
+            detectOrder.forEach(function (u) {
+                var j = Detects[u];
+                if (j && (j.state === 'queued' || j.state === 'running')) {
+                    j.cancelled = true; n++;
+                    if (j.state === 'queued') { j.state = 'cancelled'; j.status = 'Cancelled'; }
+                }
+            });
+            if (n) notify('Cancelling ' + n + ' detection(s)', 'warning');
+            renderDetectPanel(); renderQueue();
+        }
 
+        function setDetectConcurrency(n) {
+            DETECT_MAX = clamp(parseInt(n, 10) || 2, 1, 6);
+            try { localStorage.setItem('cf_detect_max', DETECT_MAX); } catch (e) { }
+            pumpDetects();
+            renderDetectPanel();
+        }
+
+        /** Start as many queued jobs as the concurrency budget allows. */
+        function pumpDetects() {
+            var free = DETECT_MAX - detectRunning();
+            for (var i = 0; i < detectOrder.length && free > 0; i++) {
+                var job = Detects[detectOrder[i]];
+                if (!job || job.state !== 'queued' || job.cancelled) continue;
+                var v = videoByUid(job.uid);
+                if (!v || !canDetect(v)) { job.state = 'error'; job.status = 'No proxy any more'; continue; }
+                free--;
+                runDetect(job, v);
+            }
+        }
+
+        /** Stop and forget a video's detection job. */
+        function dropDetect(uid) {
+            var j = Detects[uid];
+            if (j) {
+                j.cancelled = true;
+                if (j.state === 'queued') j.state = 'cancelled';
+            }
+            delete Detects[uid];
+            var i = detectOrder.indexOf(uid);
+            if (i >= 0) detectOrder.splice(i, 1);
+            pumpDetects();
+        }
+
+        function videoByUid(uid) {
+            for (var i = 0; i < videos.length; i++) if (videos[i].uid === uid) return videos[i];
+            return null;
+        }
+
+        /* ---- the analysis itself ---- */
+
+        async function runDetect(job, v) {
+            job.state = 'running'; job.started = performance.now();
+            job.status = 'Pass 1 · coarse scan'; job.detail = 'Opening the proxy…'; job.pct = 0;
+            paintDetect(job);
+
+            var o = job.opts;
+            var pvCtx = job.preview.getContext('2d');
             var video = makeWorkerVideo(v);
+            var finish = function () {
+                video.removeAttribute('src');
+                try { video.load(); } catch (e) { }
+                pumpDetects();
+                paintDetect(job);
+                renderQueue();
+            };
+
             try {
-                await new Promise(function (res2, rej) {
-                    video.onloadedmetadata = res2;
+                await new Promise(function (res, rej) {
+                    video.onloadedmetadata = res;
                     video.onerror = function () { rej(new Error('cannot read that media')); };
                     setTimeout(function () { rej(new Error('timed out loading media')); }, 25000);
                 });
             } catch (err) {
-                notify('Auto-detect failed: ' + err.message, 'error');
-                resetDetectUI(); return;
+                job.state = 'error'; job.status = 'Failed'; job.detail = err.message;
+                notify('Auto-detect failed on "' + job.title + '": ' + err.message, 'error');
+                finish(); return;
             }
 
-            var d = (isFinite(video.duration) && video.duration > 0) ? video.duration : duration();
-            if (!d || !isFinite(d) || d < 1) { notify('Cannot read the duration', 'error'); resetDetectUI(); return; }
+            var d = (isFinite(video.duration) && video.duration > 0) ? video.duration : (v.duration || 0);
+            if (!d || !isFinite(d) || d < 1) {
+                job.state = 'error'; job.status = 'Failed'; job.detail = 'Cannot read the duration';
+                notify('Cannot read the duration of "' + job.title + '"', 'error');
+                finish(); return;
+            }
 
-            var pv = $('detectPreview').getContext('2d');
             var ac = document.createElement('canvas');
-            ac.width = aw; ac.height = ah;
+            ac.width = o.aw; ac.height = o.ah;
             var actx = ac.getContext('2d', { willReadFrequently: true });
 
             var step = 0.25;
@@ -6090,17 +6469,19 @@ start_bridge.bat
             v.diffData = [];
 
             for (var t = 0; t < d; t += step) {
-                if (detectCancelled) break;
+                if (job.cancelled) break;
+                if (interacting()) await detectStandDown();
+                if (job.cancelled) break;
                 frames++;
                 try {
                     await seekVideoAsync(video, t);
-                    actx.drawImage(video, 0, 0, aw, ah);
-                    var img = actx.getImageData(0, 0, aw, ah);
-                    if (frames % 8 === 1) { try { pv.drawImage(video, 0, 0, 160, 90); } catch (e) { } }
+                    actx.drawImage(video, 0, 0, o.aw, o.ah);
+                    var img = actx.getImageData(0, 0, o.aw, o.ah);
+                    if (frames % 8 === 1) { try { pvCtx.drawImage(video, 0, 0, 160, 90); } catch (e) { } }
                     if (prev) {
                         var diff = frameDiff(prev, img);
                         v.diffData.push({ time: t, diff: diff });
-                        if (diff > threshold && (!coarse.length || t - coarse[coarse.length - 1].time > minGap)) {
+                        if (diff > o.threshold && (!coarse.length || t - coarse[coarse.length - 1].time > o.minGap)) {
                             coarse.push({ time: t, prevTime: t - step });
                         }
                     } else { v.diffData.push({ time: t, diff: 0 }); }
@@ -6109,31 +6490,33 @@ start_bridge.bat
 
                 if (frames % 5 === 0) {
                     var p = (t / d) * 100;
-                    $('detectProgress').style.width = (p * 0.7).toFixed(1) + '%';
-                    $('detectDetail').textContent = 'Pass 1 · frame ' + frames + '/' + totalFrames + ' · ' + p.toFixed(1) + '%';
-                    $('detectFound').textContent = coarse.length + ' candidates';
-                    $('detectStatus').textContent = 'Pass 1 · coarse scan';
-                    await yieldToUI();
+                    job.pct = p * 0.7;
+                    job.status = 'Pass 1 · coarse scan';
+                    job.detail = 'Frame ' + frames + '/' + totalFrames + ' · ' + p.toFixed(1) + '%';
+                    job.found = coarse.length + ' candidates';
+                    paintDetect(job);
+                    await detectYield();
                 }
             }
 
             var cuts = [];
-            if (!detectCancelled && coarse.length) {
-                btn.textContent = '⏳ Pass 2 · refining ' + coarse.length + '…';
-                $('detectStatus').textContent = 'Pass 2 · pinpointing exact frames';
+            if (!job.cancelled && coarse.length) {
+                job.status = 'Pass 2 · pinpointing exact frames';
                 var fine = 1 / 30;
                 for (var ci = 0; ci < coarse.length; ci++) {
-                    if (detectCancelled) break;
+                    if (job.cancelled) break;
                     var cc = coarse[ci];
                     var ws = Math.max(0, cc.prevTime - step * 0.5);
                     var we = Math.min(d, cc.time + step * 0.5);
                     var best = 0, bestT = cc.time, wp = null;
                     for (var ft = ws; ft <= we; ft += fine) {
-                        if (detectCancelled) break;
+                        if (job.cancelled) break;
+                        if (interacting()) await detectStandDown();
+                        if (job.cancelled) break;
                         try {
                             await seekVideoAsync(video, ft, 2000);
-                            actx.drawImage(video, 0, 0, aw, ah);
-                            var fi = actx.getImageData(0, 0, aw, ah);
+                            actx.drawImage(video, 0, 0, o.aw, o.ah);
+                            var fi = actx.getImageData(0, 0, o.aw, o.ah);
                             if (wp) {
                                 var fd = frameDiff(wp, fi);
                                 if (fd > best) { best = fd; bestT = ft; }
@@ -6141,36 +6524,134 @@ start_bridge.bat
                             wp = new ImageData(new Uint8ClampedArray(fi.data), fi.width, fi.height);
                         } catch (e) { }
                     }
-                    if (best > threshold) {
+                    if (best > o.threshold) {
                         var rt = Math.round(bestT * 1000) / 1000;
-                        if (!cuts.length || rt - cuts[cuts.length - 1] > minGap) cuts.push(rt);
+                        if (!cuts.length || rt - cuts[cuts.length - 1] > o.minGap) cuts.push(rt);
                     }
-                    try { await seekVideoAsync(video, bestT, 1500); pv.drawImage(video, 0, 0, 160, 90); } catch (e) { }
-                    var p2 = ((ci + 1) / coarse.length * 30 + 70).toFixed(1);
-                    $('detectProgress').style.width = p2 + '%';
-                    $('detectDetail').textContent = 'Pass 2 · refining ' + (ci + 1) + '/' + coarse.length;
-                    $('detectFound').textContent = cuts.length + ' cuts confirmed';
-                    await yieldToUI();
+                    try { await seekVideoAsync(video, bestT, 1500); pvCtx.drawImage(video, 0, 0, 160, 90); } catch (e) { }
+                    job.pct = (ci + 1) / coarse.length * 30 + 70;
+                    job.detail = 'Refining ' + (ci + 1) + '/' + coarse.length;
+                    job.found = cuts.length + ' cuts confirmed';
+                    paintDetect(job);
+                    await detectYield();
                 }
             }
 
-            video.removeAttribute('src'); try { video.load(); } catch (e) { }
+            if (job.cancelled) {
+                job.state = 'cancelled'; job.status = 'Cancelled';
+                job.detail = 'Stopped after ' + frames + ' frames';
+                notify('Detection cancelled · ' + job.title, 'warning');
+                finish(); return;
+            }
 
-            if (!detectCancelled) {
-                $('detectProgress').style.width = '100%';
-                $('detectStatus').textContent = 'Done — ' + cuts.length + ' cuts (frame-precise)';
-                $('detectDetail').textContent = totalFrames + ' frames scanned · ' + coarse.length + ' regions refined';
-                drawDiffGraph(threshold);
-                if (cuts.length) {
-                    replaceClipsFromRanges(cutPointsToRanges(cuts),
-                        'Detected ' + cuts.length + ' scene cuts → ' + (cuts.length + 1) + ' clips');
-                } else {
-                    notify('No scene changes found — raise the sensitivity', 'warning');
-                }
+            job.state = 'done'; job.pct = 100; job.cuts = cuts;
+            job.status = 'Done — ' + cuts.length + ' cuts (frame-precise)';
+            job.detail = totalFrames + ' frames scanned · ' + coarse.length + ' regions refined';
+            job.found = cuts.length + ' cuts confirmed';
+
+            if (cuts.length) {
+                applyRangesToVideo(v, cutPointsToRangesFor(v, cuts, d),
+                    'Detected ' + cuts.length + ' cuts in "' + job.title + '" → ' + (cuts.length + 1) + ' clips');
             } else {
-                notify('Detection cancelled', 'warning');
+                notify('No scene changes in "' + job.title + '" — raise the sensitivity', 'warning');
             }
-            resetDetectUI();
+            finish();
+        }
+
+        /** A gesture owns the machine. Everything the user can feel - the
+         *  playhead, the preview - happens on the same thread and the same
+         *  decoders as a background scan, so while a drag is live the scans
+         *  stop dead rather than merely yielding. A drag lasts a second or
+         *  two; the cap below guarantees a scan still creeps forward even if
+         *  someone holds the mouse down all day. */
+        function interacting() { return !!(draggingPlayhead || dragState || rangeDrag || cutDrag); }
+
+        async function detectStandDown() {
+            if (!interacting()) return;
+            var until = performance.now() + 3000;
+            while (interacting() && performance.now() < until) await sleep(60);
+        }
+
+        function detectYield() {
+            return interacting() ? sleep(50) : yieldToUI();
+        }
+
+        /* ---- applying results to any video, current or not ---- */
+
+        function cutPointsToRangesFor(v, points, d) {
+            var pts = [0].concat(points.filter(function (p) { return p > 0.02 && p < d - 0.02; })
+                .sort(function (a, b) { return a - b; })).concat([d]);
+            var out = [];
+            for (var i = 0; i < pts.length - 1; i++) {
+                if (pts[i + 1] - pts[i] > 0.05) out.push({ start: pts[i], end: pts[i + 1] });
+            }
+            return out;
+        }
+
+        function applyRangesToVideo(v, ranges, label) {
+            if (!v || !ranges.length) return;
+            if (v === V()) pushUndo();
+            v.clips = ranges.map(function (r) {
+                return { id: uid(), start: r.start, end: r.end, name: r.name || null, sel: true };
+            });
+            v._thumbs = {};
+            if (v === V()) { selClip = -1; afterClipsChanged(); }
+            else { updateStats(); renderQueue(); regenerateScript(); persist(); }
+            notify(label || ('Created ' + ranges.length + ' clips'), 'success');
+        }
+
+        /* ---- panel painting ---- */
+
+        var detectPaintRaf = 0;
+        function paintDetect(job) {
+            var v = V();
+            if (!v || !job || job.uid !== v.uid) { updateDetectSummary(); return; }
+            if (detectPaintRaf) return;
+            detectPaintRaf = requestAnimationFrame(function () {
+                detectPaintRaf = 0;
+                renderDetectPanel();
+            });
+        }
+
+        function updateDetectSummary() {
+            var el = $('detectSummary'); if (!el) return;
+            var run = detectRunning(), q = detectQueued();
+            var done = detectOrder.filter(function (u) { return Detects[u] && Detects[u].state === 'done'; }).length;
+            if (!run && !q) {
+                el.innerHTML = done
+                    ? '<span class="text-[var(--success)]">✓ ' + done + ' video(s) analysed</span>'
+                    : '<span class="text-[var(--text-secondary)]">Nothing running</span>';
+                $('detectCancelAllBtn').classList.add('hidden');
+                return;
+            }
+            el.innerHTML = '<span class="text-[var(--accent-light)] font-bold">' + run + ' running</span>'
+                + (q ? ' <span class="text-[var(--text-secondary)]">· ' + q + ' queued</span>' : '')
+                + (done ? ' <span class="text-[var(--success)]">· ' + done + ' done</span>' : '');
+            $('detectCancelAllBtn').classList.remove('hidden');
+        }
+
+        function renderDetectPanel() {
+            updateDetectSummary();
+            var v = V();
+            var job = v ? detectJob(v.uid) : null;
+            var btn = $('detectBtn');
+            var live = $('detectLive'), idle = $('detectIdle');
+            var busy = job && (job.state === 'queued' || job.state === 'running');
+
+            btn.disabled = !!busy;
+            btn.textContent = busy
+                ? (job.state === 'queued' ? '⏳ Queued…' : '⏳ ' + Math.round(job.pct) + '%')
+                : '🤖 Detect Scenes';
+            $('detectCancelBtn').classList.toggle('hidden', !busy);
+
+            if (!job) { live.classList.add('hidden'); idle.classList.remove('hidden'); return; }
+            live.classList.remove('hidden'); idle.classList.add('hidden');
+            try { $('detectPreview').getContext('2d').drawImage(job.preview, 0, 0, 160, 90); } catch (e) { }
+            $('detectStatus').textContent = job.status;
+            $('detectDetail').textContent = job.detail;
+            $('detectFound').textContent = job.found || '';
+            $('detectProgress').style.width = job.pct.toFixed(1) + '%';
+            if (job.state === 'done' && v.diffData && v.diffData.length) drawDiffGraph(job.opts.threshold);
         }
 
         function drawDiffGraph(threshold) {
@@ -6331,7 +6812,7 @@ start_bridge.bat
             var btn = $('fsEnableBtn');
             if (btn) {
                 btn.classList.toggle('active', on);
-                btn.textContent = on ? '🎞 Filmstrip ON' : '🎞 Filmstrip OFF';
+                btn.textContent = on ? '🎞 Film ✓' : '🎞 Film ✕';
                 btn.title = on ? 'Filmstrip is on — click to disable and free its memory'
                     : 'Filmstrip is off (saves memory). Click to build one for this video.';
             }
@@ -6542,6 +7023,21 @@ start_bridge.bat
 
         /** The panel belongs to a loaded video, so it appears with one and
          *  goes away with the empty state - never a black box on an empty app. */
+        var FP_SIZES = ['s', 'm', 'l', 'xl'];
+        var FP_SIZE_NAMES = { s: 'small', m: 'medium', l: 'large', xl: 'huge' };
+        var fpSize = 'm';
+
+        function applyFramePreviewSize(size, quiet) {
+            fpSize = FP_SIZES.indexOf(size) >= 0 ? size : 'm';
+            if (D.framePreview) D.framePreview.setAttribute('data-size', fpSize);
+            try { localStorage.setItem('cf_fp_size', fpSize); } catch (e) { }
+            if (!quiet) notify('Preview frame · ' + FP_SIZE_NAMES[fpSize], 'info');
+        }
+
+        function cycleFramePreviewSize() {
+            applyFramePreviewSize(FP_SIZES[(FP_SIZES.indexOf(fpSize) + 1) % FP_SIZES.length]);
+        }
+
         function syncFramePreviewPanel() {
             if (!D.framePreview) return;
             D.framePreview.style.display = V() ? 'block' : 'none';
@@ -6586,14 +7082,15 @@ start_bridge.bat
             } catch (e) { return false; }
         }
 
-        /** Follow the playhead: text every time, picture at most ~20/sec. */
+        /** Follow the playhead: text every time, picture at most ~20/sec.
+         *  Playback and jumps come through here; the drag has its own path. */
         function trackFramePreview(t, force) {
             if (!D.framePreview || D.framePreview.style.display === 'none') return;
             updateFramePreviewInfo(t);
             var now = performance.now();
             if (!force && now - fpLastPaint < 50) return;
             fpLastPaint = now;
-            drawFramePreviewFromPlayer();
+            if (!drawFramePreviewFromPlayer()) drawCachedFrame(t);
         }
 
         /** Coalescing preview draw on the shared decoder, used for hovering a
@@ -6668,8 +7165,10 @@ start_bridge.bat
                 D.hoverTooltip.textContent = fmtMs(t);
                 setScrubHover(true);
                 updateFramePreviewInfo(t);
-                clearTimeout(fpHoverTimer);
-                fpHoverTimer = setTimeout(function () { drawFramePreview(t); }, 55);
+                if (!drawCachedFrame(t)) {           // cached frames need no decode at all
+                    clearTimeout(fpHoverTimer);
+                    fpHoverTimer = setTimeout(function () { drawFramePreview(t); }, 55);
+                }
             });
             tl.addEventListener('mouseleave', function () {
                 D.hoverCursor.classList.remove('visible');
@@ -8144,7 +8643,8 @@ start_bridge.bat
                 ['Jump 5s', ['Ctrl', '←/→']],
                 ['Previous / next clip', ['↑', '↓']],
                 ['Loop the clip you are on', ['L']],
-                ['Speed down / up', ['⇧', ',', '.']]
+                ['Speed down / up', ['⇧', ',', '.']],
+                ['Preview frame size', [',']]
             ]],
             ['Cutting', [
                 ['Mark a cut · again on the cut unmarks it', ['M']],
@@ -8365,7 +8865,7 @@ start_bridge.bat
                     break;
                 case 'p': e.preventDefault(); fetchProxyForCurrent(); break;
                 case 'e': e.preventDefault(); downloadScript(currentTab); break;
-                case ',': if (e.shiftKey) { e.preventDefault(); bumpSpeed(-1); } break;
+                case ',': e.preventDefault(); if (e.shiftKey) bumpSpeed(-1); else cycleFramePreviewSize(); break;
                 case '.': if (e.shiftKey) { e.preventDefault(); bumpSpeed(1); } break;
                 case '?': e.preventDefault(); openShortcuts(); break;
                 case '/': if (e.shiftKey) { e.preventDefault(); openShortcuts(); } break;
@@ -8445,6 +8945,17 @@ start_bridge.bat
             $('rippleBtn').classList.toggle('active', rippleEdges);
             $('fsToggleBtn').classList.add('active');
             setFilmstripEnabled(filmstripEnabled());
+            var savedSize = 'm';
+            try { savedSize = localStorage.getItem('cf_fp_size') || 'm'; } catch (e) { }
+            applyFramePreviewSize(savedSize, true);
+
+            DETECT_MAX = detectMaxDefault();
+            try {
+                var sm = parseInt(localStorage.getItem('cf_detect_max'), 10);
+                if (sm >= 1 && sm <= 6) DETECT_MAX = sm;
+            } catch (e) { }
+            $('detectMax').value = String(DETECT_MAX);
+            renderDetectPanel();
 
             $('urlInput').addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') { e.preventDefault(); addFromInput(); }
@@ -8462,6 +8973,7 @@ start_bridge.bat
                 new ResizeObserver(function () {
                     if (raf) cancelAnimationFrame(raf);
                     raf = requestAnimationFrame(function () {
+                        scheduleCache();
                         renderRuler(); renderTimeline();
                         if (waveformOn) drawWaveform();
                     });
