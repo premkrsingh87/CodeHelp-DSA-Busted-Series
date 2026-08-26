@@ -46,14 +46,25 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, unquote, parse_qs
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 # --------------------------------------------------------------------------
 #  Paths
 # --------------------------------------------------------------------------
 HOME = os.path.expanduser("~")
 CACHE_DIR = os.path.join(HOME, ".clipforge", "cache")
-OUTPUT_DIR = os.path.join(os.getcwd(), "ClipForge_Output")
+
+
+def default_output_dir():
+    """Somewhere sane and writable - never the launch directory, which can be
+    System32 if the bridge was started from an elevated prompt."""
+    for candidate in (os.path.join(HOME, "Videos"), os.path.join(HOME, "Movies")):
+        if os.path.isdir(candidate):
+            return os.path.join(candidate, "ClipForge_Output")
+    return os.path.join(HOME, "ClipForge_Output")
+
+
+OUTPUT_DIR = default_output_dir()
 
 # --------------------------------------------------------------------------
 #  Tool discovery
@@ -71,8 +82,11 @@ def find_tools(force=False):
     if exe:
         ytdlp, kind = [exe], "binary"
     else:
-        local = os.path.join(os.getcwd(), "yt-dlp.exe" if os.name == "nt" else "yt-dlp")
-        if os.path.isfile(local):
+        name = "yt-dlp.exe" if os.name == "nt" else "yt-dlp"
+        here = os.path.dirname(os.path.abspath(__file__))
+        local = next((c for c in (os.path.join(here, name), os.path.join(os.getcwd(), name))
+                      if os.path.isfile(c)), None)
+        if local:
             ytdlp, kind = [local], "local"
         else:
             try:
@@ -100,15 +114,42 @@ def ytdlp_version():
         return None
 
 
+YTDLP_EXE_URL = ("https://github.com/yt-dlp/yt-dlp/releases/latest/download/"
+                 "yt-dlp.exe")
+
+
 def install_ytdlp():
-    """Best effort `pip install -U yt-dlp`."""
+    """Install yt-dlp without the user opening a terminal.
+
+    Tries pip first; if that fails on Windows, falls back to dropping the
+    standalone yt-dlp.exe next to this script (no Python packaging involved).
+    """
+    log = []
     try:
         r = subprocess.run([sys.executable, "-m", "pip", "install", "-U", "yt-dlp"],
-                           capture_output=True, text=True, timeout=300)
+                           capture_output=True, text=True, timeout=420)
+        log.append((r.stdout or "") + (r.stderr or ""))
         find_tools(force=True)
-        return r.returncode == 0, (r.stdout or "") + (r.stderr or "")
-    except Exception as e:  # pragma: no cover - environment dependent
-        return False, str(e)
+        if _TOOLS["ytdlp"]:
+            return True, "\n".join(log)
+    except Exception as e:
+        log.append("pip failed: %s" % e)
+
+    if os.name == "nt":
+        log.append("Falling back to the standalone yt-dlp.exe ...")
+        try:
+            import urllib.request
+            target = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  "yt-dlp.exe")
+            urllib.request.urlretrieve(YTDLP_EXE_URL, target)
+            log.append("Downloaded %s" % target)
+            _TOOLS["ytdlp"] = [target]
+            _TOOLS["ytdlp_kind"] = "local"
+            return True, "\n".join(log)
+        except Exception as e:
+            log.append("download failed: %s" % e)
+
+    return False, "\n".join(log)
 
 
 # --------------------------------------------------------------------------
@@ -631,15 +672,20 @@ def main():
     ap = argparse.ArgumentParser(description="ClipForge Bridge")
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--host", default="127.0.0.1")
-    ap.add_argument("--out", default=OUTPUT_DIR, help="where extracted clips go")
+    ap.add_argument("--out", default=None, help="where extracted clips go")
     ap.add_argument("--cache", default=CACHE_DIR, help="where proxy copies live")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
 
-    OUTPUT_DIR = os.path.abspath(args.out)
+    OUTPUT_DIR = os.path.abspath(args.out) if args.out else default_output_dir()
     CACHE_DIR = os.path.abspath(args.cache)
     QUIET = args.quiet
     os.makedirs(CACHE_DIR, exist_ok=True)
+    try:
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+    except OSError:
+        OUTPUT_DIR = os.path.join(HOME, "ClipForge_Output")
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     t = find_tools()
     print("=" * 62)

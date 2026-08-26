@@ -21,23 +21,32 @@ YouTube URL ──► 240p proxy (few MB) ──► scrub / split / pick ──�
 
 ## Quick start
 
+**You only need `index.html`.** Everything else it builds for you.
+
+1. Open `index.html` (double-click it).
+2. Click **❔ Setup** in the header → **⬇ Windows — ClipForge_Bridge.bat**
+   (or **⬇ Mac / Linux — .command**).
+3. Double-click that launcher and leave its window open.
+4. Back in the page, the header chip turns **green**. Paste a YouTube URL, press
+   **⚡ Get Proxy Copy**, and start cutting.
+
+The launcher is a single self-extracting file: it carries the bridge inside it, finds Python,
+downloads `yt-dlp.exe` on first run, and starts serving. Nothing to unzip, no folder structure to
+get right.
+
+> **Why is a launcher needed at all?** A web page is not permitted to download from YouTube —
+> that's a browser security rule, not a missing feature. One small local process has to do it.
+> The page generates that process on demand so you never manage more than one file.
+
+If yt-dlp ever goes missing, the app shows a **🔧 Install yt-dlp (one click)** button that installs
+it through the running bridge — no terminal.
+
+Prefer to drive it yourself?
+
 ```bash
-# 1. one-time: install yt-dlp (ffmpeg strongly recommended too)
 pip install -U yt-dlp
-
-# 2. start the bridge and leave the window open
-cd clipforge-pro/bridge
-python clipforge_bridge.py          #  Windows: double-click start_bridge.bat
-                                    #  macOS/Linux: ./start_bridge.sh
-
-# 3. open the app
-#    double-click clipforge-pro/index.html
+python clipforge_bridge.py        # Setup → "Plain clipforge_bridge.py"
 ```
-
-The chip in the header turns **green** when the bridge is reachable. Paste a URL, press
-**⚡ Get Proxy Copy**, and start cutting.
-
----
 
 ## Three ways to get a preview
 
@@ -110,17 +119,17 @@ Multiple videos in the queue are handled in one script; clips are named `V1_Clip
 
 ```
 clipforge-pro/
-├── index.html                    the whole app — one file, no build, no CDN, no network needed
-├── bridge/
-│   ├── clipforge_bridge.py       local helper: proxy downloads + one-click extraction
-│   ├── start_bridge.bat          Windows launcher (installs yt-dlp if missing)
-│   └── start_bridge.sh           macOS / Linux launcher
+├── index.html                    ← the whole app AND the bridge installer
+├── bridge/                       (reference copy of what index.html embeds)
+│   ├── clipforge_bridge.py
+│   ├── start_bridge.bat
+│   └── start_bridge.sh
 └── README.md
 ```
 
-`index.html` has **no external dependencies** — the CSS is self-contained and the ZIP writer is
-built in, so it works offline, off a USB stick, or behind a locked-down proxy. Google Fonts is
-loaded if available and falls back to system fonts if not.
+`index.html` is fully standalone — it embeds the bridge source, has no CDN dependencies, its own
+ZIP writer, and self-contained CSS. Copy that one file anywhere and it still works. The `bridge/`
+folder is the same code kept unpacked for reading and editing; you do not need it to use the app.
 
 Your queue and clips autosave to `localStorage`, and **Save** / **Load** write a `.json` project
 file you can keep or move between machines.
@@ -146,6 +155,9 @@ python clipforge_bridge.py --port 8765 --out "D:/Clips" --cache "D:/proxies"
 
 Proxies are cached under `~/.clipforge/cache`, so re-opening a video you've already worked on is
 instant. Delete that folder any time to reclaim the space.
+
+Extracted clips go to `~/Videos/ClipForge_Output` (or `~/ClipForge_Output`), never the folder the
+launcher happened to start in — override with `--out`.
 
 ## Notes
 
