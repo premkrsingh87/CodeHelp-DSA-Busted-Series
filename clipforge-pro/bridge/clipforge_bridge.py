@@ -46,7 +46,7 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, unquote, parse_qs
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 # --------------------------------------------------------------------------
 #  Paths
@@ -165,7 +165,7 @@ def new_job(kind, meta=None):
         JOBS[jid] = {
             "id": jid, "kind": kind, "status": "queued", "pct": 0.0,
             "speed": "", "eta": "", "message": "Queued", "error": None,
-            "file": None, "files": [], "log": [], "cancel": False,
+            "file": None, "raw_file": None, "files": [], "log": [], "cancel": False,
             "created": time.time(), "meta": meta or {},
         }
     return jid
@@ -346,16 +346,104 @@ def worker_info(jid, url):
         job_set(jid, status="error", error=str(e)[:500])
 
 
-def worker_proxy(jid, url, video_id, height):
-    os.makedirs(CACHE_DIR, exist_ok=True)
-    stem = os.path.join(CACHE_DIR, "%s_%dp" % (sanitize(video_id, "video"), height))
+DUR_RE = re.compile(r"Duration:\s*(\d+):(\d\d):(\d\d\.\d+)")
+OUT_TIME_RE = re.compile(r"out_time_ms=(\d+)")
 
-    # Already cached? Serve instantly.
+
+def transcode_scrub(jid, src, dst, height, pct_from, pct_to):
+    """Re-encode the proxy with a keyframe every second.
+
+    Seeking a video costs a decode from the previous keyframe. yt-dlp's source
+    typically has them ~10s apart, which is why scrubbing a long video feels
+    laggy even at 240p. One keyframe per second makes every seek cheap - this is
+    exactly what an NLE's "proxy media" is for.
+    """
+    ff = find_tools()["ffmpeg"]
+    if not ff:
+        return False
+
+    cmd = [
+        ff, "-y", "-i", src,
+        "-vf", "scale=-2:%d" % height,
+        "-c:v", "libx264", "-preset", "veryfast", "-tune", "fastdecode",
+        "-crf", "30", "-pix_fmt", "yuv420p",
+        "-force_key_frames", "expr:gte(t,n_forced*1)",
+        "-c:a", "aac", "-b:a", "64k", "-ac", "1",
+        "-movflags", "+faststart",
+        "-progress", "pipe:1", "-nostats",
+        dst,
+    ]
+    job_log(jid, "$ " + " ".join(cmd))
+    job_set(jid, status="running", message="Optimising for scrubbing...", speed="", eta="")
+
+    creation = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            text=True, bufsize=1, encoding="utf-8",
+                            errors="replace", creationflags=creation)
+    with JOBS_LOCK:
+        if jid in JOBS:
+            JOBS[jid]["_proc"] = proc
+
+    total_s = 0.0
+    span = max(0.0, pct_to - pct_from)
+    for line in proc.stdout:
+        j = job_get(jid)
+        if j and j.get("cancel"):
+            try:
+                proc.terminate()
+            except Exception:
+                pass
+            return False
+        m = DUR_RE.search(line)
+        if m and not total_s:
+            total_s = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3))
+        m = OUT_TIME_RE.search(line)
+        if m and total_s:
+            done = int(m.group(1)) / 1_000_000.0
+            job_set(jid, pct=round(pct_from + span * min(1.0, done / total_s), 1),
+                    message="Optimising for scrubbing... %d%%"
+                            % int(100 * min(1.0, done / total_s)))
+    proc.wait()
+    ok = proc.returncode == 0 and os.path.isfile(dst) and os.path.getsize(dst) > 1024
+    if not ok:
+        job_log(jid, "[WARN] scrub transcode failed (exit %s); using the raw proxy"
+                % proc.returncode)
+    return ok
+
+
+def worker_proxy(jid, url, video_id, height, scrub=True):
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    base = sanitize(video_id, "video")
+    stem = os.path.join(CACHE_DIR, "%s_%dp" % (base, height))
+    scrub_path = os.path.join(CACHE_DIR, "%s_%dp_scrub.mp4" % (base, height))
+
+    # A previously optimised proxy is the best possible hit.
+    if os.path.isfile(scrub_path) and os.path.getsize(scrub_path) > 1024:
+        raw = next((stem + e for e in (".mp4", ".mkv", ".webm")
+                    if os.path.isfile(stem + e)), None)
+        job_set(jid, status="done", pct=100, message="Proxy ready (cached, scrub-optimised)",
+                file=scrub_path, raw_file=raw,
+                meta={"cached": True, "scrub": True, "size": os.path.getsize(scrub_path)})
+        return
+
+    # Otherwise a raw cached download still saves the network round trip.
     for ext in (".mp4", ".mkv", ".webm"):
         if os.path.isfile(stem + ext) and os.path.getsize(stem + ext) > 1024:
+            if scrub and find_tools()["ffmpeg"]:
+                if transcode_scrub(jid, stem + ext, scrub_path, height, 0, 99):
+                    job_set(jid, status="done", pct=100,
+                            message="Proxy ready (scrub-optimised)", file=scrub_path,
+                            raw_file=stem + ext,
+                            meta={"cached": True, "scrub": True,
+                                  "size": os.path.getsize(scrub_path)})
+                    return
+                if job_get(jid).get("cancel"):
+                    job_set(jid, status="cancelled", message="Cancelled")
+                    return
             job_set(jid, status="done", pct=100, message="Proxy ready (cached)",
                     file=stem + ext,
-                    meta={"cached": True, "size": os.path.getsize(stem + ext)})
+                    meta={"cached": True, "scrub": False,
+                          "size": os.path.getsize(stem + ext)})
             return
 
     tools = find_tools()
@@ -367,9 +455,11 @@ def worker_proxy(jid, url, video_id, height):
                  "--postprocessor-args", "ffmpeg:-movflags +faststart"]
     args += [url]
 
+    want_scrub = bool(scrub and tools["ffmpeg"])
+    dl_to = 60 if want_scrub else 96      # leave room for the optimise pass
     job_set(jid, status="running", message="Downloading %dp proxy..." % height)
     code = run_ytdlp(jid, args, phase_label="Downloading %dp proxy..." % height,
-                     pct_from=0, pct_to=96)
+                     pct_from=0, pct_to=dl_to)
 
     j = job_get(jid)
     if j and j.get("status") == "cancelled":
@@ -395,8 +485,18 @@ def worker_proxy(jid, url, video_id, height):
         job_set(jid, status="error", error="Proxy file not found after download")
         return
 
+    if want_scrub and transcode_scrub(jid, found, scrub_path, height, dl_to, 99):
+        job_set(jid, status="done", pct=100, message="Proxy ready (scrub-optimised)",
+                file=scrub_path, raw_file=found,
+                meta={"cached": False, "scrub": True,
+                      "size": os.path.getsize(scrub_path)})
+        return
+    if job_get(jid).get("cancel"):
+        job_set(jid, status="cancelled", message="Cancelled")
+        return
+
     job_set(jid, status="done", pct=100, message="Proxy ready", file=found,
-            meta={"cached": False, "size": os.path.getsize(found)})
+            meta={"cached": False, "scrub": False, "size": os.path.getsize(found)})
 
 
 def worker_extract(jid, payload):
@@ -549,7 +649,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"ok": True})
 
         if path.startswith("/file/"):
-            return self.serve_media(unquote(path[len("/file/"):]))
+            q = parse_qs(urlparse(self.path).query)
+            want_raw = (q.get("raw") or ["0"])[0] in ("1", "true", "yes")
+            return self.serve_media(unquote(path[len("/file/"):]), want_raw)
 
         if path == "/reveal":
             q = parse_qs(urlparse(self.path).query)
@@ -576,8 +678,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "url required"}, 400)
             height = int(data.get("height") or 240)
             vid = data.get("id") or re.sub(r"\W+", "", url)[-11:]
+            scrub = data.get("scrub", True)
             jid = new_job("proxy", {"url": url, "height": height, "id": vid})
-            threading.Thread(target=worker_proxy, args=(jid, url, vid, height),
+            threading.Thread(target=worker_proxy, args=(jid, url, vid, height, scrub),
                              daemon=True).start()
             return self._json({"job": jid})
 
@@ -596,9 +699,9 @@ class Handler(BaseHTTPRequestHandler):
         return self._json({"error": "not found"}, 404)
 
     # ---- media streaming with Range support (needed for <video> seeking) ----
-    def serve_media(self, jid):
+    def serve_media(self, jid, want_raw=False):
         j = job_get(jid)
-        fpath = (j or {}).get("file")
+        fpath = ((j or {}).get("raw_file") if want_raw else None) or (j or {}).get("file")
         if not fpath or not os.path.isfile(fpath):
             return self._json({"error": "file not ready"}, 404)
 

@@ -929,6 +929,11 @@
             opacity: 0.24;
         }
 
+        .tl-clip.looping {
+            outline: 2px dashed var(--success);
+            outline-offset: 2px;
+        }
+
         .tl-clip.dragging {
             cursor: grabbing;
             z-index: 30 !important;
@@ -1774,6 +1779,67 @@
         }
 
         /* ============ METHOD CARDS ============ */
+        .method-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .method-chip {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 8px;
+            border-radius: 9px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.18s ease;
+            text-align: left;
+            min-width: 0;
+        }
+
+        .method-chip:hover {
+            border-color: var(--border-light);
+        }
+
+        .method-chip.selected {
+            border-color: var(--accent);
+            background: rgba(124, 92, 252, 0.09);
+            box-shadow: 0 0 12px rgba(124, 92, 252, 0.16);
+        }
+
+        .method-chip-ico {
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .method-chip-txt {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .method-chip-txt b {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .method-chip-txt i {
+            font-size: 8.5px;
+            font-style: normal;
+            color: var(--text-secondary);
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         .method-card {
             background: var(--bg-secondary);
             border: 2px solid var(--border);
@@ -2053,6 +2119,137 @@
             animation: fadeIn 0.3s ease;
         }
 
+        .job-dock-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .job-dock-title {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent-light);
+        }
+
+        .job-cancel-all {
+            background: none;
+            border: none;
+            color: var(--danger);
+            font-size: 10px;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .job-cancel-all:hover {
+            text-decoration: underline;
+        }
+
+        .job-row {
+            padding: 7px 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .job-row:first-of-type {
+            border-top: none;
+        }
+
+        .job-row-top {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .job-row-label {
+            font-size: 11px;
+            font-weight: 700;
+            flex: 1 1 0%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .job-row-x {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 11px;
+            padding: 0 2px;
+        }
+
+        .job-row-x:hover {
+            color: var(--danger);
+        }
+
+        .job-row-msg {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin: 2px 0 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .job-row-bar {
+            height: 5px;
+        }
+
+        .job-row-meta {
+            font-size: 9px;
+            color: var(--text-secondary);
+            margin-top: 3px;
+        }
+
+        /* inline download progress on a queue card */
+        .queue-progress {
+            height: 3px;
+            background: var(--bg-hover);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .queue-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--yt), var(--warning));
+            width: 0%;
+            transition: width 0.25s ease;
+        }
+
+        .keys-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 16px 22px;
+        }
+
+        .keys-sect h4 {
+            font-size: 9.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--accent-light);
+            margin-bottom: 7px;
+        }
+
+        .keys-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 3px 0;
+            font-size: 11.5px;
+            color: var(--text-secondary);
+        }
+
+        .keys-row span:last-child {
+            display: flex;
+            gap: 3px;
+            flex-shrink: 0;
+        }
+
         .modal-backdrop {
             position: fixed;
             inset: 0;
@@ -2277,12 +2474,15 @@
                 <div class="flex items-center gap-2 mt-2 text-[10px] text-[var(--text-secondary)] flex-wrap">
                     <span class="key-hint">M</span> split ·
                     <span class="key-hint">I</span>/<span class="key-hint">O</span> in-out ·
-                    <span class="key-hint">S</span>/<span class="key-hint">D</span> select ·
+                    <span class="key-hint">[</span>/<span class="key-hint">]</span> trim ·
+                    <span class="key-hint">L</span> loop ·
+                    <span class="key-hint">Z</span> zoom to clip ·
+                    <span class="key-hint">S</span>/<span class="key-hint">D</span> keep-skip ·
                     <span class="key-hint">Space</span> play ·
-                    <span class="key-hint">←→</span> 1s ·
                     <span class="key-hint">⇧←→</span> frame ·
-                    <span class="key-hint">↑↓</span> clip ·
-                    <span class="key-hint">Ctrl+Z</span> undo
+                    <button onclick="openShortcuts()"
+                        class="underline hover:text-[var(--accent-light)] cursor-pointer">all shortcuts
+                        <span class="key-hint">?</span></button>
                 </div>
             </section>
 
@@ -2355,72 +2555,37 @@
 
                 <!-- split methods -->
                 <div class="card p-4">
-                    <h3 class="font-semibold text-[10px] text-[var(--text-secondary)] uppercase tracking-widest mb-3">
+                    <h3 class="font-semibold text-[10px] text-[var(--text-secondary)] uppercase tracking-widest mb-2">
                         Split Method</h3>
-                    <div class="space-y-1.5">
-                        <div class="method-card selected" data-method="manual" onclick="selectMethod('manual')">
-                            <div class="flex items-center gap-2">
-                                <span>🎯</span>
-                                <div>
-                                    <p class="font-semibold text-[11px]">Manual</p>
-                                    <p class="text-[9px] text-[var(--text-secondary)]">Watch &amp; press M / I-O</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="method-card" data-method="chapters" onclick="selectMethod('chapters')">
-                            <div class="flex items-center gap-2">
-                                <span>📑</span>
-                                <div>
-                                    <p class="font-semibold text-[11px]">YouTube Chapters</p>
-                                    <p class="text-[9px] text-[var(--text-secondary)]">Instant clips from chapters</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="method-card" data-method="auto" onclick="selectMethod('auto')">
-                            <div class="flex items-center gap-2">
-                                <span>🤖</span>
-                                <div>
-                                    <p class="font-semibold text-[11px]">Auto Scene Detect</p>
-                                    <p class="text-[9px] text-[var(--text-secondary)]">Frame-by-frame analysis</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="method-card" data-method="silence" onclick="selectMethod('silence')">
-                            <div class="flex items-center gap-2">
-                                <span>🔊</span>
-                                <div>
-                                    <p class="font-semibold text-[11px]">Audio / Silence</p>
-                                    <p class="text-[9px] text-[var(--text-secondary)]">Cut on speech pauses</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="method-card" data-method="interval" onclick="selectMethod('interval')">
-                            <div class="flex items-center gap-2">
-                                <span>⏱</span>
-                                <div>
-                                    <p class="font-semibold text-[11px]">Fixed Interval</p>
-                                    <p class="text-[9px] text-[var(--text-secondary)]">Every N seconds</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="method-card" data-method="count" onclick="selectMethod('count')">
-                            <div class="flex items-center gap-2">
-                                <span>🔢</span>
-                                <div>
-                                    <p class="font-semibold text-[11px]">Equal Parts</p>
-                                    <p class="text-[9px] text-[var(--text-secondary)]">N clips of equal length</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="method-card" data-method="custom" onclick="selectMethod('custom')">
-                            <div class="flex items-center gap-2">
-                                <span>📝</span>
-                                <div>
-                                    <p class="font-semibold text-[11px]">Paste Timestamps</p>
-                                    <p class="text-[9px] text-[var(--text-secondary)]">00:00-00:41 per line</p>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="method-grid">
+                        <button class="method-chip selected" data-method="manual" onclick="selectMethod('manual')" title="Watch &amp; press M">
+                            <span class="method-chip-ico">🎯</span>
+                            <span class="method-chip-txt"><b>Manual</b><i>Watch &amp; press M</i></span>
+                        </button>
+                        <button class="method-chip" data-method="chapters" onclick="selectMethod('chapters')" title="From YouTube">
+                            <span class="method-chip-ico">📑</span>
+                            <span class="method-chip-txt"><b>Chapters</b><i>From YouTube</i></span>
+                        </button>
+                        <button class="method-chip" data-method="auto" onclick="selectMethod('auto')" title="Frame analysis">
+                            <span class="method-chip-ico">🤖</span>
+                            <span class="method-chip-txt"><b>Auto Scenes</b><i>Frame analysis</i></span>
+                        </button>
+                        <button class="method-chip" data-method="silence" onclick="selectMethod('silence')" title="Speech pauses">
+                            <span class="method-chip-ico">🔊</span>
+                            <span class="method-chip-txt"><b>Silence</b><i>Speech pauses</i></span>
+                        </button>
+                        <button class="method-chip" data-method="interval" onclick="selectMethod('interval')" title="Every N sec">
+                            <span class="method-chip-ico">⏱</span>
+                            <span class="method-chip-txt"><b>Interval</b><i>Every N sec</i></span>
+                        </button>
+                        <button class="method-chip" data-method="count" onclick="selectMethod('count')" title="N clips">
+                            <span class="method-chip-ico">🔢</span>
+                            <span class="method-chip-txt"><b>Equal Parts</b><i>N clips</i></span>
+                        </button>
+                        <button class="method-chip" data-method="custom" onclick="selectMethod('custom')" title="Paste a list">
+                            <span class="method-chip-ico">📝</span>
+                            <span class="method-chip-txt"><b>Timestamps</b><i>Paste a list</i></span>
+                        </button>
                     </div>
 
                     <div id="intervalSettings" class="hidden mt-3 space-y-2">
@@ -2489,6 +2654,10 @@
                         Ripple edges</button>
                     <button class="fs-ctrl" id="waveBtn" onclick="toggleWaveform()"
                         title="Draw the audio waveform behind the timeline">🔊 Waveform</button>
+                    <button class="fs-ctrl" id="fsEnableBtn" onclick="toggleFilmstripEnabled()"
+                        title="Filmstrip is off (saves memory). Click to build one for this video.">🎞 Filmstrip
+                        OFF</button>
+                    <button class="fs-ctrl" onclick="openShortcuts()" title="Keyboard shortcuts (?)">⌨ Keys</button>
                     <div class="h-4 w-px bg-[var(--border)]"></div>
                     <span class="text-[10px] text-[var(--text-secondary)]">Zoom</span>
                     <button class="zoom-btn" onclick="zoomTimeline(-1)" title="Zoom out">−</button>
@@ -2835,21 +3004,18 @@ start_bridge.bat
     </main>
 
     <!-- ============ JOB DOCK ============ -->
-    <div class="job-dock" id="jobDock">
-        <div class="flex items-start gap-3">
-            <div class="mini-spinner mt-0.5" id="jobSpinner"></div>
-            <div class="flex-1 min-w-0">
-                <p class="text-xs font-bold" id="jobTitle">Working…</p>
-                <p class="text-[10px] text-[var(--text-secondary)] mt-0.5 truncate" id="jobMsg">Starting</p>
-                <div class="progress-bar-outer mt-2">
-                    <div class="progress-bar-fill yt" id="jobBar" style="width:0%"></div>
-                </div>
-                <div class="flex justify-between items-center mt-1">
-                    <span class="text-[9px] mono text-[var(--text-secondary)]" id="jobMeta"></span>
-                    <button onclick="cancelActiveJob()" class="text-[9px] text-[var(--danger)] hover:underline"
-                        id="jobCancel">✕ cancel</button>
-                </div>
+    <div class="job-dock" id="jobDock"></div>
+
+    <!-- ============ SHORTCUTS ============ -->
+    <div class="modal-backdrop" id="keysModal" onclick="if(event.target===this)closeShortcuts()">
+        <div class="modal-box" style="max-width:760px">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold flex items-center gap-2">⌨ Keyboard shortcuts</h3>
+                <button onclick="closeShortcuts()" class="text-[var(--text-secondary)] hover:text-white text-xl">✕</button>
             </div>
+            <div class="keys-grid" id="keysGrid"></div>
+            <p class="text-[11px] text-[var(--text-secondary)] mt-4">Shortcuts are ignored while you are typing in a
+                text box. Press <span class="key-hint">?</span> any time to reopen this.</p>
         </div>
     </div>
 
@@ -2961,6 +3127,7 @@ start_bridge.bat
         var inPoint = null, outPoint = null;
 
         var proxyHeight = 240;
+        var scrubProxy = true;      // re-encode proxies with 1s keyframes (3x faster scrubbing)
         var engine = 'ytdlp';     // 'ytdlp' | 'ffmpeg'
         var quality = 'best';
         var container = 'mp4';
@@ -2997,7 +3164,7 @@ start_bridge.bat
                 'clipsList', 'queueList', 'scriptOutput', 'waveformCanvas',
                 'filmstripStrip', 'filmstripScroll', 'filmstripContainer', 'framePreview',
                 'fpCanvas', 'fpTimeBadge', 'fpPos', 'fpPct', 'fpClipInfo', 'fpClipBadge',
-                'dragTooltip', 'jobDock', 'jobTitle', 'jobMsg', 'jobBar', 'jobMeta',
+                'dragTooltip', 'jobDock',
                 'bridgeChip', 'bridgeChipText', 'videoWrap'
             ].forEach(function (id) { D[id] = document.getElementById(id); });
         }
@@ -3238,33 +3405,108 @@ start_bridge.bat
         }
 
         /* ==========================================================
-         *  JOB DOCK
+         *  JOB REGISTRY
+         *  Many jobs run at once (a proxy per video, an extraction, an audio
+         *  decode). Each owns its own record, so one finishing can never wipe
+         *  another's progress - that was the multi-video "glitch".
          * ========================================================== */
-        var activeJob = null;
+        var Jobs = {};            // localId -> record
+        var jobSeq = 0;
 
-        function showJob(title, msg) {
-            D.jobTitle.textContent = title;
-            D.jobMsg.textContent = msg || '';
-            D.jobBar.style.width = '0%';
-            D.jobMeta.textContent = '';
-            D.jobDock.classList.add('active');
+        function jobStart(opts) {
+            var id = 'j' + (++jobSeq);
+            Jobs[id] = {
+                id: id, bridgeId: null, kind: opts.kind || 'task',
+                label: opts.label || 'Working', message: opts.message || 'Starting…',
+                videoUid: opts.videoUid || null, pct: 0, speed: '', eta: '',
+                status: 'running', started: Date.now(), cancellable: opts.cancellable !== false
+            };
+            renderJobDock();
+            return id;
         }
-        function updateJob(job) {
-            if (!job) return;
-            D.jobMsg.textContent = job.message || job.status;
-            D.jobBar.style.width = (job.pct || 0) + '%';
-            var bits = [];
-            if (job.speed) bits.push(job.speed);
-            if (job.eta) bits.push('ETA ' + job.eta);
-            bits.push((job.pct || 0).toFixed(0) + '%');
-            D.jobMeta.textContent = bits.join(' · ');
-        }
-        function hideJob() { D.jobDock.classList.remove('active'); activeJob = null; }
 
-        async function cancelActiveJob() {
-            if (!activeJob) { hideJob(); return; }
-            try { await bridgeGet('/cancel/' + activeJob, 5000); } catch (e) { }
-            notify('Cancelling…', 'warning');
+        function jobPatch(id, patch) {
+            var j = Jobs[id];
+            if (!j) return;
+            for (var k in patch) if (Object.prototype.hasOwnProperty.call(patch, k)) j[k] = patch[k];
+            renderJobDock();
+            if (j.videoUid) {
+                updateQueueProgress(j.videoUid);
+                if (V() && V().uid === j.videoUid) syncProxyPanel();
+            }
+        }
+
+        /** Copy a bridge progress payload into a local job record. */
+        function jobFromBridge(id, bj) {
+            jobPatch(id, {
+                pct: bj.pct || 0, message: bj.message || bj.status || '',
+                speed: bj.speed || '', eta: bj.eta || ''
+            });
+        }
+
+        function jobEnd(id) {
+            var j = Jobs[id];
+            if (!j) return;
+            var uid = j.videoUid;
+            delete Jobs[id];
+            renderJobDock();
+            if (uid) {
+                updateQueueProgress(uid);
+                if (V() && V().uid === uid) syncProxyPanel();
+            }
+        }
+
+        function activeJobs() {
+            return Object.keys(Jobs).map(function (k) { return Jobs[k]; });
+        }
+        function jobForVideo(uid) {
+            return activeJobs().find(function (j) { return j.videoUid === uid; }) || null;
+        }
+        function jobsOfKind(kind) {
+            return activeJobs().filter(function (j) { return j.kind === kind; });
+        }
+
+        async function cancelJob(id) {
+            var j = Jobs[id];
+            if (!j) return;
+            jobPatch(id, { message: 'Cancelling…', status: 'cancelling' });
+            if (j.bridgeId) { try { await bridgeGet('/cancel/' + j.bridgeId, 5000); } catch (e) { } }
+        }
+
+        /** The dock lists every running job, each with its own bar and cancel. */
+        function renderJobDock() {
+            var dock = D.jobDock;
+            if (!dock) return;
+            var list = activeJobs();
+            if (!list.length) { dock.classList.remove('active'); dock.innerHTML = ''; return; }
+            dock.classList.add('active');
+            var html = '<div class="job-dock-head">'
+                + '<span class="job-dock-title">' + list.length + ' task'
+                + (list.length > 1 ? 's' : '') + ' running</span>'
+                + (list.length > 1
+                    ? '<button class="job-cancel-all" onclick="cancelAllJobs()">cancel all</button>' : '')
+                + '</div>';
+            list.forEach(function (j) {
+                var meta = [j.speed, j.eta ? 'ETA ' + j.eta : '', (j.pct || 0).toFixed(0) + '%']
+                    .filter(Boolean).join(' · ');
+                html += '<div class="job-row">'
+                    + '<div class="job-row-top">'
+                    + '<span class="job-row-label" title="' + esc(j.label) + '">' + esc(j.label) + '</span>'
+                    + (j.cancellable
+                        ? '<button class="job-row-x" onclick="cancelJob(\'' + j.id + '\')" title="Cancel">✕</button>'
+                        : '')
+                    + '</div>'
+                    + '<div class="job-row-msg">' + esc(j.message || '') + '</div>'
+                    + '<div class="progress-bar-outer job-row-bar"><div class="progress-bar-fill yt" style="width:'
+                    + (j.pct || 0) + '%"></div></div>'
+                    + '<div class="job-row-meta mono">' + esc(meta) + '</div>'
+                    + '</div>';
+            });
+            dock.innerHTML = html;
+        }
+
+        function cancelAllJobs() {
+            activeJobs().forEach(function (j) { cancelJob(j.id); });
         }
 
         /* ==========================================================
@@ -3414,7 +3656,17 @@ start_bridge.bat
                 }
             };
             el.onerror = function () {
-                notify('Could not play that file — try a different proxy quality or container', 'error');
+                // A browser without H.264 cannot play the scrub-optimised proxy.
+                // Fall back to the raw download once before giving up.
+                if (v.source === 'proxy' && !v._triedRaw && /\/file\//.test(v.mediaUrl || '')) {
+                    v._triedRaw = true;
+                    v.mediaUrl = v.mediaUrl.split('?')[0] + '?raw=1';
+                    releaseMedia(v.uid);
+                    notify('Using the un-optimised proxy (this browser cannot decode the optimised one)', 'warning');
+                    mountHtml5(v);
+                    return;
+                }
+                notify('Could not play that file — try a different proxy quality', 'error');
             };
             try { el.load(); } catch (e) { }
         }
@@ -3537,8 +3789,13 @@ start_bridge.bat
         function selectVideo(i) {
             if (i < 0 || i >= videos.length) return;
             if (cur === i && P.mode !== 'none') { renderQueue(); return; }
+            var prev = V();
             cur = i;
             selClip = -1; inPoint = null; outPoint = null;
+            loopClipId = null; previewStopAt = null;
+            if (thumbObserver) { thumbObserver.disconnect(); thumbObserver = null; }
+            thumbToken++; fsToken++;
+            if (prev && prev !== videos[i]) trimMediaPool();
             var v = videos[i];
             timelineZoom = 1;
             P.teardown();
@@ -3549,7 +3806,8 @@ start_bridge.bat
                 updatePlayerUI();
             }
             renderQueue(); renderRuler(); renderTimeline(); renderClips();
-            updateChaptersUI(); updateProxyUI(); regenerateScript(); updateStats();
+            updateChaptersUI(); updateProxyUI(); syncProxyPanel();
+            regenerateScript(); updateStats();
             D.filmstripContainer.style.display = 'none';
             D.framePreview.style.display = 'none';
             if (canReadFrames()) { initFramePreview(); rebuildFilmstrip(); }
@@ -3600,7 +3858,10 @@ start_bridge.bat
                 if (v.busy) { tagClass = 'loading'; tagText = '⏳ ' + v.busy; }
                 var title = v.title || (v.kind === 'local' ? v.fileName : ('Video ' + (i + 1)));
                 var sel = v.clips.filter(function (c) { return c.sel; }).length;
-                return '<div class="queue-item ' + (i === cur ? 'active' : '') + '" onclick="selectVideo(' + i + ')">'
+                var job = jobForVideo(v.uid);
+                if (job) { tagClass = 'loading'; tagText = '⏳ ' + (job.pct || 0).toFixed(0) + '%'; }
+                return '<div class="queue-item ' + (i === cur ? 'active' : '') + '" data-uid="' + v.uid
+                    + '" onclick="selectVideo(' + i + ')">'
                     + '<div class="flex items-start gap-2.5">'
                     + (v.thumbnail
                         ? '<img class="queue-thumb" src="' + esc(v.thumbnail) + '" alt="" loading="lazy" onerror="this.outerHTML=\'<div class=&quot;queue-thumb-ph&quot;>🎬</div>\'">'
@@ -3615,7 +3876,11 @@ start_bridge.bat
                     + '<span class="src-tag ' + tagClass + '">' + tagText + '</span>'
                     + '<span class="text-[9.5px] text-[var(--accent-light)] font-bold">' + v.clips.length + ' clip'
                     + (v.clips.length === 1 ? '' : 's') + (v.clips.length ? ' · ' + sel + ' on' : '') + '</span>'
-                    + '</div></div>'
+                    + '</div>'
+                    + '<div class="queue-progress" style="display:' + (job ? '' : 'none') + '">'
+                    + '<div class="queue-progress-fill" style="width:' + (job ? (job.pct || 0) : 0) + '%"></div>'
+                    + '</div>'
+                    + '</div>'
                     + '<button onclick="removeVideo(' + i + ',event)" class="text-[var(--text-secondary)] hover:text-[var(--danger)] p-1 text-xs" title="Remove">✕</button>'
                     + '</div></div>';
             }).join('');
@@ -3709,6 +3974,7 @@ start_bridge.bat
             $('getProxyBtn').disabled = !on || !isYT;
             $('getAllProxiesBtn').disabled = !on || !videos.some(function (x) { return x.kind === 'yt'; });
             $('proxyOfflineNote').classList.toggle('hidden', !!on);
+            syncProxyPanel();
             if (!on) {
                 var noYtdlp = Bridge.online && Bridge.health && !Bridge.health.ytdlp;
                 $('proxyOfflineTitle').textContent = noYtdlp ? '\u26a0 yt-dlp not installed' : '\u26a0 Bridge offline';
@@ -3726,68 +3992,113 @@ start_bridge.bat
                 : 'Needs the local bridge — use the .bat script instead';
         }
 
-        var proxyCancelJob = null;
-
-        function showProxyProgress(show, label) {
-            $('proxyProgressWrap').classList.toggle('hidden', !show);
-            if (label) $('proxyProgressLabel').textContent = label;
-            if (!show) {
+        /** The proxy panel always reflects the CURRENT video, looked up live -
+         *  never a value captured when some other download started. */
+        function syncProxyPanel() {
+            var v = V();
+            var job = v ? jobForVideo(v.uid) : null;
+            var wrap = $('proxyProgressWrap');
+            if (!job) {
+                wrap.classList.add('hidden');
                 $('proxyProgressBar').style.width = '0%';
                 $('proxyProgressPct').textContent = '0%';
                 $('proxyProgressMeta').textContent = '';
+                return;
             }
+            wrap.classList.remove('hidden');
+            $('proxyProgressLabel').textContent = job.label;
+            $('proxyProgressBar').style.width = (job.pct || 0) + '%';
+            $('proxyProgressPct').textContent = (job.pct || 0).toFixed(0) + '%';
+            $('proxyProgressMeta').textContent =
+                [job.speed, job.eta ? 'ETA ' + job.eta : ''].filter(Boolean).join(' · ')
+                || (job.message || '');
         }
 
-        async function cancelProxy() {
-            if (proxyCancelJob) { try { await bridgeGet('/cancel/' + proxyCancelJob, 5000); } catch (e) { } }
+        function cancelProxy() {
+            var v = V();
+            var job = v ? jobForVideo(v.uid) : null;
+            if (!job) return;
+            cancelJob(job.id);
             notify('Cancelling proxy download…', 'warning');
         }
 
-        /** Download (or reuse) the low-res proxy for one video and load it. */
+        /** Inline progress on the queue card, so you can see other videos
+         *  downloading while you edit this one. */
+        function updateQueueProgress(uid) {
+            var row = D.queueList.querySelector('[data-uid="' + uid + '"]');
+            if (!row) return;
+            var job = jobForVideo(uid);
+            var bar = row.querySelector('.queue-progress-fill');
+            var wrap = row.querySelector('.queue-progress');
+            var tag = row.querySelector('.src-tag');
+            if (!wrap) return;
+            if (!job) { wrap.style.display = 'none'; return; }
+            wrap.style.display = '';
+            if (bar) bar.style.width = (job.pct || 0) + '%';
+            if (tag) {
+                tag.className = 'src-tag loading';
+                tag.textContent = '⏳ ' + (job.pct || 0).toFixed(0) + '%';
+            }
+        }
+
+        /** Download (or reuse) the low-res proxy for one video.
+         *  Fully re-entrant: several of these can be in flight at once and the
+         *  user can keep editing any other video meanwhile. */
         async function fetchProxy(v, silent) {
             if (!Bridge.online) { await checkBridge(true); }
-            if (!Bridge.online) { notify('Bridge offline — see Setup', 'error'); openSetup(); return false; }
-            if (!Bridge.health.ytdlp) { notify('yt-dlp is not installed on the bridge', 'error'); openSetup(); return false; }
-            if (v.kind !== 'yt') { notify('That entry is already a local file', 'warning'); return false; }
+            if (!Bridge.online) {
+                if (!silent) { notify('Bridge offline — see Setup', 'error'); openSetup(); }
+                return false;
+            }
+            if (!Bridge.health.ytdlp) {
+                if (!silent) { notify('yt-dlp is not installed on the bridge', 'error'); openSetup(); }
+                return false;
+            }
+            if (v.kind !== 'yt') { if (!silent) notify('That entry is already a local file', 'warning'); return false; }
+            if (jobForVideo(v.uid)) { if (!silent) notify('Already downloading that one', 'info'); return false; }
 
-            v.busy = 'proxy'; renderQueue();
-            var isCurrent = (videos[cur] === v);
-            if (isCurrent) showProxyProgress(true, 'Fetching ' + proxyHeight + 'p proxy…');
-            showJob('Proxy · ' + (v.title || v.id), 'Starting…');
+            var wantHeight = proxyHeight;
+            var jid = jobStart({
+                kind: 'proxy', videoUid: v.uid,
+                label: '⚡ ' + wantHeight + 'p · ' + (v.title || v.id),
+                message: 'Starting…'
+            });
+            v.busy = 'proxy';
+            renderQueue();
 
             try {
-                var start = await bridgePost('/proxy', { url: v.url, id: v.id, height: proxyHeight });
-                proxyCancelJob = start.job; activeJob = start.job;
-                var job = await pollJob(start.job, function (j) {
-                    updateJob(j);
-                    if (isCurrent) {
-                        $('proxyProgressBar').style.width = (j.pct || 0) + '%';
-                        $('proxyProgressPct').textContent = (j.pct || 0).toFixed(0) + '%';
-                        $('proxyProgressMeta').textContent =
-                            [j.speed, j.eta ? 'ETA ' + j.eta : ''].filter(Boolean).join(' · ') || (j.message || '');
-                    }
-                });
+                var startRes = await bridgePost('/proxy',
+                    { url: v.url, id: v.id, height: wantHeight, scrub: scrubProxy });
+                jobPatch(jid, { bridgeId: startRes.job });
 
-                v.busy = null; proxyCancelJob = null;
-                hideJob();
-                if (isCurrent) showProxyProgress(false);
+                var job = await pollJob(startRes.job, function (bj) { jobFromBridge(jid, bj); });
+
+                v.busy = null;
+                jobEnd(jid);
 
                 if (job.status !== 'done') {
                     renderQueue();
-                    notify(job.status === 'cancelled' ? 'Proxy cancelled'
-                        : ('Proxy failed: ' + (job.error || 'unknown error')),
-                        job.status === 'cancelled' ? 'warning' : 'error');
+                    if (!silent || job.status === 'error') {
+                        notify(job.status === 'cancelled'
+                            ? 'Proxy cancelled · ' + (v.title || v.id)
+                            : 'Proxy failed: ' + (job.error || 'unknown error'),
+                            job.status === 'cancelled' ? 'warning' : 'error');
+                    }
                     return false;
                 }
 
                 if (v.mediaUrl && v.mediaUrl.startsWith('blob:')) URL.revokeObjectURL(v.mediaUrl);
+                releaseMedia(v.uid);                 // drop any decoder bound to the old source
                 v.source = 'proxy';
-                v.proxyHeight = proxyHeight;
+                v.proxyHeight = wantHeight;
                 v.mediaUrl = bridgeUrl('/file/' + job.id);
                 v.file = null;
-                v.filmstrip = []; v.waveform = null;
+                v.filmstrip = []; v.waveform = null; v._thumbs = {}; v._triedRaw = false;
                 renderQueue();
-                if (videos[cur] === v) mountHtml5(v);
+
+                // Only touch the player if this video is still the one on screen.
+                if (V() === v) mountHtml5(v);
+
                 if (!silent) {
                     var mb = job.meta && job.meta.size ? (job.meta.size / 1048576).toFixed(1) + ' MB' : '';
                     notify('Proxy ready' + (mb ? ' · ' + mb : '')
@@ -3795,8 +4106,8 @@ start_bridge.bat
                 }
                 return true;
             } catch (e) {
-                v.busy = null; proxyCancelJob = null; hideJob();
-                if (isCurrent) showProxyProgress(false);
+                v.busy = null;
+                jobEnd(jid);
                 renderQueue();
                 notify('Proxy request failed: ' + e.message, 'error');
                 return false;
@@ -3809,16 +4120,33 @@ start_bridge.bat
             fetchProxy(v, false);
         }
 
-        async function fetchProxiesForAll() {
-            var pending = videos.filter(function (v) { return v.kind === 'yt' && v.source !== 'proxy'; });
+        /** Queue every missing proxy and run them a few at a time. Returns
+         *  immediately so the UI stays completely free. */
+        var PROXY_CONCURRENCY = 2;
+
+        function fetchProxiesForAll() {
+            var pending = videos.filter(function (v) {
+                return v.kind === 'yt' && v.source !== 'proxy' && !jobForVideo(v.uid);
+            });
             if (!pending.length) { notify('Every video already has a proxy', 'info'); return; }
-            notify('Fetching ' + pending.length + ' proxy copies…', 'info');
-            var ok = 0;
-            for (var i = 0; i < pending.length; i++) {
-                var done = await fetchProxy(pending[i], true);
-                if (done) ok++;
+            notify('Queued ' + pending.length + ' proxy download'
+                + (pending.length > 1 ? 's' : '') + ' — keep working, they run in the background', 'info');
+
+            var i = 0, done = 0, ok = 0;
+            function pump() {
+                if (i >= pending.length) return;
+                var v = pending[i++];
+                fetchProxy(v, true).then(function (good) {
+                    if (good) ok++;
+                    done++;
+                    if (done === pending.length) {
+                        notify('Proxies ready for ' + ok + '/' + pending.length + ' videos',
+                            ok ? 'success' : 'error');
+                    }
+                    pump();
+                });
             }
-            notify('Proxies ready for ' + ok + '/' + pending.length + ' videos', ok ? 'success' : 'error');
+            for (var k = 0; k < Math.min(PROXY_CONCURRENCY, pending.length); k++) pump();
         }
 
         async function useEmbedForCurrent() {
@@ -4044,7 +4372,8 @@ start_bridge.bat
             list.forEach(function (c, i) {
                 var color = COLORS[i % COLORS.length];
                 var el = document.createElement('div');
-                el.className = 'tl-clip' + (i === selClip ? ' selected' : '') + (c.sel ? '' : ' deselected');
+                el.className = 'tl-clip' + (i === selClip ? ' selected' : '') + (c.sel ? '' : ' deselected')
+                    + (loopClipId === c.id ? ' looping' : '');
                 el.dataset.idx = i;
                 var wpct = Math.max(0.05, (c.end - c.start) / d * 100);
                 el.style.cssText = 'left:' + (c.start / d * 100) + '%;width:' + wpct + '%;'
@@ -4120,33 +4449,61 @@ start_bridge.bat
         }
 
         /* ---- playhead drag ---- */
+        /* Scrubbing rule: the bar must follow the cursor at screen rate, but the
+           decoder must NOT be asked to seek at screen rate. A seek on a long
+           video costs 25-150ms, so 60/sec guarantees the picture falls behind
+           and the whole UI feels laggy. Visual position updates every frame;
+           the actual decode is throttled and uses fastSeek where available. */
+        var SCRUB_SEEK_MS = 70;
+
+        function scrubSeek(t, force) {
+            var el = D.localVideo;
+            if (P.mode === 'yt') { P.seek(t); return; }
+            if (P.mode !== 'html5') return;
+            if (force || typeof el.fastSeek !== 'function') {
+                try { el.currentTime = t; } catch (e) { }
+            } else {
+                try { el.fastSeek(t); } catch (e) { try { el.currentTime = t; } catch (e2) { } }
+            }
+        }
+
         function initPlayheadDrag() {
             var ph = D.playhead;
-            var rect = null, wasPlaying = false, pending = 0, scheduled = false;
+            var rect = null, wasPlaying = false, pending = 0;
+            var lastSeek = 0, timer = null;
+
             ph.addEventListener('mousedown', function (e) {
                 if (!duration()) return;
                 e.preventDefault(); e.stopPropagation();
                 draggingPlayhead = true;
+                previewStopAt = null;
                 wasPlaying = !P.paused();
                 if (wasPlaying) P.pause();
                 ph.classList.add('dragging');
                 document.body.style.userSelect = 'none';
                 rect = D.timeline.getBoundingClientRect();
+                lastSeek = 0;
 
                 function move(ev) {
                     if (!draggingPlayhead) return;
                     var pct = clamp((ev.clientX - rect.left) / rect.width, 0, 1);
                     pending = pct * duration();
+                    // instant, decode-free feedback
                     ph.style.left = (pct * 100) + '%';
                     var s = fmtMs(pending);
                     D.currentTime.textContent = s;
                     D.playheadTooltip.textContent = s;
-                    if (!scheduled) {
-                        scheduled = true;
-                        requestAnimationFrame(function () {
-                            scheduled = false;
-                            if (draggingPlayhead) P.seek(pending);
-                        });
+                    updateFilmstripPlayhead(pending);
+
+                    var now = performance.now();
+                    if (now - lastSeek >= SCRUB_SEEK_MS) {
+                        lastSeek = now;
+                        scrubSeek(pending, false);
+                    } else if (!timer) {
+                        timer = setTimeout(function () {
+                            timer = null;
+                            if (draggingPlayhead) { lastSeek = performance.now(); scrubSeek(pending, false); }
+                        }, SCRUB_SEEK_MS - (now - lastSeek));
                     }
                 }
                 function up() {
@@ -4155,7 +4512,9 @@ start_bridge.bat
                     document.body.style.userSelect = '';
                     document.removeEventListener('mousemove', move);
                     document.removeEventListener('mouseup', up);
-                    P.seek(pending);
+                    if (timer) { clearTimeout(timer); timer = null; }
+                    scrubSeek(pending, true);          // land exactly, not on a keyframe
+                    syncPlayhead(pending);
                     if (wasPlaying) P.play();
                 }
                 document.addEventListener('mousemove', move);
@@ -4308,6 +4667,44 @@ start_bridge.bat
         }
         function hideDragTooltip() { D.dragTooltip.classList.remove('visible'); }
 
+        /** Ctrl+wheel zooms around the pointer; Shift+wheel scrolls the timeline. */
+        function initTimelineWheel() {
+            D.timelineScroll.addEventListener('wheel', function (e) {
+                var d = duration();
+                if (!d) return;
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    var rect = D.timeline.getBoundingClientRect();
+                    var anchorT = clamp((e.clientX - rect.left) / rect.width, 0, 1) * d;
+                    var before = timelineZoom;
+                    timelineZoom = clamp(timelineZoom * (e.deltaY < 0 ? 1.25 : 0.8), 1, 120);
+                    if (timelineZoom === before) return;
+                    $('zoomLabel').textContent = timelineZoom <= 1 ? '1x' : timelineZoom.toFixed(1) + 'x';
+                    D.timeline.style.width = (timelineZoom * 100) + '%';
+                    renderRuler(); renderTimeline(); syncFilmstripWidth();
+                    // keep the time under the cursor under the cursor
+                    var sc = D.timelineScroll;
+                    sc.scrollLeft = Math.max(0,
+                        (anchorT / d) * D.timeline.offsetWidth - (e.clientX - sc.getBoundingClientRect().left));
+                } else if (e.shiftKey) {
+                    e.preventDefault();
+                    D.timelineScroll.scrollLeft += e.deltaY;
+                }
+            }, { passive: false });
+        }
+
+        /** While playing zoomed in, keep the playhead on screen. */
+        function followPlayhead(t) {
+            if (timelineZoom <= 1 || draggingPlayhead || dragState) return;
+            var d = duration(); if (!d) return;
+            var sc = D.timelineScroll;
+            var x = (t / d) * D.timeline.offsetWidth;
+            var left = sc.scrollLeft, right = left + sc.clientWidth;
+            if (x < left + 60 || x > right - 60) {
+                sc.scrollLeft = Math.max(0, x - sc.clientWidth / 2);
+            }
+        }
+
         /* ---- playhead sync loop ---- */
         function startPlayheadLoop() {
             var last = -1;
@@ -4318,6 +4715,7 @@ start_bridge.bat
                         last = t;
                         syncPlayhead(t);
                         if (filmstripFollow) scrollFilmstripToPlayhead(t);
+                        if (!P.paused()) followPlayhead(t);
                         maybeStopAtClipEnd(t);
                     }
                 }
@@ -4327,6 +4725,11 @@ start_bridge.bat
         }
 
         function maybeStopAtClipEnd(t) {
+            var lc = loopedClip();
+            if (lc) {
+                if (t >= lc.end - 0.02 || t < lc.start - 0.05) P.seek(lc.start);
+                return;
+            }
             if (previewStopAt !== null && t >= previewStopAt) {
                 previewStopAt = null;
                 P.pause();
@@ -4763,90 +5166,140 @@ start_bridge.bat
             $('clipSearchCount').textContent = q ? shown + '/' + cards.length : '';
         }
 
-        /* ---- clip thumbnails (only possible with a readable source) ---- */
-        var thumbCtl = null;
-        function scheduleThumbs() {
-            clearTimeout(scheduleThumbs._t);
-            scheduleThumbs._t = setTimeout(captureThumbs, 260);
+        /* ---- clip thumbnails ----------------------------------------------
+           Only clips that are actually on screen get a thumbnail, captured on
+           the shared decoder. If a filmstrip already exists we reuse the
+           nearest frame, which costs nothing at all. */
+        var thumbToken = 0;
+        var thumbObserver = null;
+
+        function nearestFilmstripFrame(v, t) {
+            if (!v.filmstrip || !v.filmstrip.length) return null;
+            var best = null, bestD = Infinity;
+            for (var i = 0; i < v.filmstrip.length; i++) {
+                var f = v.filmstrip[i];
+                if (!f.img) continue;
+                var d = Math.abs(f.time - t);
+                if (d < bestD) { bestD = d; best = f; }
+            }
+            return (best && bestD <= 6) ? best.img : null;
+        }
+
+        function paintThumb(i, img) {
+            var cv = $('clipThumb_' + i);
+            if (!cv || !img) return false;
+            try { cv.getContext('2d', { alpha: false }).drawImage(img, 0, 0, 320, 180); return true; }
+            catch (e) { return false; }
+        }
+
+        function paintPlaceholder(i, text) {
+            var cv = $('clipThumb_' + i);
+            if (!cv) return;
+            var ctx = cv.getContext('2d', { alpha: false });
+            ctx.fillStyle = '#0e0e18'; ctx.fillRect(0, 0, 320, 180);
+            ctx.fillStyle = 'rgba(255,255,255,0.16)';
+            ctx.font = '13px Inter'; ctx.textAlign = 'center';
+            ctx.fillText(text, 160, 95);
         }
 
         function paintCachedThumbs() {
             var v = V(); if (!v) return;
             v._thumbs = v._thumbs || {};
             v.clips.forEach(function (c, i) {
-                var img = v._thumbs[c.id];
-                var cv = $('clipThumb_' + i);
-                if (!cv) return;
-                var ctx = cv.getContext('2d', { alpha: false });
-                if (img) {
-                    try { ctx.drawImage(img, 0, 0, 320, 180); return; } catch (e) { }
-                }
-                ctx.fillStyle = '#0e0e18'; ctx.fillRect(0, 0, 320, 180);
-                ctx.fillStyle = 'rgba(255,255,255,0.16)';
-                ctx.font = '13px Inter'; ctx.textAlign = 'center';
-                ctx.fillText(canReadFrames() ? 'loading preview…' : 'preview needs a proxy copy', 160, 95);
+                if (paintThumb(i, v._thumbs[c.id])) return;
+                var fs = nearestFilmstripFrame(v, c.start);
+                if (fs && paintThumb(i, fs)) return;
+                paintPlaceholder(i, canReadFrames() ? '…' : 'needs a proxy copy');
             });
         }
 
-        function captureThumbs() {
+        function repaintClipThumbsFromFilmstrip() {
+            var v = V(); if (!v) return;
+            v.clips.forEach(function (c, i) {
+                if (v._thumbs[c.id]) return;
+                var fs = nearestFilmstripFrame(v, c.start);
+                if (fs) paintThumb(i, fs);
+            });
+        }
+
+        /** Watch which clip cards are visible and only fetch those thumbnails. */
+        function scheduleThumbs() {
+            clearTimeout(scheduleThumbs._t);
+            scheduleThumbs._t = setTimeout(observeVisibleThumbs, 220);
+        }
+
+        function observeVisibleThumbs() {
+            if (thumbObserver) { thumbObserver.disconnect(); thumbObserver = null; }
             var v = V();
             if (!v || !v.clips.length || !canReadFrames() || !v.mediaUrl) return;
-            if (thumbCtl) thumbCtl.cancelled = true;
-            var ctl = { cancelled: false };
-            thumbCtl = ctl;
+            if (typeof IntersectionObserver === 'undefined') { captureThumbs(v.clips.map(function (c, i) { return i; })); return; }
+
+            var pending = [];
+            thumbObserver = new IntersectionObserver(function (entries) {
+                entries.forEach(function (en) {
+                    if (!en.isIntersecting) return;
+                    var i = parseInt(en.target.dataset.idx, 10);
+                    thumbObserver.unobserve(en.target);
+                    if (pending.indexOf(i) === -1) pending.push(i);
+                });
+                if (pending.length) {
+                    var batch = pending.splice(0, pending.length);
+                    captureThumbs(batch);
+                }
+            }, { root: D.clipsList, rootMargin: '260px' });
+
+            D.clipsList.querySelectorAll('.clip-card').forEach(function (el) {
+                thumbObserver.observe(el);
+            });
+        }
+
+        function captureThumbs(indices) {
+            var v = V();
+            if (!v || !canReadFrames() || !v.mediaUrl || !indices || !indices.length) return;
             v._thumbs = v._thumbs || {};
 
-            var todo = v.clips.map(function (c, i) { return { c: c, i: i }; })
-                .filter(function (x) { return !v._thumbs[x.c.id]; });
+            var todo = indices.filter(function (i) {
+                var c = v.clips[i];
+                if (!c || v._thumbs[c.id]) return false;
+                var fs = nearestFilmstripFrame(v, c.start);
+                if (fs) { paintThumb(i, fs); return false; }   // free - reuse the strip
+                return true;
+            });
             if (!todo.length) return;
 
-            var vid = document.createElement('video');
-            vid.muted = true; vid.playsInline = true; vid.preload = 'auto';
-            if (v.source === 'proxy') vid.crossOrigin = 'anonymous';
-            vid.src = v.mediaUrl;
+            var entry = acquireMedia(v);
+            if (!entry) return;
+            var token = ++thumbToken;
 
             var canvas = document.createElement('canvas');
             canvas.width = 320; canvas.height = 180;
-            var ctx = canvas.getContext('2d', { willReadFrequently: false, alpha: false });
+            var ctx = canvas.getContext('2d', { alpha: false });
 
-            vid.onloadedmetadata = function () {
-                var k = 0;
-                function next() {
-                    if (ctl.cancelled || k >= todo.length) { cleanup(); return; }
-                    var item = todo[k];
-                    var vd = (isFinite(vid.duration) && vid.duration > 0) ? vid.duration : duration();
-                    var t = Math.min(item.c.start + 0.12, Math.max(0, (vd || 1) - 0.05));
-                    var to = setTimeout(function () { vid.removeEventListener('seeked', onSeek); k++; next(); }, 4000);
-                    function onSeek() {
-                        vid.removeEventListener('seeked', onSeek);
-                        clearTimeout(to);
-                        try {
-                            ctx.drawImage(vid, 0, 0, 320, 180);
-                            var store = function (bmp) {
-                                v._thumbs[item.c.id] = bmp;
-                                var cv = $('clipThumb_' + item.i);
-                                if (cv && videos[cur] === v) {
-                                    try { cv.getContext('2d', { alpha: false }).drawImage(bmp, 0, 0, 320, 180); } catch (e) { }
-                                }
-                                k++; next();
-                            };
-                            if (typeof createImageBitmap === 'function') {
-                                createImageBitmap(canvas).then(store).catch(function () { k++; next(); });
-                            } else {
+            entry.ready.then(async function () {
+                var d = duration();
+                for (var n = 0; n < todo.length; n++) {
+                    if (token !== thumbToken || V() !== v) return;
+                    var i = todo[n];
+                    var c = v.clips[i];
+                    if (!c || v._thumbs[c.id]) continue;
+                    try {
+                        await mediaSeek(entry, Math.min(c.start + 0.12, Math.max(0, d - 0.05)));
+                        ctx.drawImage(entry.video, 0, 0, 320, 180);
+                        var img = (typeof createImageBitmap === 'function')
+                            ? await createImageBitmap(canvas)
+                            : (function () {
                                 var c2 = document.createElement('canvas');
                                 c2.width = 320; c2.height = 180;
                                 c2.getContext('2d').drawImage(canvas, 0, 0);
-                                store(c2);
-                            }
-                        } catch (e) { k++; next(); }
-                    }
-                    vid.addEventListener('seeked', onSeek);
-                    vid.currentTime = t;
+                                return c2;
+                            })();
+                        if (token !== thumbToken) { if (img.close) img.close(); return; }
+                        v._thumbs[c.id] = img;
+                        paintThumb(i, img);
+                    } catch (e) { }
+                    if (n % 3 === 2) await yieldToUI();
                 }
-                function cleanup() { vid.removeAttribute('src'); try { vid.load(); } catch (e) { } }
-                next();
-            };
-            vid.onerror = function () { };
+            }).catch(function () { });
         }
 
         /* ==========================================================
@@ -4857,6 +5310,13 @@ start_bridge.bat
             document.querySelectorAll('[data-method]').forEach(function (el) {
                 el.classList.toggle('selected', el.dataset.method === m);
             });
+            // the auto panel is full width below; jump to it so it is not missed
+            if (m === 'auto') {
+                setTimeout(function () {
+                    var el = $('autoPanel');
+                    if (el && !el.classList.contains('hidden')) el.scrollIntoView({ block: 'nearest' });
+                }, 60);
+            }
             ['interval', 'count', 'chapters', 'custom', 'silence'].forEach(function (k) {
                 var el = $(k + 'Settings');
                 if (el) el.classList.toggle('hidden', k !== m);
@@ -4983,14 +5443,89 @@ start_bridge.bat
         }
 
         /* ==========================================================
-         *  FRAME-READING HELPERS
+         *  MEDIA POOL
+         *  One decoder per video, shared by the filmstrip, clip thumbnails and
+         *  the hover preview. Previously each of those spun up its own <video>
+         *  on the same file - three decoders fighting over seeks was most of
+         *  the lag. Seeks are serialised per video so they never thrash.
          * ========================================================== */
-        function makeWorkerVideo(v) {
+        var MediaPool = Object.create(null);
+        var MEDIA_POOL_MAX = 2;          // keep the current video + one recent
+        var mediaLru = [];
+
+        function acquireMedia(v) {
+            if (!v || !v.mediaUrl || v.source === 'embed' || v.source === 'none') return null;
+            var e = MediaPool[v.uid];
+            if (e && e.src === v.mediaUrl) {
+                touchMedia(v.uid);
+                return e;
+            }
+            if (e) releaseMedia(v.uid);
+
             var el = document.createElement('video');
-            el.muted = true; el.playsInline = true; el.preload = 'auto';
+            el.muted = true;
+            el.playsInline = true;
+            el.preload = 'auto';
             if (v.source === 'proxy') el.crossOrigin = 'anonymous';
             el.src = v.mediaUrl;
-            return el;
+
+            e = {
+                uid: v.uid, src: v.mediaUrl, video: el, chain: Promise.resolve(),
+                ready: new Promise(function (resolve, reject) {
+                    var to = setTimeout(function () { reject(new Error('timed out loading media')); }, 30000);
+                    el.onloadedmetadata = function () { clearTimeout(to); resolve(el); };
+                    el.onerror = function () { clearTimeout(to); reject(new Error('cannot read that media')); };
+                })
+            };
+            e.ready.catch(function () { });      // never leave an unhandled rejection
+            MediaPool[v.uid] = e;
+            touchMedia(v.uid);
+            trimMediaPool();
+            return e;
+        }
+
+        function touchMedia(uid) {
+            var i = mediaLru.indexOf(uid);
+            if (i >= 0) mediaLru.splice(i, 1);
+            mediaLru.push(uid);
+        }
+
+        function trimMediaPool() {
+            while (mediaLru.length > MEDIA_POOL_MAX) {
+                var uid = mediaLru[0];
+                if (V() && V().uid === uid) {        // never evict what is on screen
+                    mediaLru.push(mediaLru.shift());
+                    if (mediaLru[0] === uid) break;
+                    continue;
+                }
+                releaseMedia(uid);
+            }
+        }
+
+        function releaseMedia(uid) {
+            var e = MediaPool[uid];
+            if (e) {
+                try {
+                    e.video.pause();
+                    e.video.removeAttribute('src');
+                    e.video.load();
+                } catch (err) { }
+                delete MediaPool[uid];
+            }
+            var i = mediaLru.indexOf(uid);
+            if (i >= 0) mediaLru.splice(i, 1);
+        }
+
+        function releaseAllMedia() {
+            Object.keys(MediaPool).forEach(releaseMedia);
+        }
+
+        /** Serialised seek — queued behind whatever else this decoder is doing. */
+        function mediaSeek(entry, t) {
+            entry.chain = entry.chain.then(function () {
+                return seekVideoAsync(entry.video, t);
+            }, function () { return seekVideoAsync(entry.video, t); });
+            return entry.chain;
         }
 
         function seekVideoAsync(video, time, timeoutMs) {
@@ -5002,6 +5537,26 @@ start_bridge.bat
                 video.addEventListener('seeked', h);
                 try { video.currentTime = time; } catch (e) { clearTimeout(to); resolve(); }
             });
+        }
+
+        /** Legacy helper kept for the detector, which wants its own throwaway
+         *  decoder so a long scan never blocks interactive seeks. */
+        function makeWorkerVideo(v) {
+            var el = document.createElement('video');
+            el.muted = true; el.playsInline = true; el.preload = 'auto';
+            if (v.source === 'proxy') el.crossOrigin = 'anonymous';
+            el.src = v.mediaUrl;
+            return el;
+        }
+
+        /** Rough memory report for the status readout. */
+        function poolStats() {
+            var frames = 0, thumbs = 0;
+            videos.forEach(function (v) {
+                frames += (v.filmstrip || []).length;
+                thumbs += Object.keys(v._thumbs || {}).length;
+            });
+            return { decoders: Object.keys(MediaPool).length, frames: frames, thumbs: thumbs };
         }
 
         /* ==========================================================
@@ -5212,16 +5767,16 @@ start_bridge.bat
             var AC = window.AudioContext || window.webkitAudioContext;
             if (!AC) { if (showToasts) notify('This browser cannot decode audio', 'error'); return null; }
 
-            showJob('Analysing audio', 'Decoding the proxy audio track…');
-            D.jobBar.style.width = '30%';
+            var wj = jobStart({ kind: 'audio', videoUid: v.uid, cancellable: false,
+                label: '🔊 Audio · ' + (v.title || v.id), message: 'Downloading audio…' });
             try {
                 var buf;
                 if (v.file) buf = await v.file.arrayBuffer();
                 else buf = await (await fetch(v.mediaUrl)).arrayBuffer();
-                D.jobBar.style.width = '60%';
+                jobPatch(wj, { pct: 55, message: 'Decoding…' });
                 var ctx = new AC();
                 var audio = await ctx.decodeAudioData(buf);
-                D.jobBar.style.width = '90%';
+                jobPatch(wj, { pct: 85, message: 'Building peaks…' });
 
                 var BUCKETS = 3000;
                 var ch = audio.getChannelData(0);
@@ -5234,10 +5789,10 @@ start_bridge.bat
                 }
                 try { ctx.close(); } catch (e) { }
                 v.waveform = { peaks: peaks, duration: audio.duration };
-                hideJob();
+                jobEnd(wj);
                 return v.waveform;
             } catch (e) {
-                hideJob();
+                jobEnd(wj);
                 if (showToasts) notify('Could not decode the audio track: ' + e.message, 'error');
                 return null;
             }
@@ -5314,11 +5869,53 @@ start_bridge.bat
         }
 
         /* ==========================================================
-         *  FILMSTRIP
+         *  FILMSTRIP  —  opt-in, capped and progressive
+         *  Building one costs a seek per frame, which is the single most
+         *  expensive thing this app can do. It is OFF unless you ask for it,
+         *  frame count is capped, and tiles paint as they arrive.
          * ========================================================== */
-        var fsGenerating = false, fsCancel = false;
+        var FILMSTRIP_MAX_FRAMES = 160;
+        var fsToken = 0;                  // bumped to abandon an in-flight build
 
-        function toggleFilmstrip() {
+        function filmstripEnabled() { return localStorage.getItem('clipforge.filmstrip') === 'on'; }
+
+        function setFilmstripEnabled(on) {
+            try { localStorage.setItem('clipforge.filmstrip', on ? 'on' : 'off'); } catch (e) { }
+            var btn = $('fsEnableBtn');
+            if (btn) {
+                btn.classList.toggle('active', on);
+                btn.textContent = on ? '🎞 Filmstrip ON' : '🎞 Filmstrip OFF';
+                btn.title = on ? 'Filmstrip is on — click to disable and free its memory'
+                    : 'Filmstrip is off (saves memory). Click to build one for this video.';
+            }
+        }
+
+        function toggleFilmstripEnabled() {
+            var on = !filmstripEnabled();
+            setFilmstripEnabled(on);
+            if (on) {
+                rebuildFilmstrip();
+                notify('Filmstrip on — it builds in the background', 'info');
+            } else {
+                fsToken++;
+                clearFilmstripMemory();
+                D.filmstripContainer.style.display = 'none';
+                notify('Filmstrip off — memory freed', 'success');
+            }
+        }
+
+        function clearFilmstripMemory() {
+            videos.forEach(function (v) {
+                (v.filmstrip || []).forEach(function (f) {
+                    if (f.img && f.img.close) { try { f.img.close(); } catch (e) { } }
+                });
+                v.filmstrip = [];
+            });
+            var strip = D.filmstripStrip;
+            if (strip) strip.innerHTML = '';
+        }
+
+        function toggleFilmstrip() {          // collapse / expand, keeps the frames
             filmstripVisible = !filmstripVisible;
             $('filmstripOuter').style.display = filmstripVisible ? '' : 'none';
             var b = $('fsToggleBtn');
@@ -5332,91 +5929,88 @@ start_bridge.bat
             if (filmstripFollow) scrollFilmstripToPlayhead(P.time());
         }
 
+        /** Frames are capped: the chosen interval is widened until the count fits. */
+        function filmstripPlan(d) {
+            var want = parseFloat($('filmstripInterval').value) || 5;
+            var n = Math.ceil(d / want);
+            if (n > FILMSTRIP_MAX_FRAMES) {
+                want = d / FILMSTRIP_MAX_FRAMES;
+                n = FILMSTRIP_MAX_FRAMES;
+            }
+            return { interval: want, count: n };
+        }
+
         function rebuildFilmstrip() {
             var v = V();
+            fsToken++;
+            if (!filmstripEnabled()) { D.filmstripContainer.style.display = 'none'; return; }
             if (!v || !canReadFrames() || !v.mediaUrl || !duration()) {
                 D.filmstripContainer.style.display = 'none';
                 return;
             }
-            fsCancel = true;
-            setTimeout(function () {
-                fsCancel = false;
-                v.filmstrip = [];
-                D.filmstripContainer.style.display = '';
-                D.filmstripStrip.innerHTML =
-                    '<div class="filmstrip-generating"><div class="mini-spinner"></div>'
-                    + '<span>Building preview frames…</span>'
-                    + '<span class="mono text-[var(--accent-light)]" id="filmstripPct">0%</span></div>';
-                $('filmstripProgress').style.width = '0%';
-                captureFilmstrip(v);
-            }, 140);
+            v.filmstrip = [];
+            D.filmstripContainer.style.display = '';
+            captureFilmstrip(v, ++fsToken);
         }
 
-        function captureFilmstrip(v) {
+        function captureFilmstrip(v, token) {
             var d = duration();
-            var interval = parseFloat($('filmstripInterval').value) || 5;
-            var total = Math.ceil(d / interval);
-            if (total > 1200) {
-                interval = d / 1200; total = 1200;
-                notify('Filmstrip capped at 1200 frames for this length', 'info');
-            }
-            $('filmstripInfo').textContent = 'every ' + interval.toFixed(interval < 1 ? 1 : 0) + 's · ~' + total + ' frames';
-            fsGenerating = true;
+            var plan = filmstripPlan(d);
+            var interval = plan.interval, total = plan.count;
+            $('filmstripInfo').textContent = 'every ' + interval.toFixed(interval < 1 ? 1 : 0)
+                + 's · ' + total + ' frames';
 
-            var video = makeWorkerVideo(v);
+            // paint the empty tiles straight away so the strip is usable at once
+            v.filmstrip = [];
+            for (var k = 0; k < total; k++) v.filmstrip.push({ time: k * interval, img: null });
+            renderFilmstrip();
+
+            var entry = acquireMedia(v);
+            if (!entry) return;
+
             var canvas = document.createElement('canvas');
             canvas.width = 160; canvas.height = 90;
             var ctx = canvas.getContext('2d', { alpha: false });
 
-            // MessageChannel keeps this running at full speed in background tabs
-            var chan = typeof MessageChannel !== 'undefined' ? new MessageChannel() : null;
-            var pending = null;
-            if (chan) chan.port1.onmessage = function () { var c = pending; pending = null; if (c) c(); };
-            function soon(fn) { if (chan) { pending = fn; chan.port2.postMessage(null); } else setTimeout(fn, 4); }
+            entry.ready.then(async function () {
+                for (var i = 0; i < total; i++) {
+                    if (token !== fsToken || V() !== v) return;      // abandoned
+                    var t = i * interval;
+                    try {
+                        await mediaSeek(entry, Math.min(t, d - 0.05));
+                        ctx.drawImage(entry.video, 0, 0, 160, 90);
+                        var img = (typeof createImageBitmap === 'function')
+                            ? await createImageBitmap(canvas)
+                            : (function () {
+                                var c2 = document.createElement('canvas');
+                                c2.width = 160; c2.height = 90;
+                                c2.getContext('2d').drawImage(canvas, 0, 0);
+                                return c2;
+                            })();
+                        if (token !== fsToken) { if (img.close) img.close(); return; }
+                        v.filmstrip[i].img = img;
+                        paintFilmstripTile(i);
+                    } catch (e) { /* a dropped frame is not fatal */ }
 
-            video.onloadedmetadata = function () {
-                var idx = 0;
-                function step(time) {
-                    if (fsCancel || videos[cur] !== v) { finish(true); return; }
-                    if (time >= d - 0.02) { finish(false); return; }
-                    var to = setTimeout(function () {
-                        video.removeEventListener('seeked', onSeek);
-                        idx++; soon(function () { step(time + interval); });
-                    }, 4000);
-                    function onSeek() {
-                        video.removeEventListener('seeked', onSeek);
-                        clearTimeout(to);
-                        try { ctx.drawImage(video, 0, 0, 160, 90); } catch (e) { }
-                        var after = function (bmp) {
-                            v.filmstrip.push({ time: time, img: bmp });
-                            idx++;
-                            var pct = Math.min(100, idx / total * 100).toFixed(0);
-                            var pe = $('filmstripPct'); if (pe) pe.textContent = pct + '%';
-                            $('filmstripProgress').style.width = pct + '%';
-                            soon(function () { step(time + interval); });
-                        };
-                        if (typeof createImageBitmap === 'function') {
-                            createImageBitmap(canvas).then(after).catch(function () { after(null); });
-                        } else {
-                            var c2 = document.createElement('canvas');
-                            c2.width = 160; c2.height = 90;
-                            c2.getContext('2d').drawImage(canvas, 0, 0);
-                            after(c2);
-                        }
-                    }
-                    video.addEventListener('seeked', onSeek);
-                    try { video.currentTime = time; } catch (e) { clearTimeout(to); finish(true); }
+                    var pct = ((i + 1) / total * 100);
+                    $('filmstripProgress').style.width = pct + '%';
+                    var pe = $('filmstripPct');
+                    if (pe) pe.textContent = pct.toFixed(0) + '%';
+                    if (i % 4 === 3) await yieldToUI();
                 }
-                function finish(aborted) {
-                    fsGenerating = false;
-                    video.removeAttribute('src'); try { video.load(); } catch (e) { }
-                    if (chan) { try { chan.port1.close(); chan.port2.close(); } catch (e) { } }
-                    $('filmstripProgress').style.width = '0%';
-                    if (!aborted) renderFilmstrip();
-                }
-                step(0);
-            };
-            video.onerror = function () { fsGenerating = false; D.filmstripContainer.style.display = 'none'; };
+                $('filmstripProgress').style.width = '0%';
+                var gen = $('filmstripGenerating');
+                if (gen) gen.style.display = 'none';
+                repaintClipThumbsFromFilmstrip();
+            }).catch(function () { });
+        }
+
+        function paintFilmstripTile(i) {
+            var v = V(); if (!v) return;
+            var f = v.filmstrip[i];
+            var cv = D.filmstripStrip.querySelector('canvas[data-fs="' + i + '"]');
+            if (!cv || !f || !f.img) return;
+            try { cv.getContext('2d', { alpha: false }).drawImage(f.img, 0, 0, 160, 90); } catch (e) { }
         }
 
         function renderFilmstrip() {
@@ -5424,10 +6018,8 @@ start_bridge.bat
             if (!v || !v.filmstrip.length) return;
             var strip = D.filmstripStrip;
             var visible = D.filmstripScroll.clientWidth || 900;
-            var minW = 88;
-            var width = Math.max(visible * timelineZoom, v.filmstrip.length * minW);
+            var width = Math.max(visible * timelineZoom, v.filmstrip.length * 88);
             strip.style.width = width + 'px';
-            strip.innerHTML = '';
             var fw = width / v.filmstrip.length;
             var labelEvery = Math.max(1, Math.floor(62 / fw));
 
@@ -5440,6 +6032,7 @@ start_bridge.bat
                 div.onclick = function () { P.seek(f.time); };
                 var cv = document.createElement('canvas');
                 cv.width = 160; cv.height = 90;
+                cv.setAttribute('data-fs', i);
                 if (f.img) { try { cv.getContext('2d', { alpha: false }).drawImage(f.img, 0, 0, 160, 90); } catch (e) { } }
                 div.appendChild(cv);
                 if (i % labelEvery === 0 || i === v.filmstrip.length - 1) {
@@ -5454,12 +6047,14 @@ start_bridge.bat
             ph.className = 'filmstrip-playhead';
             ph.id = 'fsPlayhead';
             frag.appendChild(ph);
+            strip.innerHTML = '';
             strip.appendChild(frag);
             updateFilmstripPlayhead(P.time());
         }
 
         function syncFilmstripWidth() {
-            if (V() && V().filmstrip && V().filmstrip.length) renderFilmstrip();
+            var v = V();
+            if (v && v.filmstrip && v.filmstrip.length) renderFilmstrip();
             if (waveformOn) drawWaveform();
         }
 
@@ -5473,54 +6068,46 @@ start_bridge.bat
         function scrollFilmstripToPlayhead(t) {
             var d = duration(); if (!d) return;
             var sc = D.filmstripScroll;
-            var target = (t / d) * D.filmstripStrip.offsetWidth - sc.clientWidth / 2;
-            sc.scrollLeft = Math.max(0, target);
+            sc.scrollLeft = Math.max(0, (t / d) * D.filmstripStrip.offsetWidth - sc.clientWidth / 2);
         }
 
         /* ==========================================================
          *  HOVER SCRUB  +  FRAME PREVIEW
          * ========================================================== */
-        var fpVideo = null, fpBusy = false, fpQueued = null, fpHoverTimer = null;
+        var fpBusy = false, fpQueued = null, fpHoverTimer = null;
 
         function initFramePreview() {
             var v = V();
-            destroyFramePreview();
+            fpBusy = false; fpQueued = null;
             if (!v || !canReadFrames() || !v.mediaUrl) { D.framePreview.style.display = 'none'; return; }
             D.framePreview.style.display = '';
-            fpVideo = makeWorkerVideo(v);
-            fpVideo.onloadeddata = function () { drawFramePreview(P.time()); };
+            var entry = acquireMedia(v);
+            if (entry) entry.ready.then(function () { drawFramePreview(P.time()); }).catch(function () { });
         }
 
-        function destroyFramePreview() {
-            if (fpVideo) {
-                fpVideo.removeAttribute('src');
-                try { fpVideo.load(); } catch (e) { }
-                fpVideo = null;
-            }
-            fpBusy = false; fpQueued = null;
-        }
+        function destroyFramePreview() { fpBusy = false; fpQueued = null; }
 
+        /** Coalescing preview draw on the shared decoder. Only the newest
+         *  request survives, so fast mouse movement never queues up work. */
         function drawFramePreview(t) {
-            if (!fpVideo) return;
+            var v = V();
+            if (!v || !canReadFrames()) return;
             if (fpBusy) { fpQueued = t; return; }
+            var entry = acquireMedia(v);
+            if (!entry) return;
             fpBusy = true;
-            var to = setTimeout(done, 2500);
-            function done() {
-                clearTimeout(to);
-                fpVideo.removeEventListener('seeked', onSeek);
+            entry.ready.then(function () {
+                return mediaSeek(entry, clamp(t, 0, Math.max(0, duration() - 0.03)));
+            }).then(function () {
                 try {
                     var cv = D.fpCanvas;
-                    var ctx = cv.getContext('2d', { alpha: false });
-                    ctx.drawImage(fpVideo, 0, 0, cv.width, cv.height);
+                    cv.getContext('2d', { alpha: false })
+                        .drawImage(entry.video, 0, 0, cv.width, cv.height);
                 } catch (e) { }
+            }).catch(function () { }).then(function () {
                 fpBusy = false;
                 if (fpQueued !== null) { var q = fpQueued; fpQueued = null; drawFramePreview(q); }
-            }
-            function onSeek() { done(); }
-            fpVideo.addEventListener('seeked', onSeek);
-            var fd = (isFinite(fpVideo.duration) && fpVideo.duration > 0) ? fpVideo.duration : duration();
-            try { fpVideo.currentTime = clamp(t, 0, Math.max(0, fd - 0.03)); }
-            catch (e) { done(); }
+            });
         }
 
         function updateFramePreviewInfo(t) {
@@ -6275,12 +6862,13 @@ start_bridge.bat
                 })
             };
 
-            showJob('Extracting ' + rows.length + ' clip(s)', 'Starting yt-dlp…');
+            var xj = jobStart({ kind: 'extract', label: '⬇ Extracting ' + rows.length + ' clip(s)',
+                message: 'Starting yt-dlp…' });
             try {
                 var start = await bridgePost('/extract', payload);
-                activeJob = start.job;
-                var job = await pollJob(start.job, updateJob, 600);
-                hideJob();
+                jobPatch(xj, { bridgeId: start.job });
+                var job = await pollJob(start.job, function (bj) { jobFromBridge(xj, bj); }, 600);
+                jobEnd(xj);
                 if (job.status === 'done') {
                     var out = (job.meta && job.meta.outdir) || '';
                     notify('Saved ' + (job.files ? job.files.length : rows.length) + ' clip(s)'
@@ -6292,7 +6880,7 @@ start_bridge.bat
                     notify('Extraction failed: ' + (job.error || 'see the bridge window'), 'error');
                 }
             } catch (e) {
-                hideJob();
+                jobEnd(xj);
                 notify('Extraction request failed: ' + e.message, 'error');
             }
         }
@@ -6356,7 +6944,7 @@ start_bridge.bat
             'cGVzCmltcG9ydCBvcwppbXBvcnQgcmUKaW1wb3J0IHNodXRpbAppbXBvcnQgc3VicHJvY2VzcwppbXBvcnQgc3lzCmltcG9ydCB0aHJlYWRp',
             'bmcKaW1wb3J0IHRpbWUKaW1wb3J0IHV1aWQKZnJvbSBodHRwLnNlcnZlciBpbXBvcnQgQmFzZUhUVFBSZXF1ZXN0SGFuZGxlciwgVGhyZWFk',
             'aW5nSFRUUFNlcnZlcgpmcm9tIHVybGxpYi5wYXJzZSBpbXBvcnQgdXJscGFyc2UsIHVucXVvdGUsIHBhcnNlX3FzCgpWRVJTSU9OID0gIjEu',
-            'MS4wIgoKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t',
+            'Mi4wIgoKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t',
             'LQojICBQYXRocwojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t',
             'LS0tLS0tCkhPTUUgPSBvcy5wYXRoLmV4cGFuZHVzZXIoIn4iKQpDQUNIRV9ESVIgPSBvcy5wYXRoLmpvaW4oSE9NRSwgIi5jbGlwZm9yZ2Ui',
             'LCAiY2FjaGUiKQoKCmRlZiBkZWZhdWx0X291dHB1dF9kaXIoKToKICAgICIiIlNvbWV3aGVyZSBzYW5lIGFuZCB3cml0YWJsZSAtIG5ldmVy',
@@ -6408,252 +6996,310 @@ start_bridge.bat
             'dGE9Tm9uZSk6CiAgICBqaWQgPSB1dWlkLnV1aWQ0KCkuaGV4WzoxMl0KICAgIHdpdGggSk9CU19MT0NLOgogICAgICAgIEpPQlNbamlkXSA9',
             'IHsKICAgICAgICAgICAgImlkIjogamlkLCAia2luZCI6IGtpbmQsICJzdGF0dXMiOiAicXVldWVkIiwgInBjdCI6IDAuMCwKICAgICAgICAg',
             'ICAgInNwZWVkIjogIiIsICJldGEiOiAiIiwgIm1lc3NhZ2UiOiAiUXVldWVkIiwgImVycm9yIjogTm9uZSwKICAgICAgICAgICAgImZpbGUi',
-            'OiBOb25lLCAiZmlsZXMiOiBbXSwgImxvZyI6IFtdLCAiY2FuY2VsIjogRmFsc2UsCiAgICAgICAgICAgICJjcmVhdGVkIjogdGltZS50aW1l',
-            'KCksICJtZXRhIjogbWV0YSBvciB7fSwKICAgICAgICB9CiAgICByZXR1cm4gamlkCgoKZGVmIGpvYl9zZXQoamlkLCAqKmt3KToKICAgIHdp',
-            'dGggSk9CU19MT0NLOgogICAgICAgIGogPSBKT0JTLmdldChqaWQpCiAgICAgICAgaWYgbm90IGo6CiAgICAgICAgICAgIHJldHVybgogICAg',
-            'ICAgIGoudXBkYXRlKGt3KQoKCmRlZiBqb2JfbG9nKGppZCwgbGluZSk6CiAgICB3aXRoIEpPQlNfTE9DSzoKICAgICAgICBqID0gSk9CUy5n',
-            'ZXQoamlkKQogICAgICAgIGlmIG5vdCBqOgogICAgICAgICAgICByZXR1cm4KICAgICAgICBqWyJsb2ciXS5hcHBlbmQobGluZSkKICAgICAg',
-            'ICBpZiBsZW4oalsibG9nIl0pID4gNDAwOgogICAgICAgICAgICBkZWwgalsibG9nIl1bOi00MDBdCgoKZGVmIGpvYl9nZXQoamlkKToKICAg',
-            'IHdpdGggSk9CU19MT0NLOgogICAgICAgIGogPSBKT0JTLmdldChqaWQpCiAgICAgICAgcmV0dXJuIGRpY3QoaikgaWYgaiBlbHNlIE5vbmUK',
-            'CgojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiMg',
-            'IHl0LWRscCBoZWxwZXJzCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t',
-            'LS0tLS0tLS0tLS0KUFJPR1JFU1NfUkUgPSByZS5jb21waWxlKHIiQ0ZQUk9HXHwoW158XSopXHwoW158XSopXHwoW158XSopIikKUENUX1JF',
-            'ID0gcmUuY29tcGlsZShyIihbXGQuXSspXHMqJSIpCgpQUk9HUkVTU19URU1QTEFURSA9ICJDRlBST0d8JShwcm9ncmVzcy5fcGVyY2VudF9z',
-            'dHIpc3wlKHByb2dyZXNzLl9zcGVlZF9zdHIpc3wlKHByb2dyZXNzLl9ldGFfc3RyKXMiCgoKZGVmIHJ1bl95dGRscChqaWQsIGFyZ3MsIHBo',
-            'YXNlX2xhYmVsPSJEb3dubG9hZGluZyIsIHBjdF9mcm9tPTAuMCwgcGN0X3RvPTEwMC4wKToKICAgICIiIlJ1biB5dC1kbHAgc3RyZWFtaW5n',
-            'IHByb2dyZXNzIGludG8gdGhlIGpvYi4gUmV0dXJucyB0aGUgZXhpdCBjb2RlLiIiIgogICAgdG9vbHMgPSBmaW5kX3Rvb2xzKCkKICAgIGlm',
-            'IG5vdCB0b29sc1sieXRkbHAiXToKICAgICAgICBqb2Jfc2V0KGppZCwgc3RhdHVzPSJlcnJvciIsIGVycm9yPSJ5dC1kbHAgbm90IGZvdW5k',
-            'IikKICAgICAgICByZXR1cm4gMTI3CgogICAgY21kID0gdG9vbHNbInl0ZGxwIl0gKyBbIi0tbmV3bGluZSIsICItLXByb2dyZXNzIiwKICAg',
-            'ICAgICAgICAgICAgICAgICAgICAgICAgICItLXByb2dyZXNzLXRlbXBsYXRlIiwgUFJPR1JFU1NfVEVNUExBVEVdICsgYXJncwogICAgam9i',
-            'X2xvZyhqaWQsICIkICIgKyAiICIuam9pbihjbWQpKQoKICAgIGNyZWF0aW9uID0gMAogICAgaWYgb3MubmFtZSA9PSAibnQiOgogICAgICAg',
-            'IGNyZWF0aW9uID0gZ2V0YXR0cihzdWJwcm9jZXNzLCAiQ1JFQVRFX05PX1dJTkRPVyIsIDApCgogICAgcHJvYyA9IHN1YnByb2Nlc3MuUG9w',
-            'ZW4oY21kLCBzdGRvdXQ9c3VicHJvY2Vzcy5QSVBFLCBzdGRlcnI9c3VicHJvY2Vzcy5TVERPVVQsCiAgICAgICAgICAgICAgICAgICAgICAg',
-            'ICAgICB0ZXh0PVRydWUsIGJ1ZnNpemU9MSwgZW5jb2Rpbmc9InV0Zi04IiwKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGVycm9ycz0i',
-            'cmVwbGFjZSIsIGNyZWF0aW9uZmxhZ3M9Y3JlYXRpb24pCgogICAgd2l0aCBKT0JTX0xPQ0s6CiAgICAgICAgaWYgamlkIGluIEpPQlM6CiAg',
-            'ICAgICAgICAgIEpPQlNbamlkXVsiX3Byb2MiXSA9IHByb2MKCiAgICBzcGFuID0gbWF4KDAuMCwgcGN0X3RvIC0gcGN0X2Zyb20pCiAgICBm',
-            'b3IgbGluZSBpbiBwcm9jLnN0ZG91dDoKICAgICAgICBsaW5lID0gbGluZS5yc3RyaXAoIlxuIikKICAgICAgICBqID0gam9iX2dldChqaWQp',
-            'CiAgICAgICAgaWYgaiBhbmQgai5nZXQoImNhbmNlbCIpOgogICAgICAgICAgICB0cnk6CiAgICAgICAgICAgICAgICBwcm9jLnRlcm1pbmF0',
-            'ZSgpCiAgICAgICAgICAgIGV4Y2VwdCBFeGNlcHRpb246CiAgICAgICAgICAgICAgICBwYXNzCiAgICAgICAgICAgIGpvYl9zZXQoamlkLCBz',
-            'dGF0dXM9ImNhbmNlbGxlZCIsIG1lc3NhZ2U9IkNhbmNlbGxlZCIpCiAgICAgICAgICAgIHJldHVybiAxMzAKCiAgICAgICAgbSA9IFBST0dS',
-            'RVNTX1JFLnNlYXJjaChsaW5lKQogICAgICAgIGlmIG06CiAgICAgICAgICAgIHJhd19wY3QsIHNwZWVkLCBldGEgPSBtLmdyb3VwKDEpLCBt',
-            'Lmdyb3VwKDIpLCBtLmdyb3VwKDMpCiAgICAgICAgICAgIHBtID0gUENUX1JFLnNlYXJjaChyYXdfcGN0KQogICAgICAgICAgICBsb2NhbF9w',
-            'Y3QgPSBmbG9hdChwbS5ncm91cCgxKSkgaWYgcG0gZWxzZSAwLjAKICAgICAgICAgICAgam9iX3NldChqaWQsCiAgICAgICAgICAgICAgICAg',
-            'ICAgc3RhdHVzPSJydW5uaW5nIiwKICAgICAgICAgICAgICAgICAgICBwY3Q9cm91bmQocGN0X2Zyb20gKyBzcGFuICogbG9jYWxfcGN0IC8g',
-            'MTAwLjAsIDEpLAogICAgICAgICAgICAgICAgICAgIHNwZWVkPXNwZWVkLnN0cmlwKCksCiAgICAgICAgICAgICAgICAgICAgZXRhPWV0YS5z',
-            'dHJpcCgpLAogICAgICAgICAgICAgICAgICAgIG1lc3NhZ2U9cGhhc2VfbGFiZWwpCiAgICAgICAgICAgIGNvbnRpbnVlCgogICAgICAgIGlm',
-            'IGxpbmUuc3RyaXAoKToKICAgICAgICAgICAgam9iX2xvZyhqaWQsIGxpbmUpCiAgICAgICAgICAgIGxvdyA9IGxpbmUubG93ZXIoKQogICAg',
-            'ICAgICAgICBpZiAiW21lcmdlcl0iIGluIGxvdyBvciAibWVyZ2luZyIgaW4gbG93OgogICAgICAgICAgICAgICAgam9iX3NldChqaWQsIG1l',
-            'c3NhZ2U9Ik1lcmdpbmcgYXVkaW8gKyB2aWRlby4uLiIpCiAgICAgICAgICAgIGVsaWYgIltleHRyYWN0YXVkaW9dIiBpbiBsb3c6CiAgICAg',
-            'ICAgICAgICAgICBqb2Jfc2V0KGppZCwgbWVzc2FnZT0iRXh0cmFjdGluZyBhdWRpby4uLiIpCiAgICAgICAgICAgIGVsaWYgIlt5b3V0dWJl',
-            'XSIgaW4gbG93IGFuZCAiZG93bmxvYWRpbmciIGluIGxvdzoKICAgICAgICAgICAgICAgIGpvYl9zZXQoamlkLCBtZXNzYWdlPSJSZWFkaW5n',
-            'IHZpZGVvIGluZm8uLi4iKQogICAgICAgICAgICBlbGlmIGxpbmUuc3RhcnRzd2l0aCgiRVJST1IiKToKICAgICAgICAgICAgICAgIGpvYl9z',
-            'ZXQoamlkLCBlcnJvcj1saW5lWzo1MDBdKQoKICAgIHByb2Mud2FpdCgpCiAgICByZXR1cm4gcHJvYy5yZXR1cm5jb2RlCgoKZGVmIHByb3h5',
-            'X2Zvcm1hdChoZWlnaHQpOgogICAgIiIieXQtZGxwIGZvcm1hdCBzZWxlY3RvciBmb3IgYSBzbWFsbCwgc2Vla2FibGUgcHJveHkgY29weS4i',
-            'IiIKICAgIGggPSBpbnQoaGVpZ2h0KQogICAgcmV0dXJuICgKICAgICAgICAiYnYqW2hlaWdodDw9JWRdW2V4dD1tcDRdK2JhW2V4dD1tNGFd',
-            'LyIKICAgICAgICAiYltoZWlnaHQ8PSVkXVtleHQ9bXA0XS8iCiAgICAgICAgImJ2KltoZWlnaHQ8PSVkXStiYS8iCiAgICAgICAgImJbaGVp',
-            'Z2h0PD0lZF0vIgogICAgICAgICJ3diord2EvdyIgJSAoaCwgaCwgaCwgaCkKICAgICkKCgpkZWYgcXVhbGl0eV9mb3JtYXQocXVhbGl0eSwg',
-            'Y29udGFpbmVyKToKICAgICIiInl0LWRscCBmb3JtYXQgc2VsZWN0b3IgZm9yIHRoZSBmaW5hbCwgZnVsbCBxdWFsaXR5IGNsaXBzLiIiIgog',
-            'ICAgaWYgcXVhbGl0eSA9PSAiYXVkaW8iOgogICAgICAgIHJldHVybiAiYmVzdGF1ZGlvL2Jlc3QiCiAgICBpZiBxdWFsaXR5ID09ICJiZXN0',
-            'IjoKICAgICAgICBpZiBjb250YWluZXIgPT0gIndlYm0iOgogICAgICAgICAgICByZXR1cm4gImJ2KitiYS9iIgogICAgICAgIHJldHVybiAi',
-            'YnYqW2V4dD1tcDRdK2JhW2V4dD1tNGFdL2J2KitiYS9iW2V4dD1tcDRdL2IiCiAgICBoID0gaW50KHF1YWxpdHkpCiAgICByZXR1cm4gKCJi',
-            'dipbaGVpZ2h0PD0lZF1bZXh0PW1wNF0rYmFbZXh0PW00YV0vIgogICAgICAgICAgICAiYnYqW2hlaWdodDw9JWRdK2JhLyIKICAgICAgICAg',
-            'ICAgImJbaGVpZ2h0PD0lZF1bZXh0PW1wNF0vYltoZWlnaHQ8PSVkXSIgJSAoaCwgaCwgaCwgaCkpCgoKZGVmIHNhbml0aXplKG5hbWUsIGZh',
-            'bGxiYWNrPSJjbGlwIik6CiAgICBuYW1lID0gcmUuc3ViKHIiW15cd1wtLiBdKyIsICJfIiwgKG5hbWUgb3IgIiIpLnN0cmlwKCkpCiAgICBu',
-            'YW1lID0gcmUuc3ViKHIiXHMrIiwgIl8iLCBuYW1lKS5zdHJpcCgiLl8gIikKICAgIHJldHVybiBuYW1lWzo4MF0gb3IgZmFsbGJhY2sKCgoj',
-            'IC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiMgIFdv',
-            'cmtlcnMKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t',
-            'LQpkZWYgd29ya2VyX2luZm8oamlkLCB1cmwpOgogICAgdG9vbHMgPSBmaW5kX3Rvb2xzKCkKICAgIGlmIG5vdCB0b29sc1sieXRkbHAiXToK',
-            'ICAgICAgICBqb2Jfc2V0KGppZCwgc3RhdHVzPSJlcnJvciIsIGVycm9yPSJ5dC1kbHAgbm90IGZvdW5kLiBSdW46IHBpcCBpbnN0YWxsIC1V',
-            'IHl0LWRscCIpCiAgICAgICAgcmV0dXJuCiAgICBqb2Jfc2V0KGppZCwgc3RhdHVzPSJydW5uaW5nIiwgbWVzc2FnZT0iUmVhZGluZyB2aWRl',
-            'byBpbmZvLi4uIiwgcGN0PTEwKQogICAgdHJ5OgogICAgICAgIGNtZCA9IHRvb2xzWyJ5dGRscCJdICsgWyItSiIsICItLW5vLXBsYXlsaXN0',
-            'IiwgIi0tc2tpcC1kb3dubG9hZCIsCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIi0tbm8td2FybmluZ3MiLCB1cmxdCiAgICAg',
-            'ICAgciA9IHN1YnByb2Nlc3MucnVuKGNtZCwgY2FwdHVyZV9vdXRwdXQ9VHJ1ZSwgdGV4dD1UcnVlLCB0aW1lb3V0PTE4MCwKICAgICAgICAg',
-            'ICAgICAgICAgICAgICAgICAgZW5jb2Rpbmc9InV0Zi04IiwgZXJyb3JzPSJyZXBsYWNlIikKICAgICAgICBpZiByLnJldHVybmNvZGUgIT0g',
-            'MDoKICAgICAgICAgICAgam9iX3NldChqaWQsIHN0YXR1cz0iZXJyb3IiLAogICAgICAgICAgICAgICAgICAgIGVycm9yPShyLnN0ZGVyciBv',
-            'ciAieXQtZGxwIGZhaWxlZCIpLnN0cmlwKClbOjUwMF0pCiAgICAgICAgICAgIHJldHVybgogICAgICAgIGRhdGEgPSBqc29uLmxvYWRzKHIu',
-            'c3Rkb3V0KQogICAgICAgIGhlaWdodHMgPSBzb3J0ZWQoe2YuZ2V0KCJoZWlnaHQiKSBmb3IgZiBpbiAoZGF0YS5nZXQoImZvcm1hdHMiKSBv',
-            'ciBbXSkKICAgICAgICAgICAgICAgICAgICAgICAgICBpZiBmLmdldCgiaGVpZ2h0Iil9KQogICAgICAgIGluZm8gPSB7CiAgICAgICAgICAg',
-            'ICJpZCI6IGRhdGEuZ2V0KCJpZCIpLAogICAgICAgICAgICAidGl0bGUiOiBkYXRhLmdldCgidGl0bGUiKSwKICAgICAgICAgICAgImR1cmF0',
-            'aW9uIjogZGF0YS5nZXQoImR1cmF0aW9uIiksCiAgICAgICAgICAgICJ1cGxvYWRlciI6IGRhdGEuZ2V0KCJ1cGxvYWRlciIpIG9yIGRhdGEu',
-            'Z2V0KCJjaGFubmVsIiksCiAgICAgICAgICAgICJ0aHVtYm5haWwiOiBkYXRhLmdldCgidGh1bWJuYWlsIiksCiAgICAgICAgICAgICJ3ZWJw',
-            'YWdlX3VybCI6IGRhdGEuZ2V0KCJ3ZWJwYWdlX3VybCIpIG9yIHVybCwKICAgICAgICAgICAgImlzX2xpdmUiOiBib29sKGRhdGEuZ2V0KCJp',
-            'c19saXZlIikpLAogICAgICAgICAgICAiaGVpZ2h0cyI6IGhlaWdodHMsCiAgICAgICAgICAgICJjaGFwdGVycyI6IFsKICAgICAgICAgICAg',
-            'ICAgIHsidGl0bGUiOiBjLmdldCgidGl0bGUiKSwKICAgICAgICAgICAgICAgICAic3RhcnQiOiBjLmdldCgic3RhcnRfdGltZSIpLAogICAg',
-            'ICAgICAgICAgICAgICJlbmQiOiBjLmdldCgiZW5kX3RpbWUiKX0KICAgICAgICAgICAgICAgIGZvciBjIGluIChkYXRhLmdldCgiY2hhcHRl',
-            'cnMiKSBvciBbXSkKICAgICAgICAgICAgICAgIGlmIGMuZ2V0KCJzdGFydF90aW1lIikgaXMgbm90IE5vbmUKICAgICAgICAgICAgXSwKICAg',
-            'ICAgICB9CiAgICAgICAgam9iX3NldChqaWQsIHN0YXR1cz0iZG9uZSIsIHBjdD0xMDAsIG1lc3NhZ2U9IkluZm8gcmVhZHkiLAogICAgICAg',
-            'ICAgICAgICAgbWV0YT17ImluZm8iOiBpbmZvfSkKICAgIGV4Y2VwdCBzdWJwcm9jZXNzLlRpbWVvdXRFeHBpcmVkOgogICAgICAgIGpvYl9z',
-            'ZXQoamlkLCBzdGF0dXM9ImVycm9yIiwgZXJyb3I9IlRpbWVkIG91dCByZWFkaW5nIHZpZGVvIGluZm8iKQogICAgZXhjZXB0IEV4Y2VwdGlv',
-            'biBhcyBlOgogICAgICAgIGpvYl9zZXQoamlkLCBzdGF0dXM9ImVycm9yIiwgZXJyb3I9c3RyKGUpWzo1MDBdKQoKCmRlZiB3b3JrZXJfcHJv',
-            'eHkoamlkLCB1cmwsIHZpZGVvX2lkLCBoZWlnaHQpOgogICAgb3MubWFrZWRpcnMoQ0FDSEVfRElSLCBleGlzdF9vaz1UcnVlKQogICAgc3Rl',
-            'bSA9IG9zLnBhdGguam9pbihDQUNIRV9ESVIsICIlc18lZHAiICUgKHNhbml0aXplKHZpZGVvX2lkLCAidmlkZW8iKSwgaGVpZ2h0KSkKCiAg',
-            'ICAjIEFscmVhZHkgY2FjaGVkPyBTZXJ2ZSBpbnN0YW50bHkuCiAgICBmb3IgZXh0IGluICgiLm1wNCIsICIubWt2IiwgIi53ZWJtIik6CiAg',
-            'ICAgICAgaWYgb3MucGF0aC5pc2ZpbGUoc3RlbSArIGV4dCkgYW5kIG9zLnBhdGguZ2V0c2l6ZShzdGVtICsgZXh0KSA+IDEwMjQ6CiAgICAg',
-            'ICAgICAgIGpvYl9zZXQoamlkLCBzdGF0dXM9ImRvbmUiLCBwY3Q9MTAwLCBtZXNzYWdlPSJQcm94eSByZWFkeSAoY2FjaGVkKSIsCiAgICAg',
-            'ICAgICAgICAgICAgICAgZmlsZT1zdGVtICsgZXh0LAogICAgICAgICAgICAgICAgICAgIG1ldGE9eyJjYWNoZWQiOiBUcnVlLCAic2l6ZSI6',
-            'IG9zLnBhdGguZ2V0c2l6ZShzdGVtICsgZXh0KX0pCiAgICAgICAgICAgIHJldHVybgoKICAgIHRvb2xzID0gZmluZF90b29scygpCiAgICBh',
-            'cmdzID0gWyItZiIsIHByb3h5X2Zvcm1hdChoZWlnaHQpLCAiLS1uby1wbGF5bGlzdCIsICItLW5vLXBhcnQiLAogICAgICAgICAgICAiLS1m',
-            'b3JjZS1vdmVyd3JpdGVzIiwgIi0tbm8td2FybmluZ3MiLCAiLW8iLCBzdGVtICsgIi4lKGV4dClzIl0KICAgIGlmIHRvb2xzWyJmZm1wZWci',
-            'XToKICAgICAgICAjIGZhc3RzdGFydCBtb3ZlcyB0aGUgbW9vdiBhdG9tIHRvIHRoZSBmcm9udCAtPiBpbnN0YW50IHNlZWtpbmcKICAgICAg',
-            'ICBhcmdzICs9IFsiLS1tZXJnZS1vdXRwdXQtZm9ybWF0IiwgIm1wNCIsCiAgICAgICAgICAgICAgICAgIi0tcG9zdHByb2Nlc3Nvci1hcmdz',
-            'IiwgImZmbXBlZzotbW92ZmxhZ3MgK2Zhc3RzdGFydCJdCiAgICBhcmdzICs9IFt1cmxdCgogICAgam9iX3NldChqaWQsIHN0YXR1cz0icnVu',
-            'bmluZyIsIG1lc3NhZ2U9IkRvd25sb2FkaW5nICVkcCBwcm94eS4uLiIgJSBoZWlnaHQpCiAgICBjb2RlID0gcnVuX3l0ZGxwKGppZCwgYXJn',
-            'cywgcGhhc2VfbGFiZWw9IkRvd25sb2FkaW5nICVkcCBwcm94eS4uLiIgJSBoZWlnaHQsCiAgICAgICAgICAgICAgICAgICAgIHBjdF9mcm9t',
-            'PTAsIHBjdF90bz05NikKCiAgICBqID0gam9iX2dldChqaWQpCiAgICBpZiBqIGFuZCBqLmdldCgic3RhdHVzIikgPT0gImNhbmNlbGxlZCI6',
-            'CiAgICAgICAgcmV0dXJuCiAgICBpZiBjb2RlICE9IDA6CiAgICAgICAgam9iX3NldChqaWQsIHN0YXR1cz0iZXJyb3IiLAogICAgICAgICAg',
-            'ICAgICAgZXJyb3I9KGogb3Ige30pLmdldCgiZXJyb3IiKSBvciAieXQtZGxwIGV4aXRlZCB3aXRoIGNvZGUgJWQiICUgY29kZSkKICAgICAg',
-            'ICByZXR1cm4KCiAgICBmb3VuZCA9IE5vbmUKICAgIGZvciBleHQgaW4gKCIubXA0IiwgIi5ta3YiLCAiLndlYm0iLCAiLm00diIpOgogICAg',
-            'ICAgIGlmIG9zLnBhdGguaXNmaWxlKHN0ZW0gKyBleHQpOgogICAgICAgICAgICBmb3VuZCA9IHN0ZW0gKyBleHQKICAgICAgICAgICAgYnJl',
-            'YWsKICAgIGlmIG5vdCBmb3VuZDoKICAgICAgICAjIHl0LWRscCBtYXkgaGF2ZSBjaG9zZW4gYW5vdGhlciBleHRlbnNpb24KICAgICAgICBi',
-            'YXNlID0gb3MucGF0aC5iYXNlbmFtZShzdGVtKQogICAgICAgIGZvciBmIGluIG9zLmxpc3RkaXIoQ0FDSEVfRElSKToKICAgICAgICAgICAg',
-            'aWYgZi5zdGFydHN3aXRoKGJhc2UpOgogICAgICAgICAgICAgICAgZm91bmQgPSBvcy5wYXRoLmpvaW4oQ0FDSEVfRElSLCBmKQogICAgICAg',
-            'ICAgICAgICAgYnJlYWsKICAgIGlmIG5vdCBmb3VuZDoKICAgICAgICBqb2Jfc2V0KGppZCwgc3RhdHVzPSJlcnJvciIsIGVycm9yPSJQcm94',
-            'eSBmaWxlIG5vdCBmb3VuZCBhZnRlciBkb3dubG9hZCIpCiAgICAgICAgcmV0dXJuCgogICAgam9iX3NldChqaWQsIHN0YXR1cz0iZG9uZSIs',
-            'IHBjdD0xMDAsIG1lc3NhZ2U9IlByb3h5IHJlYWR5IiwgZmlsZT1mb3VuZCwKICAgICAgICAgICAgbWV0YT17ImNhY2hlZCI6IEZhbHNlLCAi',
-            'c2l6ZSI6IG9zLnBhdGguZ2V0c2l6ZShmb3VuZCl9KQoKCmRlZiB3b3JrZXJfZXh0cmFjdChqaWQsIHBheWxvYWQpOgogICAgIiIiRG93bmxv',
-            'YWQgdGhlIHNlbGVjdGVkIGNsaXBzIGF0IGZ1bGwgcXVhbGl0eSB2aWEgLS1kb3dubG9hZC1zZWN0aW9ucy4iIiIKICAgIGl0ZW1zID0gcGF5',
-            'bG9hZC5nZXQoImNsaXBzIikgb3IgW10KICAgIHF1YWxpdHkgPSBzdHIocGF5bG9hZC5nZXQoInF1YWxpdHkiLCAiYmVzdCIpKQogICAgY29u',
-            'dGFpbmVyID0gc3RyKHBheWxvYWQuZ2V0KCJmb3JtYXQiLCAibXA0IikpCiAgICBvdXRkaXIgPSBwYXlsb2FkLmdldCgib3V0ZGlyIikgb3Ig',
-            'T1VUUFVUX0RJUgoKICAgICMgVW5pcXVlIGZvbGRlciBzbyBub3RoaW5nIGlzIGV2ZXIgb3ZlcndyaXR0ZW4gLSBzYW1lIGJlaGF2aW91ciBh',
-            'cyB0aGUKICAgICMgZXhwb3J0ZWQgLmJhdCBzY3JpcHQuCiAgICBiYXNlLCBuID0gb3MucGF0aC5qb2luKG91dGRpciwgIkNsaXBzIiksIDEK',
-            'ICAgIHRhcmdldCA9IGJhc2UKICAgIHdoaWxlIG9zLnBhdGguZXhpc3RzKHRhcmdldCk6CiAgICAgICAgdGFyZ2V0ID0gIiVzXyVkIiAlIChi',
-            'YXNlLCBuKQogICAgICAgIG4gKz0gMQogICAgb3MubWFrZWRpcnModGFyZ2V0LCBleGlzdF9vaz1UcnVlKQoKICAgIHRvb2xzID0gZmluZF90',
-            'b29scygpCiAgICBmbXQgPSBxdWFsaXR5X2Zvcm1hdChxdWFsaXR5LCBjb250YWluZXIpCiAgICB0b3RhbCA9IGxlbihpdGVtcykKICAgIGRv',
-            'bmVfZmlsZXMgPSBbXQoKICAgIGpvYl9zZXQoamlkLCBzdGF0dXM9InJ1bm5pbmciLCBtZXNzYWdlPSJFeHRyYWN0aW5nICVkIGNsaXAocyku',
-            'Li4iICUgdG90YWwsCiAgICAgICAgICAgIG1ldGE9eyJvdXRkaXIiOiB0YXJnZXQsICJ0b3RhbCI6IHRvdGFsfSkKCiAgICBmb3IgaSwgY2xp',
-            'cCBpbiBlbnVtZXJhdGUoaXRlbXMpOgogICAgICAgIGogPSBqb2JfZ2V0KGppZCkKICAgICAgICBpZiBqIGFuZCBqLmdldCgiY2FuY2VsIik6',
-            'CiAgICAgICAgICAgIGpvYl9zZXQoamlkLCBzdGF0dXM9ImNhbmNlbGxlZCIsIG1lc3NhZ2U9IkNhbmNlbGxlZCIpCiAgICAgICAgICAgIHJl',
-            'dHVybgoKICAgICAgICBuYW1lID0gc2FuaXRpemUoY2xpcC5nZXQoIm5hbWUiKSBvciAiY2xpcF8lMDJkIiAlIChpICsgMSkpCiAgICAgICAg',
-            'b3V0ID0gb3MucGF0aC5qb2luKHRhcmdldCwgbmFtZSArICIuJShleHQpcyIpCiAgICAgICAgc2VjdGlvbiA9ICIqJXMtJXMiICUgKGNsaXAu',
-            'Z2V0KCJzdGFydCIpLCBjbGlwLmdldCgiZW5kIikpCgogICAgICAgIGFyZ3MgPSBbIi1mIiwgZm10LCAiLS1kb3dubG9hZC1zZWN0aW9ucyIs',
-            'IHNlY3Rpb24sICItLW5vLXBsYXlsaXN0IiwKICAgICAgICAgICAgICAgICItLW5vLXBhcnQiLCAiLS1mb3JjZS1vdmVyd3JpdGVzIiwgIi0t',
-            'bm8td2FybmluZ3MiLAogICAgICAgICAgICAgICAgIi1vIiwgb3V0XQogICAgICAgIGlmIHF1YWxpdHkgPT0gImF1ZGlvIjoKICAgICAgICAg',
-            'ICAgYXJncyArPSBbIi14IiwgIi0tYXVkaW8tZm9ybWF0IiwgIm1wMyIsICItLWF1ZGlvLXF1YWxpdHkiLCAiMCJdCiAgICAgICAgZWxzZToK',
-            'ICAgICAgICAgICAgaWYgdG9vbHNbImZmbXBlZyJdOgogICAgICAgICAgICAgICAgYXJncyArPSBbIi0tZm9yY2Uta2V5ZnJhbWVzLWF0LWN1',
-            'dHMiXQogICAgICAgICAgICBhcmdzICs9IFsiLS1tZXJnZS1vdXRwdXQtZm9ybWF0IiwgY29udGFpbmVyXQogICAgICAgIGFyZ3MgKz0gW2Ns',
-            'aXAuZ2V0KCJ1cmwiKV0KCiAgICAgICAgbG8gPSAxMDAuMCAqIGkgLyBtYXgoMSwgdG90YWwpCiAgICAgICAgaGkgPSAxMDAuMCAqIChpICsg',
-            'MSkgLyBtYXgoMSwgdG90YWwpCiAgICAgICAgam9iX3NldChqaWQsIG1lc3NhZ2U9IkNsaXAgJWQvJWQgLSAlcyIgJSAoaSArIDEsIHRvdGFs',
-            'LCBuYW1lKSkKICAgICAgICBjb2RlID0gcnVuX3l0ZGxwKGppZCwgYXJncywKICAgICAgICAgICAgICAgICAgICAgICAgIHBoYXNlX2xhYmVs',
-            'PSJDbGlwICVkLyVkIC0gJXMiICUgKGkgKyAxLCB0b3RhbCwgbmFtZSksCiAgICAgICAgICAgICAgICAgICAgICAgICBwY3RfZnJvbT1sbywg',
-            'cGN0X3RvPWhpKQogICAgICAgIGlmIGNvZGUgPT0gMTMwOgogICAgICAgICAgICByZXR1cm4KICAgICAgICBpZiBjb2RlID09IDA6CiAgICAg',
-            'ICAgICAgIGZvciBmIGluIG9zLmxpc3RkaXIodGFyZ2V0KToKICAgICAgICAgICAgICAgIGlmIGYuc3RhcnRzd2l0aChuYW1lICsgIi4iKToK',
-            'ICAgICAgICAgICAgICAgICAgICBwID0gb3MucGF0aC5qb2luKHRhcmdldCwgZikKICAgICAgICAgICAgICAgICAgICBpZiBwIG5vdCBpbiBk',
-            'b25lX2ZpbGVzOgogICAgICAgICAgICAgICAgICAgICAgICBkb25lX2ZpbGVzLmFwcGVuZChwKQogICAgICAgIGVsc2U6CiAgICAgICAgICAg',
-            'IGpvYl9sb2coamlkLCAiW1dBUk5dIGNsaXAgJXMgZmFpbGVkIChleGl0ICVkKSIgJSAobmFtZSwgY29kZSkpCgogICAgICAgIGpvYl9zZXQo',
-            'amlkLCBmaWxlcz1saXN0KGRvbmVfZmlsZXMpKQoKICAgIGpvYl9zZXQoamlkLCBzdGF0dXM9ImRvbmUiLCBwY3Q9MTAwLAogICAgICAgICAg',
-            'ICBtZXNzYWdlPSJTYXZlZCAlZC8lZCBjbGlwKHMpIHRvICVzIiAlIChsZW4oZG9uZV9maWxlcyksIHRvdGFsLCB0YXJnZXQpLAogICAgICAg',
-            'ICAgICBmaWxlcz1kb25lX2ZpbGVzLCBtZXRhPXsib3V0ZGlyIjogdGFyZ2V0LCAidG90YWwiOiB0b3RhbH0pCgoKIyAtLS0tLS0tLS0tLS0t',
-            'LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQojICBIVFRQIGxheWVyCiMgLS0t',
-            'LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KY2xhc3MgSGFu',
-            'ZGxlcihCYXNlSFRUUFJlcXVlc3RIYW5kbGVyKToKICAgIHNlcnZlcl92ZXJzaW9uID0gIkNsaXBGb3JnZUJyaWRnZS8iICsgVkVSU0lPTgog',
-            'ICAgcHJvdG9jb2xfdmVyc2lvbiA9ICJIVFRQLzEuMSIgICAjIGtlZXAtYWxpdmU6IG11Y2ggc21vb3RoZXIgdmlkZW8gc2Vla2luZwoKICAg',
-            'ICMgLS0tLSBwbHVtYmluZyAtLS0tCiAgICBkZWYgbG9nX21lc3NhZ2Uoc2VsZiwgZm10LCAqYXJncyk6CiAgICAgICAgaWYgUVVJRVQ6CiAg',
-            'ICAgICAgICAgIHJldHVybgogICAgICAgIHN5cy5zdGRlcnIud3JpdGUoIiAgJXMgLSAlc1xuIiAlIChzZWxmLmFkZHJlc3Nfc3RyaW5nKCks',
-            'IGZtdCAlIGFyZ3MpKQoKICAgIGRlZiBfY29ycyhzZWxmKToKICAgICAgICBzZWxmLnNlbmRfaGVhZGVyKCJBY2Nlc3MtQ29udHJvbC1BbGxv',
-            'dy1PcmlnaW4iLCAiKiIpCiAgICAgICAgc2VsZi5zZW5kX2hlYWRlcigiQWNjZXNzLUNvbnRyb2wtQWxsb3ctTWV0aG9kcyIsICJHRVQsIFBP',
-            'U1QsIE9QVElPTlMiKQogICAgICAgIHNlbGYuc2VuZF9oZWFkZXIoIkFjY2Vzcy1Db250cm9sLUFsbG93LUhlYWRlcnMiLCAiQ29udGVudC1U',
-            'eXBlIikKICAgICAgICBzZWxmLnNlbmRfaGVhZGVyKCJBY2Nlc3MtQ29udHJvbC1FeHBvc2UtSGVhZGVycyIsCiAgICAgICAgICAgICAgICAg',
-            'ICAgICAgICAiQ29udGVudC1MZW5ndGgsIENvbnRlbnQtUmFuZ2UsIEFjY2VwdC1SYW5nZXMiKQoKICAgIGRlZiBfanNvbihzZWxmLCBvYmos',
-            'IGNvZGU9MjAwKToKICAgICAgICBib2R5ID0ganNvbi5kdW1wcyhvYmopLmVuY29kZSgidXRmLTgiKQogICAgICAgIHNlbGYuc2VuZF9yZXNw',
-            'b25zZShjb2RlKQogICAgICAgIHNlbGYuc2VuZF9oZWFkZXIoIkNvbnRlbnQtVHlwZSIsICJhcHBsaWNhdGlvbi9qc29uOyBjaGFyc2V0PXV0',
-            'Zi04IikKICAgICAgICBzZWxmLnNlbmRfaGVhZGVyKCJDb250ZW50LUxlbmd0aCIsIHN0cihsZW4oYm9keSkpKQogICAgICAgIHNlbGYuX2Nv',
-            'cnMoKQogICAgICAgIHNlbGYuZW5kX2hlYWRlcnMoKQogICAgICAgIHRyeToKICAgICAgICAgICAgc2VsZi53ZmlsZS53cml0ZShib2R5KQog',
-            'ICAgICAgIGV4Y2VwdCAoQnJva2VuUGlwZUVycm9yLCBDb25uZWN0aW9uUmVzZXRFcnJvcik6CiAgICAgICAgICAgIHBhc3MKCiAgICBkZWYg',
-            'X2JvZHkoc2VsZik6CiAgICAgICAgdHJ5OgogICAgICAgICAgICBuID0gaW50KHNlbGYuaGVhZGVycy5nZXQoIkNvbnRlbnQtTGVuZ3RoIikg',
-            'b3IgMCkKICAgICAgICAgICAgcmV0dXJuIGpzb24ubG9hZHMoc2VsZi5yZmlsZS5yZWFkKG4pIG9yIGIie30iKQogICAgICAgIGV4Y2VwdCBF',
-            'eGNlcHRpb246CiAgICAgICAgICAgIHJldHVybiB7fQoKICAgIGRlZiBkb19PUFRJT05TKHNlbGYpOgogICAgICAgIHNlbGYuc2VuZF9yZXNw',
-            'b25zZSgyMDQpCiAgICAgICAgc2VsZi5fY29ycygpCiAgICAgICAgc2VsZi5zZW5kX2hlYWRlcigiQ29udGVudC1MZW5ndGgiLCAiMCIpCiAg',
-            'ICAgICAgc2VsZi5lbmRfaGVhZGVycygpCgogICAgIyAtLS0tIHJvdXRlcyAtLS0tCiAgICBkZWYgZG9fR0VUKHNlbGYpOgogICAgICAgIHBh',
-            'dGggPSB1cmxwYXJzZShzZWxmLnBhdGgpLnBhdGgKCiAgICAgICAgaWYgcGF0aCBpbiAoIi8iLCAiL2hlYWx0aCIpOgogICAgICAgICAgICB0',
-            'ID0gZmluZF90b29scygpCiAgICAgICAgICAgIHJldHVybiBzZWxmLl9qc29uKHsKICAgICAgICAgICAgICAgICJvayI6IFRydWUsICJhcHAi',
-            'OiAiY2xpcGZvcmdlLWJyaWRnZSIsICJ2ZXJzaW9uIjogVkVSU0lPTiwKICAgICAgICAgICAgICAgICJ5dGRscCI6IGJvb2wodFsieXRkbHAi',
-            'XSksICJ5dGRscF9raW5kIjogdFsieXRkbHBfa2luZCJdLAogICAgICAgICAgICAgICAgInl0ZGxwX3ZlcnNpb24iOiB5dGRscF92ZXJzaW9u',
-            'KCksCiAgICAgICAgICAgICAgICAiZmZtcGVnIjogYm9vbCh0WyJmZm1wZWciXSksCiAgICAgICAgICAgICAgICAiY2FjaGUiOiBDQUNIRV9E',
-            'SVIsICJvdXRwdXQiOiBPVVRQVVRfRElSLAogICAgICAgICAgICAgICAgInB5dGhvbiI6IHN5cy52ZXJzaW9uLnNwbGl0KClbMF0sCiAgICAg',
-            'ICAgICAgIH0pCgogICAgICAgIGlmIHBhdGguc3RhcnRzd2l0aCgiL3Byb2dyZXNzLyIpOgogICAgICAgICAgICBqID0gam9iX2dldChwYXRo',
-            'LnJzcGxpdCgiLyIsIDEpWy0xXSkKICAgICAgICAgICAgaWYgbm90IGo6CiAgICAgICAgICAgICAgICByZXR1cm4gc2VsZi5fanNvbih7ImVy',
-            'cm9yIjogIm5vIHN1Y2ggam9iIn0sIDQwNCkKICAgICAgICAgICAgai5wb3AoIl9wcm9jIiwgTm9uZSkKICAgICAgICAgICAgalsibG9nIl0g',
-            'PSBqWyJsb2ciXVstMjU6XQogICAgICAgICAgICByZXR1cm4gc2VsZi5fanNvbihqKQoKICAgICAgICBpZiBwYXRoLnN0YXJ0c3dpdGgoIi9j',
-            'YW5jZWwvIik6CiAgICAgICAgICAgIGppZCA9IHBhdGgucnNwbGl0KCIvIiwgMSlbLTFdCiAgICAgICAgICAgIGpvYl9zZXQoamlkLCBjYW5j',
-            'ZWw9VHJ1ZSkKICAgICAgICAgICAgd2l0aCBKT0JTX0xPQ0s6CiAgICAgICAgICAgICAgICBwID0gKEpPQlMuZ2V0KGppZCkgb3Ige30pLmdl',
-            'dCgiX3Byb2MiKQogICAgICAgICAgICBpZiBwOgogICAgICAgICAgICAgICAgdHJ5OgogICAgICAgICAgICAgICAgICAgIHAudGVybWluYXRl',
-            'KCkKICAgICAgICAgICAgICAgIGV4Y2VwdCBFeGNlcHRpb246CiAgICAgICAgICAgICAgICAgICAgcGFzcwogICAgICAgICAgICByZXR1cm4g',
-            'c2VsZi5fanNvbih7Im9rIjogVHJ1ZX0pCgogICAgICAgIGlmIHBhdGguc3RhcnRzd2l0aCgiL2ZpbGUvIik6CiAgICAgICAgICAgIHJldHVy',
-            'biBzZWxmLnNlcnZlX21lZGlhKHVucXVvdGUocGF0aFtsZW4oIi9maWxlLyIpOl0pKQoKICAgICAgICBpZiBwYXRoID09ICIvcmV2ZWFsIjoK',
-            'ICAgICAgICAgICAgcSA9IHBhcnNlX3FzKHVybHBhcnNlKHNlbGYucGF0aCkucXVlcnkpCiAgICAgICAgICAgIGZvbGRlciA9IChxLmdldCgi',
-            'cGF0aCIpIG9yIFsiIl0pWzBdCiAgICAgICAgICAgIHJldHVybiBzZWxmLl9qc29uKHsib2siOiByZXZlYWwoZm9sZGVyKX0pCgogICAgICAg',
-            'IHJldHVybiBzZWxmLl9qc29uKHsiZXJyb3IiOiAibm90IGZvdW5kIn0sIDQwNCkKCiAgICBkZWYgZG9fUE9TVChzZWxmKToKICAgICAgICBw',
-            'YXRoID0gdXJscGFyc2Uoc2VsZi5wYXRoKS5wYXRoCiAgICAgICAgZGF0YSA9IHNlbGYuX2JvZHkoKQoKICAgICAgICBpZiBwYXRoID09ICIv',
-            'aW5mbyI6CiAgICAgICAgICAgIHVybCA9IChkYXRhLmdldCgidXJsIikgb3IgIiIpLnN0cmlwKCkKICAgICAgICAgICAgaWYgbm90IHVybDoK',
-            'ICAgICAgICAgICAgICAgIHJldHVybiBzZWxmLl9qc29uKHsiZXJyb3IiOiAidXJsIHJlcXVpcmVkIn0sIDQwMCkKICAgICAgICAgICAgamlk',
-            'ID0gbmV3X2pvYigiaW5mbyIsIHsidXJsIjogdXJsfSkKICAgICAgICAgICAgdGhyZWFkaW5nLlRocmVhZCh0YXJnZXQ9d29ya2VyX2luZm8s',
-            'IGFyZ3M9KGppZCwgdXJsKSwgZGFlbW9uPVRydWUpLnN0YXJ0KCkKICAgICAgICAgICAgcmV0dXJuIHNlbGYuX2pzb24oeyJqb2IiOiBqaWR9',
-            'KQoKICAgICAgICBpZiBwYXRoID09ICIvcHJveHkiOgogICAgICAgICAgICB1cmwgPSAoZGF0YS5nZXQoInVybCIpIG9yICIiKS5zdHJpcCgp',
-            'CiAgICAgICAgICAgIGlmIG5vdCB1cmw6CiAgICAgICAgICAgICAgICByZXR1cm4gc2VsZi5fanNvbih7ImVycm9yIjogInVybCByZXF1aXJl',
-            'ZCJ9LCA0MDApCiAgICAgICAgICAgIGhlaWdodCA9IGludChkYXRhLmdldCgiaGVpZ2h0Iikgb3IgMjQwKQogICAgICAgICAgICB2aWQgPSBk',
-            'YXRhLmdldCgiaWQiKSBvciByZS5zdWIociJcVysiLCAiIiwgdXJsKVstMTE6XQogICAgICAgICAgICBqaWQgPSBuZXdfam9iKCJwcm94eSIs',
-            'IHsidXJsIjogdXJsLCAiaGVpZ2h0IjogaGVpZ2h0LCAiaWQiOiB2aWR9KQogICAgICAgICAgICB0aHJlYWRpbmcuVGhyZWFkKHRhcmdldD13',
-            'b3JrZXJfcHJveHksIGFyZ3M9KGppZCwgdXJsLCB2aWQsIGhlaWdodCksCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZGFlbW9uPVRy',
-            'dWUpLnN0YXJ0KCkKICAgICAgICAgICAgcmV0dXJuIHNlbGYuX2pzb24oeyJqb2IiOiBqaWR9KQoKICAgICAgICBpZiBwYXRoID09ICIvZXh0',
-            'cmFjdCI6CiAgICAgICAgICAgIGlmIG5vdCBkYXRhLmdldCgiY2xpcHMiKToKICAgICAgICAgICAgICAgIHJldHVybiBzZWxmLl9qc29uKHsi',
-            'ZXJyb3IiOiAiY2xpcHMgcmVxdWlyZWQifSwgNDAwKQogICAgICAgICAgICBqaWQgPSBuZXdfam9iKCJleHRyYWN0IiwgeyJjb3VudCI6IGxl',
-            'bihkYXRhWyJjbGlwcyJdKX0pCiAgICAgICAgICAgIHRocmVhZGluZy5UaHJlYWQodGFyZ2V0PXdvcmtlcl9leHRyYWN0LCBhcmdzPShqaWQs',
-            'IGRhdGEpLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgIGRhZW1vbj1UcnVlKS5zdGFydCgpCiAgICAgICAgICAgIHJldHVybiBzZWxm',
-            'Ll9qc29uKHsiam9iIjogamlkfSkKCiAgICAgICAgaWYgcGF0aCA9PSAiL2luc3RhbGwteXRkbHAiOgogICAgICAgICAgICBvaywgb3V0ID0g',
-            'aW5zdGFsbF95dGRscCgpCiAgICAgICAgICAgIHJldHVybiBzZWxmLl9qc29uKHsib2siOiBvaywgIm91dHB1dCI6IG91dFstMjAwMDpdfSkK',
-            'CiAgICAgICAgcmV0dXJuIHNlbGYuX2pzb24oeyJlcnJvciI6ICJub3QgZm91bmQifSwgNDA0KQoKICAgICMgLS0tLSBtZWRpYSBzdHJlYW1p',
-            'bmcgd2l0aCBSYW5nZSBzdXBwb3J0IChuZWVkZWQgZm9yIDx2aWRlbz4gc2Vla2luZykgLS0tLQogICAgZGVmIHNlcnZlX21lZGlhKHNlbGYs',
-            'IGppZCk6CiAgICAgICAgaiA9IGpvYl9nZXQoamlkKQogICAgICAgIGZwYXRoID0gKGogb3Ige30pLmdldCgiZmlsZSIpCiAgICAgICAgaWYg',
-            'bm90IGZwYXRoIG9yIG5vdCBvcy5wYXRoLmlzZmlsZShmcGF0aCk6CiAgICAgICAgICAgIHJldHVybiBzZWxmLl9qc29uKHsiZXJyb3IiOiAi',
-            'ZmlsZSBub3QgcmVhZHkifSwgNDA0KQoKICAgICAgICBzaXplID0gb3MucGF0aC5nZXRzaXplKGZwYXRoKQogICAgICAgIGN0eXBlID0gbWlt',
-            'ZXR5cGVzLmd1ZXNzX3R5cGUoZnBhdGgpWzBdIG9yICJ2aWRlby9tcDQiCiAgICAgICAgcm5nID0gc2VsZi5oZWFkZXJzLmdldCgiUmFuZ2Ui',
-            'KQoKICAgICAgICBzdGFydCwgZW5kID0gMCwgc2l6ZSAtIDEKICAgICAgICBzdGF0dXMgPSAyMDAKICAgICAgICBpZiBybmc6CiAgICAgICAg',
-            'ICAgIG0gPSByZS5tYXRjaChyImJ5dGVzPShcZCopLShcZCopIiwgcm5nLnN0cmlwKCkpCiAgICAgICAgICAgIGlmIG06CiAgICAgICAgICAg',
-            'ICAgICBnMSwgZzIgPSBtLmdyb3VwKDEpLCBtLmdyb3VwKDIpCiAgICAgICAgICAgICAgICBpZiBnMToKICAgICAgICAgICAgICAgICAgICBz',
-            'dGFydCA9IGludChnMSkKICAgICAgICAgICAgICAgICAgICBlbmQgPSBpbnQoZzIpIGlmIGcyIGVsc2Ugc2l6ZSAtIDEKICAgICAgICAgICAg',
-            'ICAgIGVsaWYgZzI6ICAgICAgICAgICAgICAgICAgICAgICMgc3VmZml4IHJhbmdlOiBieXRlcz0tNTAwCiAgICAgICAgICAgICAgICAgICAg',
-            'c3RhcnQgPSBtYXgoMCwgc2l6ZSAtIGludChnMikpCiAgICAgICAgICAgICAgICBpZiBzdGFydCA+PSBzaXplOgogICAgICAgICAgICAgICAg',
-            'ICAgIHNlbGYuc2VuZF9yZXNwb25zZSg0MTYpCiAgICAgICAgICAgICAgICAgICAgc2VsZi5zZW5kX2hlYWRlcigiQ29udGVudC1SYW5nZSIs',
-            'ICJieXRlcyAqLyVkIiAlIHNpemUpCiAgICAgICAgICAgICAgICAgICAgc2VsZi5fY29ycygpCiAgICAgICAgICAgICAgICAgICAgc2VsZi5l',
-            'bmRfaGVhZGVycygpCiAgICAgICAgICAgICAgICAgICAgcmV0dXJuCiAgICAgICAgICAgICAgICBlbmQgPSBtaW4oZW5kLCBzaXplIC0gMSkK',
-            'ICAgICAgICAgICAgICAgIHN0YXR1cyA9IDIwNgoKICAgICAgICBsZW5ndGggPSBlbmQgLSBzdGFydCArIDEKICAgICAgICBzZWxmLnNlbmRf',
-            'cmVzcG9uc2Uoc3RhdHVzKQogICAgICAgIHNlbGYuc2VuZF9oZWFkZXIoIkNvbnRlbnQtVHlwZSIsIGN0eXBlKQogICAgICAgIHNlbGYuc2Vu',
-            'ZF9oZWFkZXIoIkFjY2VwdC1SYW5nZXMiLCAiYnl0ZXMiKQogICAgICAgIHNlbGYuc2VuZF9oZWFkZXIoIkNvbnRlbnQtTGVuZ3RoIiwgc3Ry',
-            'KGxlbmd0aCkpCiAgICAgICAgaWYgc3RhdHVzID09IDIwNjoKICAgICAgICAgICAgc2VsZi5zZW5kX2hlYWRlcigiQ29udGVudC1SYW5nZSIs',
-            'ICJieXRlcyAlZC0lZC8lZCIgJSAoc3RhcnQsIGVuZCwgc2l6ZSkpCiAgICAgICAgc2VsZi5zZW5kX2hlYWRlcigiQ2FjaGUtQ29udHJvbCIs',
-            'ICJwdWJsaWMsIG1heC1hZ2U9MzYwMCIpCiAgICAgICAgc2VsZi5fY29ycygpCiAgICAgICAgc2VsZi5lbmRfaGVhZGVycygpCgogICAgICAg',
-            'IHRyeToKICAgICAgICAgICAgd2l0aCBvcGVuKGZwYXRoLCAicmIiKSBhcyBmaDoKICAgICAgICAgICAgICAgIGZoLnNlZWsoc3RhcnQpCiAg',
-            'ICAgICAgICAgICAgICBsZWZ0ID0gbGVuZ3RoCiAgICAgICAgICAgICAgICB3aGlsZSBsZWZ0ID4gMDoKICAgICAgICAgICAgICAgICAgICBj',
-            'aHVuayA9IGZoLnJlYWQobWluKDI1NiAqIDEwMjQsIGxlZnQpKQogICAgICAgICAgICAgICAgICAgIGlmIG5vdCBjaHVuazoKICAgICAgICAg',
-            'ICAgICAgICAgICAgICAgYnJlYWsKICAgICAgICAgICAgICAgICAgICBzZWxmLndmaWxlLndyaXRlKGNodW5rKQogICAgICAgICAgICAgICAg',
-            'ICAgIGxlZnQgLT0gbGVuKGNodW5rKQogICAgICAgIGV4Y2VwdCAoQnJva2VuUGlwZUVycm9yLCBDb25uZWN0aW9uUmVzZXRFcnJvcik6CiAg',
-            'ICAgICAgICAgIHBhc3MgICAgICAgICAgIyB0aGUgYnJvd3NlciBhYm9ydGVkIHRoZSByYW5nZSAtIGNvbXBsZXRlbHkgbm9ybWFsCgoKZGVm',
-            'IHJldmVhbChmb2xkZXIpOgogICAgdHJ5OgogICAgICAgIGlmIG9zLm5hbWUgPT0gIm50IjoKICAgICAgICAgICAgb3Muc3RhcnRmaWxlKGZv',
-            'bGRlcikgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIyBub3FhOiBTNjA2CiAgICAgICAgZWxpZiBzeXMucGxhdGZvcm0gPT0g',
-            'ImRhcndpbiI6CiAgICAgICAgICAgIHN1YnByb2Nlc3MuUG9wZW4oWyJvcGVuIiwgZm9sZGVyXSkKICAgICAgICBlbHNlOgogICAgICAgICAg',
-            'ICBzdWJwcm9jZXNzLlBvcGVuKFsieGRnLW9wZW4iLCBmb2xkZXJdKQogICAgICAgIHJldHVybiBUcnVlCiAgICBleGNlcHQgRXhjZXB0aW9u',
-            'OgogICAgICAgIHJldHVybiBGYWxzZQoKClFVSUVUID0gRmFsc2UKCgpkZWYgbWFpbigpOgogICAgZ2xvYmFsIE9VVFBVVF9ESVIsIENBQ0hF',
-            'X0RJUiwgUVVJRVQKICAgIGFwID0gYXJncGFyc2UuQXJndW1lbnRQYXJzZXIoZGVzY3JpcHRpb249IkNsaXBGb3JnZSBCcmlkZ2UiKQogICAg',
-            'YXAuYWRkX2FyZ3VtZW50KCItLXBvcnQiLCB0eXBlPWludCwgZGVmYXVsdD04NzY1KQogICAgYXAuYWRkX2FyZ3VtZW50KCItLWhvc3QiLCBk',
-            'ZWZhdWx0PSIxMjcuMC4wLjEiKQogICAgYXAuYWRkX2FyZ3VtZW50KCItLW91dCIsIGRlZmF1bHQ9Tm9uZSwgaGVscD0id2hlcmUgZXh0cmFj',
-            'dGVkIGNsaXBzIGdvIikKICAgIGFwLmFkZF9hcmd1bWVudCgiLS1jYWNoZSIsIGRlZmF1bHQ9Q0FDSEVfRElSLCBoZWxwPSJ3aGVyZSBwcm94',
-            'eSBjb3BpZXMgbGl2ZSIpCiAgICBhcC5hZGRfYXJndW1lbnQoIi0tcXVpZXQiLCBhY3Rpb249InN0b3JlX3RydWUiKQogICAgYXJncyA9IGFw',
-            'LnBhcnNlX2FyZ3MoKQoKICAgIE9VVFBVVF9ESVIgPSBvcy5wYXRoLmFic3BhdGgoYXJncy5vdXQpIGlmIGFyZ3Mub3V0IGVsc2UgZGVmYXVs',
-            'dF9vdXRwdXRfZGlyKCkKICAgIENBQ0hFX0RJUiA9IG9zLnBhdGguYWJzcGF0aChhcmdzLmNhY2hlKQogICAgUVVJRVQgPSBhcmdzLnF1aWV0',
-            'CiAgICBvcy5tYWtlZGlycyhDQUNIRV9ESVIsIGV4aXN0X29rPVRydWUpCiAgICB0cnk6CiAgICAgICAgb3MubWFrZWRpcnMoT1VUUFVUX0RJ',
-            'UiwgZXhpc3Rfb2s9VHJ1ZSkKICAgIGV4Y2VwdCBPU0Vycm9yOgogICAgICAgIE9VVFBVVF9ESVIgPSBvcy5wYXRoLmpvaW4oSE9NRSwgIkNs',
-            'aXBGb3JnZV9PdXRwdXQiKQogICAgICAgIG9zLm1ha2VkaXJzKE9VVFBVVF9ESVIsIGV4aXN0X29rPVRydWUpCgogICAgdCA9IGZpbmRfdG9v',
-            'bHMoKQogICAgcHJpbnQoIj0iICogNjIpCiAgICBwcmludCgiICBDbGlwRm9yZ2UgQnJpZGdlIHYlcyIgJSBWRVJTSU9OKQogICAgcHJpbnQo',
-            'Ij0iICogNjIpCiAgICBwcmludCgiICBMaXN0ZW5pbmcgOiBodHRwOi8vJXM6JWQiICUgKGFyZ3MuaG9zdCwgYXJncy5wb3J0KSkKICAgIHBy',
-            'aW50KCIgIFByb3hpZXMgICA6ICVzIiAlIENBQ0hFX0RJUikKICAgIHByaW50KCIgIENsaXBzICAgICA6ICVzIiAlIE9VVFBVVF9ESVIpCiAg',
-            'ICBwcmludCgiICB5dC1kbHAgICAgOiAlcyIgJSAoeXRkbHBfdmVyc2lvbigpIG9yICJOT1QgRk9VTkQgIC0+ICBwaXAgaW5zdGFsbCAtVSB5',
-            'dC1kbHAiKSkKICAgIHByaW50KCIgIGZmbXBlZyAgICA6ICVzIiAlICh0WyJmZm1wZWciXSBvciAiTk9UIEZPVU5EICAocmVjb21tZW5kZWQp',
-            'IikpCiAgICBwcmludCgiPSIgKiA2MikKICAgIHByaW50KCIgIExlYXZlIHRoaXMgd2luZG93IG9wZW4sIHRoZW4gdXNlIENsaXBGb3JnZSBQ',
-            'cm8gaW4geW91ciBicm93c2VyLiIpCiAgICBwcmludCgiICBQcmVzcyBDdHJsK0MgdG8gc3RvcC4iKQogICAgcHJpbnQoKQoKICAgIHNydiA9',
-            'IFRocmVhZGluZ0hUVFBTZXJ2ZXIoKGFyZ3MuaG9zdCwgYXJncy5wb3J0KSwgSGFuZGxlcikKICAgIHNydi5kYWVtb25fdGhyZWFkcyA9IFRy',
-            'dWUKICAgIHRyeToKICAgICAgICBzcnYuc2VydmVfZm9yZXZlcigpCiAgICBleGNlcHQgS2V5Ym9hcmRJbnRlcnJ1cHQ6CiAgICAgICAgcHJp',
-            'bnQoIlxuICBCcmlkZ2Ugc3RvcHBlZC4iKQogICAgICAgIHNydi5zaHV0ZG93bigpCgoKaWYgX19uYW1lX18gPT0gIl9fbWFpbl9fIjoKICAg',
-            'IG1haW4oKQo=',
+            'OiBOb25lLCAicmF3X2ZpbGUiOiBOb25lLCAiZmlsZXMiOiBbXSwgImxvZyI6IFtdLCAiY2FuY2VsIjogRmFsc2UsCiAgICAgICAgICAgICJj',
+            'cmVhdGVkIjogdGltZS50aW1lKCksICJtZXRhIjogbWV0YSBvciB7fSwKICAgICAgICB9CiAgICByZXR1cm4gamlkCgoKZGVmIGpvYl9zZXQo',
+            'amlkLCAqKmt3KToKICAgIHdpdGggSk9CU19MT0NLOgogICAgICAgIGogPSBKT0JTLmdldChqaWQpCiAgICAgICAgaWYgbm90IGo6CiAgICAg',
+            'ICAgICAgIHJldHVybgogICAgICAgIGoudXBkYXRlKGt3KQoKCmRlZiBqb2JfbG9nKGppZCwgbGluZSk6CiAgICB3aXRoIEpPQlNfTE9DSzoK',
+            'ICAgICAgICBqID0gSk9CUy5nZXQoamlkKQogICAgICAgIGlmIG5vdCBqOgogICAgICAgICAgICByZXR1cm4KICAgICAgICBqWyJsb2ciXS5h',
+            'cHBlbmQobGluZSkKICAgICAgICBpZiBsZW4oalsibG9nIl0pID4gNDAwOgogICAgICAgICAgICBkZWwgalsibG9nIl1bOi00MDBdCgoKZGVm',
+            'IGpvYl9nZXQoamlkKToKICAgIHdpdGggSk9CU19MT0NLOgogICAgICAgIGogPSBKT0JTLmdldChqaWQpCiAgICAgICAgcmV0dXJuIGRpY3Qo',
+            'aikgaWYgaiBlbHNlIE5vbmUKCgojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t',
+            'LS0tLS0tLS0tLS0tLS0tCiMgIHl0LWRscCBoZWxwZXJzCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t',
+            'LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KUFJPR1JFU1NfUkUgPSByZS5jb21waWxlKHIiQ0ZQUk9HXHwoW158XSopXHwoW158XSop',
+            'XHwoW158XSopIikKUENUX1JFID0gcmUuY29tcGlsZShyIihbXGQuXSspXHMqJSIpCgpQUk9HUkVTU19URU1QTEFURSA9ICJDRlBST0d8JShw',
+            'cm9ncmVzcy5fcGVyY2VudF9zdHIpc3wlKHByb2dyZXNzLl9zcGVlZF9zdHIpc3wlKHByb2dyZXNzLl9ldGFfc3RyKXMiCgoKZGVmIHJ1bl95',
+            'dGRscChqaWQsIGFyZ3MsIHBoYXNlX2xhYmVsPSJEb3dubG9hZGluZyIsIHBjdF9mcm9tPTAuMCwgcGN0X3RvPTEwMC4wKToKICAgICIiIlJ1',
+            'biB5dC1kbHAgc3RyZWFtaW5nIHByb2dyZXNzIGludG8gdGhlIGpvYi4gUmV0dXJucyB0aGUgZXhpdCBjb2RlLiIiIgogICAgdG9vbHMgPSBm',
+            'aW5kX3Rvb2xzKCkKICAgIGlmIG5vdCB0b29sc1sieXRkbHAiXToKICAgICAgICBqb2Jfc2V0KGppZCwgc3RhdHVzPSJlcnJvciIsIGVycm9y',
+            'PSJ5dC1kbHAgbm90IGZvdW5kIikKICAgICAgICByZXR1cm4gMTI3CgogICAgY21kID0gdG9vbHNbInl0ZGxwIl0gKyBbIi0tbmV3bGluZSIs',
+            'ICItLXByb2dyZXNzIiwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICItLXByb2dyZXNzLXRlbXBsYXRlIiwgUFJPR1JFU1NfVEVNUExB',
+            'VEVdICsgYXJncwogICAgam9iX2xvZyhqaWQsICIkICIgKyAiICIuam9pbihjbWQpKQoKICAgIGNyZWF0aW9uID0gMAogICAgaWYgb3MubmFt',
+            'ZSA9PSAibnQiOgogICAgICAgIGNyZWF0aW9uID0gZ2V0YXR0cihzdWJwcm9jZXNzLCAiQ1JFQVRFX05PX1dJTkRPVyIsIDApCgogICAgcHJv',
+            'YyA9IHN1YnByb2Nlc3MuUG9wZW4oY21kLCBzdGRvdXQ9c3VicHJvY2Vzcy5QSVBFLCBzdGRlcnI9c3VicHJvY2Vzcy5TVERPVVQsCiAgICAg',
+            'ICAgICAgICAgICAgICAgICAgICAgICB0ZXh0PVRydWUsIGJ1ZnNpemU9MSwgZW5jb2Rpbmc9InV0Zi04IiwKICAgICAgICAgICAgICAgICAg',
+            'ICAgICAgICAgIGVycm9ycz0icmVwbGFjZSIsIGNyZWF0aW9uZmxhZ3M9Y3JlYXRpb24pCgogICAgd2l0aCBKT0JTX0xPQ0s6CiAgICAgICAg',
+            'aWYgamlkIGluIEpPQlM6CiAgICAgICAgICAgIEpPQlNbamlkXVsiX3Byb2MiXSA9IHByb2MKCiAgICBzcGFuID0gbWF4KDAuMCwgcGN0X3Rv',
+            'IC0gcGN0X2Zyb20pCiAgICBmb3IgbGluZSBpbiBwcm9jLnN0ZG91dDoKICAgICAgICBsaW5lID0gbGluZS5yc3RyaXAoIlxuIikKICAgICAg',
+            'ICBqID0gam9iX2dldChqaWQpCiAgICAgICAgaWYgaiBhbmQgai5nZXQoImNhbmNlbCIpOgogICAgICAgICAgICB0cnk6CiAgICAgICAgICAg',
+            'ICAgICBwcm9jLnRlcm1pbmF0ZSgpCiAgICAgICAgICAgIGV4Y2VwdCBFeGNlcHRpb246CiAgICAgICAgICAgICAgICBwYXNzCiAgICAgICAg',
+            'ICAgIGpvYl9zZXQoamlkLCBzdGF0dXM9ImNhbmNlbGxlZCIsIG1lc3NhZ2U9IkNhbmNlbGxlZCIpCiAgICAgICAgICAgIHJldHVybiAxMzAK',
+            'CiAgICAgICAgbSA9IFBST0dSRVNTX1JFLnNlYXJjaChsaW5lKQogICAgICAgIGlmIG06CiAgICAgICAgICAgIHJhd19wY3QsIHNwZWVkLCBl',
+            'dGEgPSBtLmdyb3VwKDEpLCBtLmdyb3VwKDIpLCBtLmdyb3VwKDMpCiAgICAgICAgICAgIHBtID0gUENUX1JFLnNlYXJjaChyYXdfcGN0KQog',
+            'ICAgICAgICAgICBsb2NhbF9wY3QgPSBmbG9hdChwbS5ncm91cCgxKSkgaWYgcG0gZWxzZSAwLjAKICAgICAgICAgICAgam9iX3NldChqaWQs',
+            'CiAgICAgICAgICAgICAgICAgICAgc3RhdHVzPSJydW5uaW5nIiwKICAgICAgICAgICAgICAgICAgICBwY3Q9cm91bmQocGN0X2Zyb20gKyBz',
+            'cGFuICogbG9jYWxfcGN0IC8gMTAwLjAsIDEpLAogICAgICAgICAgICAgICAgICAgIHNwZWVkPXNwZWVkLnN0cmlwKCksCiAgICAgICAgICAg',
+            'ICAgICAgICAgZXRhPWV0YS5zdHJpcCgpLAogICAgICAgICAgICAgICAgICAgIG1lc3NhZ2U9cGhhc2VfbGFiZWwpCiAgICAgICAgICAgIGNv',
+            'bnRpbnVlCgogICAgICAgIGlmIGxpbmUuc3RyaXAoKToKICAgICAgICAgICAgam9iX2xvZyhqaWQsIGxpbmUpCiAgICAgICAgICAgIGxvdyA9',
+            'IGxpbmUubG93ZXIoKQogICAgICAgICAgICBpZiAiW21lcmdlcl0iIGluIGxvdyBvciAibWVyZ2luZyIgaW4gbG93OgogICAgICAgICAgICAg',
+            'ICAgam9iX3NldChqaWQsIG1lc3NhZ2U9Ik1lcmdpbmcgYXVkaW8gKyB2aWRlby4uLiIpCiAgICAgICAgICAgIGVsaWYgIltleHRyYWN0YXVk',
+            'aW9dIiBpbiBsb3c6CiAgICAgICAgICAgICAgICBqb2Jfc2V0KGppZCwgbWVzc2FnZT0iRXh0cmFjdGluZyBhdWRpby4uLiIpCiAgICAgICAg',
+            'ICAgIGVsaWYgIlt5b3V0dWJlXSIgaW4gbG93IGFuZCAiZG93bmxvYWRpbmciIGluIGxvdzoKICAgICAgICAgICAgICAgIGpvYl9zZXQoamlk',
+            'LCBtZXNzYWdlPSJSZWFkaW5nIHZpZGVvIGluZm8uLi4iKQogICAgICAgICAgICBlbGlmIGxpbmUuc3RhcnRzd2l0aCgiRVJST1IiKToKICAg',
+            'ICAgICAgICAgICAgIGpvYl9zZXQoamlkLCBlcnJvcj1saW5lWzo1MDBdKQoKICAgIHByb2Mud2FpdCgpCiAgICByZXR1cm4gcHJvYy5yZXR1',
+            'cm5jb2RlCgoKZGVmIHByb3h5X2Zvcm1hdChoZWlnaHQpOgogICAgIiIieXQtZGxwIGZvcm1hdCBzZWxlY3RvciBmb3IgYSBzbWFsbCwgc2Vl',
+            'a2FibGUgcHJveHkgY29weS4iIiIKICAgIGggPSBpbnQoaGVpZ2h0KQogICAgcmV0dXJuICgKICAgICAgICAiYnYqW2hlaWdodDw9JWRdW2V4',
+            'dD1tcDRdK2JhW2V4dD1tNGFdLyIKICAgICAgICAiYltoZWlnaHQ8PSVkXVtleHQ9bXA0XS8iCiAgICAgICAgImJ2KltoZWlnaHQ8PSVkXSti',
+            'YS8iCiAgICAgICAgImJbaGVpZ2h0PD0lZF0vIgogICAgICAgICJ3diord2EvdyIgJSAoaCwgaCwgaCwgaCkKICAgICkKCgpkZWYgcXVhbGl0',
+            'eV9mb3JtYXQocXVhbGl0eSwgY29udGFpbmVyKToKICAgICIiInl0LWRscCBmb3JtYXQgc2VsZWN0b3IgZm9yIHRoZSBmaW5hbCwgZnVsbCBx',
+            'dWFsaXR5IGNsaXBzLiIiIgogICAgaWYgcXVhbGl0eSA9PSAiYXVkaW8iOgogICAgICAgIHJldHVybiAiYmVzdGF1ZGlvL2Jlc3QiCiAgICBp',
+            'ZiBxdWFsaXR5ID09ICJiZXN0IjoKICAgICAgICBpZiBjb250YWluZXIgPT0gIndlYm0iOgogICAgICAgICAgICByZXR1cm4gImJ2KitiYS9i',
+            'IgogICAgICAgIHJldHVybiAiYnYqW2V4dD1tcDRdK2JhW2V4dD1tNGFdL2J2KitiYS9iW2V4dD1tcDRdL2IiCiAgICBoID0gaW50KHF1YWxp',
+            'dHkpCiAgICByZXR1cm4gKCJidipbaGVpZ2h0PD0lZF1bZXh0PW1wNF0rYmFbZXh0PW00YV0vIgogICAgICAgICAgICAiYnYqW2hlaWdodDw9',
+            'JWRdK2JhLyIKICAgICAgICAgICAgImJbaGVpZ2h0PD0lZF1bZXh0PW1wNF0vYltoZWlnaHQ8PSVkXSIgJSAoaCwgaCwgaCwgaCkpCgoKZGVm',
+            'IHNhbml0aXplKG5hbWUsIGZhbGxiYWNrPSJjbGlwIik6CiAgICBuYW1lID0gcmUuc3ViKHIiW15cd1wtLiBdKyIsICJfIiwgKG5hbWUgb3Ig',
+            'IiIpLnN0cmlwKCkpCiAgICBuYW1lID0gcmUuc3ViKHIiXHMrIiwgIl8iLCBuYW1lKS5zdHJpcCgiLl8gIikKICAgIHJldHVybiBuYW1lWzo4',
+            'MF0gb3IgZmFsbGJhY2sKCgojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t',
+            'LS0tLS0tLS0tLS0tCiMgIFdvcmtlcnMKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t',
+            'LS0tLS0tLS0tLS0tLS0tLS0tLQpkZWYgd29ya2VyX2luZm8oamlkLCB1cmwpOgogICAgdG9vbHMgPSBmaW5kX3Rvb2xzKCkKICAgIGlmIG5v',
+            'dCB0b29sc1sieXRkbHAiXToKICAgICAgICBqb2Jfc2V0KGppZCwgc3RhdHVzPSJlcnJvciIsIGVycm9yPSJ5dC1kbHAgbm90IGZvdW5kLiBS',
+            'dW46IHBpcCBpbnN0YWxsIC1VIHl0LWRscCIpCiAgICAgICAgcmV0dXJuCiAgICBqb2Jfc2V0KGppZCwgc3RhdHVzPSJydW5uaW5nIiwgbWVz',
+            'c2FnZT0iUmVhZGluZyB2aWRlbyBpbmZvLi4uIiwgcGN0PTEwKQogICAgdHJ5OgogICAgICAgIGNtZCA9IHRvb2xzWyJ5dGRscCJdICsgWyIt',
+            'SiIsICItLW5vLXBsYXlsaXN0IiwgIi0tc2tpcC1kb3dubG9hZCIsCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIi0tbm8td2Fy',
+            'bmluZ3MiLCB1cmxdCiAgICAgICAgciA9IHN1YnByb2Nlc3MucnVuKGNtZCwgY2FwdHVyZV9vdXRwdXQ9VHJ1ZSwgdGV4dD1UcnVlLCB0aW1l',
+            'b3V0PTE4MCwKICAgICAgICAgICAgICAgICAgICAgICAgICAgZW5jb2Rpbmc9InV0Zi04IiwgZXJyb3JzPSJyZXBsYWNlIikKICAgICAgICBp',
+            'ZiByLnJldHVybmNvZGUgIT0gMDoKICAgICAgICAgICAgam9iX3NldChqaWQsIHN0YXR1cz0iZXJyb3IiLAogICAgICAgICAgICAgICAgICAg',
+            'IGVycm9yPShyLnN0ZGVyciBvciAieXQtZGxwIGZhaWxlZCIpLnN0cmlwKClbOjUwMF0pCiAgICAgICAgICAgIHJldHVybgogICAgICAgIGRh',
+            'dGEgPSBqc29uLmxvYWRzKHIuc3Rkb3V0KQogICAgICAgIGhlaWdodHMgPSBzb3J0ZWQoe2YuZ2V0KCJoZWlnaHQiKSBmb3IgZiBpbiAoZGF0',
+            'YS5nZXQoImZvcm1hdHMiKSBvciBbXSkKICAgICAgICAgICAgICAgICAgICAgICAgICBpZiBmLmdldCgiaGVpZ2h0Iil9KQogICAgICAgIGlu',
+            'Zm8gPSB7CiAgICAgICAgICAgICJpZCI6IGRhdGEuZ2V0KCJpZCIpLAogICAgICAgICAgICAidGl0bGUiOiBkYXRhLmdldCgidGl0bGUiKSwK',
+            'ICAgICAgICAgICAgImR1cmF0aW9uIjogZGF0YS5nZXQoImR1cmF0aW9uIiksCiAgICAgICAgICAgICJ1cGxvYWRlciI6IGRhdGEuZ2V0KCJ1',
+            'cGxvYWRlciIpIG9yIGRhdGEuZ2V0KCJjaGFubmVsIiksCiAgICAgICAgICAgICJ0aHVtYm5haWwiOiBkYXRhLmdldCgidGh1bWJuYWlsIiks',
+            'CiAgICAgICAgICAgICJ3ZWJwYWdlX3VybCI6IGRhdGEuZ2V0KCJ3ZWJwYWdlX3VybCIpIG9yIHVybCwKICAgICAgICAgICAgImlzX2xpdmUi',
+            'OiBib29sKGRhdGEuZ2V0KCJpc19saXZlIikpLAogICAgICAgICAgICAiaGVpZ2h0cyI6IGhlaWdodHMsCiAgICAgICAgICAgICJjaGFwdGVy',
+            'cyI6IFsKICAgICAgICAgICAgICAgIHsidGl0bGUiOiBjLmdldCgidGl0bGUiKSwKICAgICAgICAgICAgICAgICAic3RhcnQiOiBjLmdldCgi',
+            'c3RhcnRfdGltZSIpLAogICAgICAgICAgICAgICAgICJlbmQiOiBjLmdldCgiZW5kX3RpbWUiKX0KICAgICAgICAgICAgICAgIGZvciBjIGlu',
+            'IChkYXRhLmdldCgiY2hhcHRlcnMiKSBvciBbXSkKICAgICAgICAgICAgICAgIGlmIGMuZ2V0KCJzdGFydF90aW1lIikgaXMgbm90IE5vbmUK',
+            'ICAgICAgICAgICAgXSwKICAgICAgICB9CiAgICAgICAgam9iX3NldChqaWQsIHN0YXR1cz0iZG9uZSIsIHBjdD0xMDAsIG1lc3NhZ2U9Iklu',
+            'Zm8gcmVhZHkiLAogICAgICAgICAgICAgICAgbWV0YT17ImluZm8iOiBpbmZvfSkKICAgIGV4Y2VwdCBzdWJwcm9jZXNzLlRpbWVvdXRFeHBp',
+            'cmVkOgogICAgICAgIGpvYl9zZXQoamlkLCBzdGF0dXM9ImVycm9yIiwgZXJyb3I9IlRpbWVkIG91dCByZWFkaW5nIHZpZGVvIGluZm8iKQog',
+            'ICAgZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgICAgIGpvYl9zZXQoamlkLCBzdGF0dXM9ImVycm9yIiwgZXJyb3I9c3RyKGUpWzo1MDBd',
+            'KQoKCkRVUl9SRSA9IHJlLmNvbXBpbGUociJEdXJhdGlvbjpccyooXGQrKTooXGRcZCk6KFxkXGRcLlxkKykiKQpPVVRfVElNRV9SRSA9IHJl',
+            'LmNvbXBpbGUociJvdXRfdGltZV9tcz0oXGQrKSIpCgoKZGVmIHRyYW5zY29kZV9zY3J1YihqaWQsIHNyYywgZHN0LCBoZWlnaHQsIHBjdF9m',
+            'cm9tLCBwY3RfdG8pOgogICAgIiIiUmUtZW5jb2RlIHRoZSBwcm94eSB3aXRoIGEga2V5ZnJhbWUgZXZlcnkgc2Vjb25kLgoKICAgIFNlZWtp',
+            'bmcgYSB2aWRlbyBjb3N0cyBhIGRlY29kZSBmcm9tIHRoZSBwcmV2aW91cyBrZXlmcmFtZS4geXQtZGxwJ3Mgc291cmNlCiAgICB0eXBpY2Fs',
+            'bHkgaGFzIHRoZW0gfjEwcyBhcGFydCwgd2hpY2ggaXMgd2h5IHNjcnViYmluZyBhIGxvbmcgdmlkZW8gZmVlbHMKICAgIGxhZ2d5IGV2ZW4g',
+            'YXQgMjQwcC4gT25lIGtleWZyYW1lIHBlciBzZWNvbmQgbWFrZXMgZXZlcnkgc2VlayBjaGVhcCAtIHRoaXMgaXMKICAgIGV4YWN0bHkgd2hh',
+            'dCBhbiBOTEUncyAicHJveHkgbWVkaWEiIGlzIGZvci4KICAgICIiIgogICAgZmYgPSBmaW5kX3Rvb2xzKClbImZmbXBlZyJdCiAgICBpZiBu',
+            'b3QgZmY6CiAgICAgICAgcmV0dXJuIEZhbHNlCgogICAgY21kID0gWwogICAgICAgIGZmLCAiLXkiLCAiLWkiLCBzcmMsCiAgICAgICAgIi12',
+            'ZiIsICJzY2FsZT0tMjolZCIgJSBoZWlnaHQsCiAgICAgICAgIi1jOnYiLCAibGlieDI2NCIsICItcHJlc2V0IiwgInZlcnlmYXN0IiwgIi10',
+            'dW5lIiwgImZhc3RkZWNvZGUiLAogICAgICAgICItY3JmIiwgIjMwIiwgIi1waXhfZm10IiwgInl1djQyMHAiLAogICAgICAgICItZm9yY2Vf',
+            'a2V5X2ZyYW1lcyIsICJleHByOmd0ZSh0LG5fZm9yY2VkKjEpIiwKICAgICAgICAiLWM6YSIsICJhYWMiLCAiLWI6YSIsICI2NGsiLCAiLWFj',
+            'IiwgIjEiLAogICAgICAgICItbW92ZmxhZ3MiLCAiK2Zhc3RzdGFydCIsCiAgICAgICAgIi1wcm9ncmVzcyIsICJwaXBlOjEiLCAiLW5vc3Rh',
+            'dHMiLAogICAgICAgIGRzdCwKICAgIF0KICAgIGpvYl9sb2coamlkLCAiJCAiICsgIiAiLmpvaW4oY21kKSkKICAgIGpvYl9zZXQoamlkLCBz',
+            'dGF0dXM9InJ1bm5pbmciLCBtZXNzYWdlPSJPcHRpbWlzaW5nIGZvciBzY3J1YmJpbmcuLi4iLCBzcGVlZD0iIiwgZXRhPSIiKQoKICAgIGNy',
+            'ZWF0aW9uID0gZ2V0YXR0cihzdWJwcm9jZXNzLCAiQ1JFQVRFX05PX1dJTkRPVyIsIDApIGlmIG9zLm5hbWUgPT0gIm50IiBlbHNlIDAKICAg',
+            'IHByb2MgPSBzdWJwcm9jZXNzLlBvcGVuKGNtZCwgc3Rkb3V0PXN1YnByb2Nlc3MuUElQRSwgc3RkZXJyPXN1YnByb2Nlc3MuU1RET1VULAog',
+            'ICAgICAgICAgICAgICAgICAgICAgICAgICAgdGV4dD1UcnVlLCBidWZzaXplPTEsIGVuY29kaW5nPSJ1dGYtOCIsCiAgICAgICAgICAgICAg',
+            'ICAgICAgICAgICAgICBlcnJvcnM9InJlcGxhY2UiLCBjcmVhdGlvbmZsYWdzPWNyZWF0aW9uKQogICAgd2l0aCBKT0JTX0xPQ0s6CiAgICAg',
+            'ICAgaWYgamlkIGluIEpPQlM6CiAgICAgICAgICAgIEpPQlNbamlkXVsiX3Byb2MiXSA9IHByb2MKCiAgICB0b3RhbF9zID0gMC4wCiAgICBz',
+            'cGFuID0gbWF4KDAuMCwgcGN0X3RvIC0gcGN0X2Zyb20pCiAgICBmb3IgbGluZSBpbiBwcm9jLnN0ZG91dDoKICAgICAgICBqID0gam9iX2dl',
+            'dChqaWQpCiAgICAgICAgaWYgaiBhbmQgai5nZXQoImNhbmNlbCIpOgogICAgICAgICAgICB0cnk6CiAgICAgICAgICAgICAgICBwcm9jLnRl',
+            'cm1pbmF0ZSgpCiAgICAgICAgICAgIGV4Y2VwdCBFeGNlcHRpb246CiAgICAgICAgICAgICAgICBwYXNzCiAgICAgICAgICAgIHJldHVybiBG',
+            'YWxzZQogICAgICAgIG0gPSBEVVJfUkUuc2VhcmNoKGxpbmUpCiAgICAgICAgaWYgbSBhbmQgbm90IHRvdGFsX3M6CiAgICAgICAgICAgIHRv',
+            'dGFsX3MgPSBpbnQobS5ncm91cCgxKSkgKiAzNjAwICsgaW50KG0uZ3JvdXAoMikpICogNjAgKyBmbG9hdChtLmdyb3VwKDMpKQogICAgICAg',
+            'IG0gPSBPVVRfVElNRV9SRS5zZWFyY2gobGluZSkKICAgICAgICBpZiBtIGFuZCB0b3RhbF9zOgogICAgICAgICAgICBkb25lID0gaW50KG0u',
+            'Z3JvdXAoMSkpIC8gMV8wMDBfMDAwLjAKICAgICAgICAgICAgam9iX3NldChqaWQsIHBjdD1yb3VuZChwY3RfZnJvbSArIHNwYW4gKiBtaW4o',
+            'MS4wLCBkb25lIC8gdG90YWxfcyksIDEpLAogICAgICAgICAgICAgICAgICAgIG1lc3NhZ2U9Ik9wdGltaXNpbmcgZm9yIHNjcnViYmluZy4u',
+            'LiAlZCUlIgogICAgICAgICAgICAgICAgICAgICAgICAgICAgJSBpbnQoMTAwICogbWluKDEuMCwgZG9uZSAvIHRvdGFsX3MpKSkKICAgIHBy',
+            'b2Mud2FpdCgpCiAgICBvayA9IHByb2MucmV0dXJuY29kZSA9PSAwIGFuZCBvcy5wYXRoLmlzZmlsZShkc3QpIGFuZCBvcy5wYXRoLmdldHNp',
+            'emUoZHN0KSA+IDEwMjQKICAgIGlmIG5vdCBvazoKICAgICAgICBqb2JfbG9nKGppZCwgIltXQVJOXSBzY3J1YiB0cmFuc2NvZGUgZmFpbGVk',
+            'IChleGl0ICVzKTsgdXNpbmcgdGhlIHJhdyBwcm94eSIKICAgICAgICAgICAgICAgICUgcHJvYy5yZXR1cm5jb2RlKQogICAgcmV0dXJuIG9r',
+            'CgoKZGVmIHdvcmtlcl9wcm94eShqaWQsIHVybCwgdmlkZW9faWQsIGhlaWdodCwgc2NydWI9VHJ1ZSk6CiAgICBvcy5tYWtlZGlycyhDQUNI',
+            'RV9ESVIsIGV4aXN0X29rPVRydWUpCiAgICBiYXNlID0gc2FuaXRpemUodmlkZW9faWQsICJ2aWRlbyIpCiAgICBzdGVtID0gb3MucGF0aC5q',
+            'b2luKENBQ0hFX0RJUiwgIiVzXyVkcCIgJSAoYmFzZSwgaGVpZ2h0KSkKICAgIHNjcnViX3BhdGggPSBvcy5wYXRoLmpvaW4oQ0FDSEVfRElS',
+            'LCAiJXNfJWRwX3NjcnViLm1wNCIgJSAoYmFzZSwgaGVpZ2h0KSkKCiAgICAjIEEgcHJldmlvdXNseSBvcHRpbWlzZWQgcHJveHkgaXMgdGhl',
+            'IGJlc3QgcG9zc2libGUgaGl0LgogICAgaWYgb3MucGF0aC5pc2ZpbGUoc2NydWJfcGF0aCkgYW5kIG9zLnBhdGguZ2V0c2l6ZShzY3J1Yl9w',
+            'YXRoKSA+IDEwMjQ6CiAgICAgICAgcmF3ID0gbmV4dCgoc3RlbSArIGUgZm9yIGUgaW4gKCIubXA0IiwgIi5ta3YiLCAiLndlYm0iKQogICAg',
+            'ICAgICAgICAgICAgICAgIGlmIG9zLnBhdGguaXNmaWxlKHN0ZW0gKyBlKSksIE5vbmUpCiAgICAgICAgam9iX3NldChqaWQsIHN0YXR1cz0i',
+            'ZG9uZSIsIHBjdD0xMDAsIG1lc3NhZ2U9IlByb3h5IHJlYWR5IChjYWNoZWQsIHNjcnViLW9wdGltaXNlZCkiLAogICAgICAgICAgICAgICAg',
+            'ZmlsZT1zY3J1Yl9wYXRoLCByYXdfZmlsZT1yYXcsCiAgICAgICAgICAgICAgICBtZXRhPXsiY2FjaGVkIjogVHJ1ZSwgInNjcnViIjogVHJ1',
+            'ZSwgInNpemUiOiBvcy5wYXRoLmdldHNpemUoc2NydWJfcGF0aCl9KQogICAgICAgIHJldHVybgoKICAgICMgT3RoZXJ3aXNlIGEgcmF3IGNh',
+            'Y2hlZCBkb3dubG9hZCBzdGlsbCBzYXZlcyB0aGUgbmV0d29yayByb3VuZCB0cmlwLgogICAgZm9yIGV4dCBpbiAoIi5tcDQiLCAiLm1rdiIs',
+            'ICIud2VibSIpOgogICAgICAgIGlmIG9zLnBhdGguaXNmaWxlKHN0ZW0gKyBleHQpIGFuZCBvcy5wYXRoLmdldHNpemUoc3RlbSArIGV4dCkg',
+            'PiAxMDI0OgogICAgICAgICAgICBpZiBzY3J1YiBhbmQgZmluZF90b29scygpWyJmZm1wZWciXToKICAgICAgICAgICAgICAgIGlmIHRyYW5z',
+            'Y29kZV9zY3J1YihqaWQsIHN0ZW0gKyBleHQsIHNjcnViX3BhdGgsIGhlaWdodCwgMCwgOTkpOgogICAgICAgICAgICAgICAgICAgIGpvYl9z',
+            'ZXQoamlkLCBzdGF0dXM9ImRvbmUiLCBwY3Q9MTAwLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgbWVzc2FnZT0iUHJveHkgcmVhZHkg',
+            'KHNjcnViLW9wdGltaXNlZCkiLCBmaWxlPXNjcnViX3BhdGgsCiAgICAgICAgICAgICAgICAgICAgICAgICAgICByYXdfZmlsZT1zdGVtICsg',
+            'ZXh0LAogICAgICAgICAgICAgICAgICAgICAgICAgICAgbWV0YT17ImNhY2hlZCI6IFRydWUsICJzY3J1YiI6IFRydWUsCiAgICAgICAgICAg',
+            'ICAgICAgICAgICAgICAgICAgICAgICAic2l6ZSI6IG9zLnBhdGguZ2V0c2l6ZShzY3J1Yl9wYXRoKX0pCiAgICAgICAgICAgICAgICAgICAg',
+            'cmV0dXJuCiAgICAgICAgICAgICAgICBpZiBqb2JfZ2V0KGppZCkuZ2V0KCJjYW5jZWwiKToKICAgICAgICAgICAgICAgICAgICBqb2Jfc2V0',
+            'KGppZCwgc3RhdHVzPSJjYW5jZWxsZWQiLCBtZXNzYWdlPSJDYW5jZWxsZWQiKQogICAgICAgICAgICAgICAgICAgIHJldHVybgogICAgICAg',
+            'ICAgICBqb2Jfc2V0KGppZCwgc3RhdHVzPSJkb25lIiwgcGN0PTEwMCwgbWVzc2FnZT0iUHJveHkgcmVhZHkgKGNhY2hlZCkiLAogICAgICAg',
+            'ICAgICAgICAgICAgIGZpbGU9c3RlbSArIGV4dCwKICAgICAgICAgICAgICAgICAgICBtZXRhPXsiY2FjaGVkIjogVHJ1ZSwgInNjcnViIjog',
+            'RmFsc2UsCiAgICAgICAgICAgICAgICAgICAgICAgICAgInNpemUiOiBvcy5wYXRoLmdldHNpemUoc3RlbSArIGV4dCl9KQogICAgICAgICAg',
+            'ICByZXR1cm4KCiAgICB0b29scyA9IGZpbmRfdG9vbHMoKQogICAgYXJncyA9IFsiLWYiLCBwcm94eV9mb3JtYXQoaGVpZ2h0KSwgIi0tbm8t',
+            'cGxheWxpc3QiLCAiLS1uby1wYXJ0IiwKICAgICAgICAgICAgIi0tZm9yY2Utb3ZlcndyaXRlcyIsICItLW5vLXdhcm5pbmdzIiwgIi1vIiwg',
+            'c3RlbSArICIuJShleHQpcyJdCiAgICBpZiB0b29sc1siZmZtcGVnIl06CiAgICAgICAgIyBmYXN0c3RhcnQgbW92ZXMgdGhlIG1vb3YgYXRv',
+            'bSB0byB0aGUgZnJvbnQgLT4gaW5zdGFudCBzZWVraW5nCiAgICAgICAgYXJncyArPSBbIi0tbWVyZ2Utb3V0cHV0LWZvcm1hdCIsICJtcDQi',
+            'LAogICAgICAgICAgICAgICAgICItLXBvc3Rwcm9jZXNzb3ItYXJncyIsICJmZm1wZWc6LW1vdmZsYWdzICtmYXN0c3RhcnQiXQogICAgYXJn',
+            'cyArPSBbdXJsXQoKICAgIHdhbnRfc2NydWIgPSBib29sKHNjcnViIGFuZCB0b29sc1siZmZtcGVnIl0pCiAgICBkbF90byA9IDYwIGlmIHdh',
+            'bnRfc2NydWIgZWxzZSA5NiAgICAgICMgbGVhdmUgcm9vbSBmb3IgdGhlIG9wdGltaXNlIHBhc3MKICAgIGpvYl9zZXQoamlkLCBzdGF0dXM9',
+            'InJ1bm5pbmciLCBtZXNzYWdlPSJEb3dubG9hZGluZyAlZHAgcHJveHkuLi4iICUgaGVpZ2h0KQogICAgY29kZSA9IHJ1bl95dGRscChqaWQs',
+            'IGFyZ3MsIHBoYXNlX2xhYmVsPSJEb3dubG9hZGluZyAlZHAgcHJveHkuLi4iICUgaGVpZ2h0LAogICAgICAgICAgICAgICAgICAgICBwY3Rf',
+            'ZnJvbT0wLCBwY3RfdG89ZGxfdG8pCgogICAgaiA9IGpvYl9nZXQoamlkKQogICAgaWYgaiBhbmQgai5nZXQoInN0YXR1cyIpID09ICJjYW5j',
+            'ZWxsZWQiOgogICAgICAgIHJldHVybgogICAgaWYgY29kZSAhPSAwOgogICAgICAgIGpvYl9zZXQoamlkLCBzdGF0dXM9ImVycm9yIiwKICAg',
+            'ICAgICAgICAgICAgIGVycm9yPShqIG9yIHt9KS5nZXQoImVycm9yIikgb3IgInl0LWRscCBleGl0ZWQgd2l0aCBjb2RlICVkIiAlIGNvZGUp',
+            'CiAgICAgICAgcmV0dXJuCgogICAgZm91bmQgPSBOb25lCiAgICBmb3IgZXh0IGluICgiLm1wNCIsICIubWt2IiwgIi53ZWJtIiwgIi5tNHYi',
+            'KToKICAgICAgICBpZiBvcy5wYXRoLmlzZmlsZShzdGVtICsgZXh0KToKICAgICAgICAgICAgZm91bmQgPSBzdGVtICsgZXh0CiAgICAgICAg',
+            'ICAgIGJyZWFrCiAgICBpZiBub3QgZm91bmQ6CiAgICAgICAgIyB5dC1kbHAgbWF5IGhhdmUgY2hvc2VuIGFub3RoZXIgZXh0ZW5zaW9uCiAg',
+            'ICAgICAgYmFzZSA9IG9zLnBhdGguYmFzZW5hbWUoc3RlbSkKICAgICAgICBmb3IgZiBpbiBvcy5saXN0ZGlyKENBQ0hFX0RJUik6CiAgICAg',
+            'ICAgICAgIGlmIGYuc3RhcnRzd2l0aChiYXNlKToKICAgICAgICAgICAgICAgIGZvdW5kID0gb3MucGF0aC5qb2luKENBQ0hFX0RJUiwgZikK',
+            'ICAgICAgICAgICAgICAgIGJyZWFrCiAgICBpZiBub3QgZm91bmQ6CiAgICAgICAgam9iX3NldChqaWQsIHN0YXR1cz0iZXJyb3IiLCBlcnJv',
+            'cj0iUHJveHkgZmlsZSBub3QgZm91bmQgYWZ0ZXIgZG93bmxvYWQiKQogICAgICAgIHJldHVybgoKICAgIGlmIHdhbnRfc2NydWIgYW5kIHRy',
+            'YW5zY29kZV9zY3J1YihqaWQsIGZvdW5kLCBzY3J1Yl9wYXRoLCBoZWlnaHQsIGRsX3RvLCA5OSk6CiAgICAgICAgam9iX3NldChqaWQsIHN0',
+            'YXR1cz0iZG9uZSIsIHBjdD0xMDAsIG1lc3NhZ2U9IlByb3h5IHJlYWR5IChzY3J1Yi1vcHRpbWlzZWQpIiwKICAgICAgICAgICAgICAgIGZp',
+            'bGU9c2NydWJfcGF0aCwgcmF3X2ZpbGU9Zm91bmQsCiAgICAgICAgICAgICAgICBtZXRhPXsiY2FjaGVkIjogRmFsc2UsICJzY3J1YiI6IFRy',
+            'dWUsCiAgICAgICAgICAgICAgICAgICAgICAic2l6ZSI6IG9zLnBhdGguZ2V0c2l6ZShzY3J1Yl9wYXRoKX0pCiAgICAgICAgcmV0dXJuCiAg',
+            'ICBpZiBqb2JfZ2V0KGppZCkuZ2V0KCJjYW5jZWwiKToKICAgICAgICBqb2Jfc2V0KGppZCwgc3RhdHVzPSJjYW5jZWxsZWQiLCBtZXNzYWdl',
+            'PSJDYW5jZWxsZWQiKQogICAgICAgIHJldHVybgoKICAgIGpvYl9zZXQoamlkLCBzdGF0dXM9ImRvbmUiLCBwY3Q9MTAwLCBtZXNzYWdlPSJQ',
+            'cm94eSByZWFkeSIsIGZpbGU9Zm91bmQsCiAgICAgICAgICAgIG1ldGE9eyJjYWNoZWQiOiBGYWxzZSwgInNjcnViIjogRmFsc2UsICJzaXpl',
+            'Ijogb3MucGF0aC5nZXRzaXplKGZvdW5kKX0pCgoKZGVmIHdvcmtlcl9leHRyYWN0KGppZCwgcGF5bG9hZCk6CiAgICAiIiJEb3dubG9hZCB0',
+            'aGUgc2VsZWN0ZWQgY2xpcHMgYXQgZnVsbCBxdWFsaXR5IHZpYSAtLWRvd25sb2FkLXNlY3Rpb25zLiIiIgogICAgaXRlbXMgPSBwYXlsb2Fk',
+            'LmdldCgiY2xpcHMiKSBvciBbXQogICAgcXVhbGl0eSA9IHN0cihwYXlsb2FkLmdldCgicXVhbGl0eSIsICJiZXN0IikpCiAgICBjb250YWlu',
+            'ZXIgPSBzdHIocGF5bG9hZC5nZXQoImZvcm1hdCIsICJtcDQiKSkKICAgIG91dGRpciA9IHBheWxvYWQuZ2V0KCJvdXRkaXIiKSBvciBPVVRQ',
+            'VVRfRElSCgogICAgIyBVbmlxdWUgZm9sZGVyIHNvIG5vdGhpbmcgaXMgZXZlciBvdmVyd3JpdHRlbiAtIHNhbWUgYmVoYXZpb3VyIGFzIHRo',
+            'ZQogICAgIyBleHBvcnRlZCAuYmF0IHNjcmlwdC4KICAgIGJhc2UsIG4gPSBvcy5wYXRoLmpvaW4ob3V0ZGlyLCAiQ2xpcHMiKSwgMQogICAg',
+            'dGFyZ2V0ID0gYmFzZQogICAgd2hpbGUgb3MucGF0aC5leGlzdHModGFyZ2V0KToKICAgICAgICB0YXJnZXQgPSAiJXNfJWQiICUgKGJhc2Us',
+            'IG4pCiAgICAgICAgbiArPSAxCiAgICBvcy5tYWtlZGlycyh0YXJnZXQsIGV4aXN0X29rPVRydWUpCgogICAgdG9vbHMgPSBmaW5kX3Rvb2xz',
+            'KCkKICAgIGZtdCA9IHF1YWxpdHlfZm9ybWF0KHF1YWxpdHksIGNvbnRhaW5lcikKICAgIHRvdGFsID0gbGVuKGl0ZW1zKQogICAgZG9uZV9m',
+            'aWxlcyA9IFtdCgogICAgam9iX3NldChqaWQsIHN0YXR1cz0icnVubmluZyIsIG1lc3NhZ2U9IkV4dHJhY3RpbmcgJWQgY2xpcChzKS4uLiIg',
+            'JSB0b3RhbCwKICAgICAgICAgICAgbWV0YT17Im91dGRpciI6IHRhcmdldCwgInRvdGFsIjogdG90YWx9KQoKICAgIGZvciBpLCBjbGlwIGlu',
+            'IGVudW1lcmF0ZShpdGVtcyk6CiAgICAgICAgaiA9IGpvYl9nZXQoamlkKQogICAgICAgIGlmIGogYW5kIGouZ2V0KCJjYW5jZWwiKToKICAg',
+            'ICAgICAgICAgam9iX3NldChqaWQsIHN0YXR1cz0iY2FuY2VsbGVkIiwgbWVzc2FnZT0iQ2FuY2VsbGVkIikKICAgICAgICAgICAgcmV0dXJu',
+            'CgogICAgICAgIG5hbWUgPSBzYW5pdGl6ZShjbGlwLmdldCgibmFtZSIpIG9yICJjbGlwXyUwMmQiICUgKGkgKyAxKSkKICAgICAgICBvdXQg',
+            'PSBvcy5wYXRoLmpvaW4odGFyZ2V0LCBuYW1lICsgIi4lKGV4dClzIikKICAgICAgICBzZWN0aW9uID0gIiolcy0lcyIgJSAoY2xpcC5nZXQo',
+            'InN0YXJ0IiksIGNsaXAuZ2V0KCJlbmQiKSkKCiAgICAgICAgYXJncyA9IFsiLWYiLCBmbXQsICItLWRvd25sb2FkLXNlY3Rpb25zIiwgc2Vj',
+            'dGlvbiwgIi0tbm8tcGxheWxpc3QiLAogICAgICAgICAgICAgICAgIi0tbm8tcGFydCIsICItLWZvcmNlLW92ZXJ3cml0ZXMiLCAiLS1uby13',
+            'YXJuaW5ncyIsCiAgICAgICAgICAgICAgICAiLW8iLCBvdXRdCiAgICAgICAgaWYgcXVhbGl0eSA9PSAiYXVkaW8iOgogICAgICAgICAgICBh',
+            'cmdzICs9IFsiLXgiLCAiLS1hdWRpby1mb3JtYXQiLCAibXAzIiwgIi0tYXVkaW8tcXVhbGl0eSIsICIwIl0KICAgICAgICBlbHNlOgogICAg',
+            'ICAgICAgICBpZiB0b29sc1siZmZtcGVnIl06CiAgICAgICAgICAgICAgICBhcmdzICs9IFsiLS1mb3JjZS1rZXlmcmFtZXMtYXQtY3V0cyJd',
+            'CiAgICAgICAgICAgIGFyZ3MgKz0gWyItLW1lcmdlLW91dHB1dC1mb3JtYXQiLCBjb250YWluZXJdCiAgICAgICAgYXJncyArPSBbY2xpcC5n',
+            'ZXQoInVybCIpXQoKICAgICAgICBsbyA9IDEwMC4wICogaSAvIG1heCgxLCB0b3RhbCkKICAgICAgICBoaSA9IDEwMC4wICogKGkgKyAxKSAv',
+            'IG1heCgxLCB0b3RhbCkKICAgICAgICBqb2Jfc2V0KGppZCwgbWVzc2FnZT0iQ2xpcCAlZC8lZCAtICVzIiAlIChpICsgMSwgdG90YWwsIG5h',
+            'bWUpKQogICAgICAgIGNvZGUgPSBydW5feXRkbHAoamlkLCBhcmdzLAogICAgICAgICAgICAgICAgICAgICAgICAgcGhhc2VfbGFiZWw9IkNs',
+            'aXAgJWQvJWQgLSAlcyIgJSAoaSArIDEsIHRvdGFsLCBuYW1lKSwKICAgICAgICAgICAgICAgICAgICAgICAgIHBjdF9mcm9tPWxvLCBwY3Rf',
+            'dG89aGkpCiAgICAgICAgaWYgY29kZSA9PSAxMzA6CiAgICAgICAgICAgIHJldHVybgogICAgICAgIGlmIGNvZGUgPT0gMDoKICAgICAgICAg',
+            'ICAgZm9yIGYgaW4gb3MubGlzdGRpcih0YXJnZXQpOgogICAgICAgICAgICAgICAgaWYgZi5zdGFydHN3aXRoKG5hbWUgKyAiLiIpOgogICAg',
+            'ICAgICAgICAgICAgICAgIHAgPSBvcy5wYXRoLmpvaW4odGFyZ2V0LCBmKQogICAgICAgICAgICAgICAgICAgIGlmIHAgbm90IGluIGRvbmVf',
+            'ZmlsZXM6CiAgICAgICAgICAgICAgICAgICAgICAgIGRvbmVfZmlsZXMuYXBwZW5kKHApCiAgICAgICAgZWxzZToKICAgICAgICAgICAgam9i',
+            'X2xvZyhqaWQsICJbV0FSTl0gY2xpcCAlcyBmYWlsZWQgKGV4aXQgJWQpIiAlIChuYW1lLCBjb2RlKSkKCiAgICAgICAgam9iX3NldChqaWQs',
+            'IGZpbGVzPWxpc3QoZG9uZV9maWxlcykpCgogICAgam9iX3NldChqaWQsIHN0YXR1cz0iZG9uZSIsIHBjdD0xMDAsCiAgICAgICAgICAgIG1l',
+            'c3NhZ2U9IlNhdmVkICVkLyVkIGNsaXAocykgdG8gJXMiICUgKGxlbihkb25lX2ZpbGVzKSwgdG90YWwsIHRhcmdldCksCiAgICAgICAgICAg',
+            'IGZpbGVzPWRvbmVfZmlsZXMsIG1ldGE9eyJvdXRkaXIiOiB0YXJnZXQsICJ0b3RhbCI6IHRvdGFsfSkKCgojIC0tLS0tLS0tLS0tLS0tLS0t',
+            'LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiMgIEhUVFAgbGF5ZXIKIyAtLS0tLS0t',
+            'LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpjbGFzcyBIYW5kbGVy',
+            'KEJhc2VIVFRQUmVxdWVzdEhhbmRsZXIpOgogICAgc2VydmVyX3ZlcnNpb24gPSAiQ2xpcEZvcmdlQnJpZGdlLyIgKyBWRVJTSU9OCiAgICBw',
+            'cm90b2NvbF92ZXJzaW9uID0gIkhUVFAvMS4xIiAgICMga2VlcC1hbGl2ZTogbXVjaCBzbW9vdGhlciB2aWRlbyBzZWVraW5nCgogICAgIyAt',
+            'LS0tIHBsdW1iaW5nIC0tLS0KICAgIGRlZiBsb2dfbWVzc2FnZShzZWxmLCBmbXQsICphcmdzKToKICAgICAgICBpZiBRVUlFVDoKICAgICAg',
+            'ICAgICAgcmV0dXJuCiAgICAgICAgc3lzLnN0ZGVyci53cml0ZSgiICAlcyAtICVzXG4iICUgKHNlbGYuYWRkcmVzc19zdHJpbmcoKSwgZm10',
+            'ICUgYXJncykpCgogICAgZGVmIF9jb3JzKHNlbGYpOgogICAgICAgIHNlbGYuc2VuZF9oZWFkZXIoIkFjY2Vzcy1Db250cm9sLUFsbG93LU9y',
+            'aWdpbiIsICIqIikKICAgICAgICBzZWxmLnNlbmRfaGVhZGVyKCJBY2Nlc3MtQ29udHJvbC1BbGxvdy1NZXRob2RzIiwgIkdFVCwgUE9TVCwg',
+            'T1BUSU9OUyIpCiAgICAgICAgc2VsZi5zZW5kX2hlYWRlcigiQWNjZXNzLUNvbnRyb2wtQWxsb3ctSGVhZGVycyIsICJDb250ZW50LVR5cGUi',
+            'KQogICAgICAgIHNlbGYuc2VuZF9oZWFkZXIoIkFjY2Vzcy1Db250cm9sLUV4cG9zZS1IZWFkZXJzIiwKICAgICAgICAgICAgICAgICAgICAg',
+            'ICAgICJDb250ZW50LUxlbmd0aCwgQ29udGVudC1SYW5nZSwgQWNjZXB0LVJhbmdlcyIpCgogICAgZGVmIF9qc29uKHNlbGYsIG9iaiwgY29k',
+            'ZT0yMDApOgogICAgICAgIGJvZHkgPSBqc29uLmR1bXBzKG9iaikuZW5jb2RlKCJ1dGYtOCIpCiAgICAgICAgc2VsZi5zZW5kX3Jlc3BvbnNl',
+            'KGNvZGUpCiAgICAgICAgc2VsZi5zZW5kX2hlYWRlcigiQ29udGVudC1UeXBlIiwgImFwcGxpY2F0aW9uL2pzb247IGNoYXJzZXQ9dXRmLTgi',
+            'KQogICAgICAgIHNlbGYuc2VuZF9oZWFkZXIoIkNvbnRlbnQtTGVuZ3RoIiwgc3RyKGxlbihib2R5KSkpCiAgICAgICAgc2VsZi5fY29ycygp',
+            'CiAgICAgICAgc2VsZi5lbmRfaGVhZGVycygpCiAgICAgICAgdHJ5OgogICAgICAgICAgICBzZWxmLndmaWxlLndyaXRlKGJvZHkpCiAgICAg',
+            'ICAgZXhjZXB0IChCcm9rZW5QaXBlRXJyb3IsIENvbm5lY3Rpb25SZXNldEVycm9yKToKICAgICAgICAgICAgcGFzcwoKICAgIGRlZiBfYm9k',
+            'eShzZWxmKToKICAgICAgICB0cnk6CiAgICAgICAgICAgIG4gPSBpbnQoc2VsZi5oZWFkZXJzLmdldCgiQ29udGVudC1MZW5ndGgiKSBvciAw',
+            'KQogICAgICAgICAgICByZXR1cm4ganNvbi5sb2FkcyhzZWxmLnJmaWxlLnJlYWQobikgb3IgYiJ7fSIpCiAgICAgICAgZXhjZXB0IEV4Y2Vw',
+            'dGlvbjoKICAgICAgICAgICAgcmV0dXJuIHt9CgogICAgZGVmIGRvX09QVElPTlMoc2VsZik6CiAgICAgICAgc2VsZi5zZW5kX3Jlc3BvbnNl',
+            'KDIwNCkKICAgICAgICBzZWxmLl9jb3JzKCkKICAgICAgICBzZWxmLnNlbmRfaGVhZGVyKCJDb250ZW50LUxlbmd0aCIsICIwIikKICAgICAg',
+            'ICBzZWxmLmVuZF9oZWFkZXJzKCkKCiAgICAjIC0tLS0gcm91dGVzIC0tLS0KICAgIGRlZiBkb19HRVQoc2VsZik6CiAgICAgICAgcGF0aCA9',
+            'IHVybHBhcnNlKHNlbGYucGF0aCkucGF0aAoKICAgICAgICBpZiBwYXRoIGluICgiLyIsICIvaGVhbHRoIik6CiAgICAgICAgICAgIHQgPSBm',
+            'aW5kX3Rvb2xzKCkKICAgICAgICAgICAgcmV0dXJuIHNlbGYuX2pzb24oewogICAgICAgICAgICAgICAgIm9rIjogVHJ1ZSwgImFwcCI6ICJj',
+            'bGlwZm9yZ2UtYnJpZGdlIiwgInZlcnNpb24iOiBWRVJTSU9OLAogICAgICAgICAgICAgICAgInl0ZGxwIjogYm9vbCh0WyJ5dGRscCJdKSwg',
+            'Inl0ZGxwX2tpbmQiOiB0WyJ5dGRscF9raW5kIl0sCiAgICAgICAgICAgICAgICAieXRkbHBfdmVyc2lvbiI6IHl0ZGxwX3ZlcnNpb24oKSwK',
+            'ICAgICAgICAgICAgICAgICJmZm1wZWciOiBib29sKHRbImZmbXBlZyJdKSwKICAgICAgICAgICAgICAgICJjYWNoZSI6IENBQ0hFX0RJUiwg',
+            'Im91dHB1dCI6IE9VVFBVVF9ESVIsCiAgICAgICAgICAgICAgICAicHl0aG9uIjogc3lzLnZlcnNpb24uc3BsaXQoKVswXSwKICAgICAgICAg',
+            'ICAgfSkKCiAgICAgICAgaWYgcGF0aC5zdGFydHN3aXRoKCIvcHJvZ3Jlc3MvIik6CiAgICAgICAgICAgIGogPSBqb2JfZ2V0KHBhdGgucnNw',
+            'bGl0KCIvIiwgMSlbLTFdKQogICAgICAgICAgICBpZiBub3QgajoKICAgICAgICAgICAgICAgIHJldHVybiBzZWxmLl9qc29uKHsiZXJyb3Ii',
+            'OiAibm8gc3VjaCBqb2IifSwgNDA0KQogICAgICAgICAgICBqLnBvcCgiX3Byb2MiLCBOb25lKQogICAgICAgICAgICBqWyJsb2ciXSA9IGpb',
+            'ImxvZyJdWy0yNTpdCiAgICAgICAgICAgIHJldHVybiBzZWxmLl9qc29uKGopCgogICAgICAgIGlmIHBhdGguc3RhcnRzd2l0aCgiL2NhbmNl',
+            'bC8iKToKICAgICAgICAgICAgamlkID0gcGF0aC5yc3BsaXQoIi8iLCAxKVstMV0KICAgICAgICAgICAgam9iX3NldChqaWQsIGNhbmNlbD1U',
+            'cnVlKQogICAgICAgICAgICB3aXRoIEpPQlNfTE9DSzoKICAgICAgICAgICAgICAgIHAgPSAoSk9CUy5nZXQoamlkKSBvciB7fSkuZ2V0KCJf',
+            'cHJvYyIpCiAgICAgICAgICAgIGlmIHA6CiAgICAgICAgICAgICAgICB0cnk6CiAgICAgICAgICAgICAgICAgICAgcC50ZXJtaW5hdGUoKQog',
+            'ICAgICAgICAgICAgICAgZXhjZXB0IEV4Y2VwdGlvbjoKICAgICAgICAgICAgICAgICAgICBwYXNzCiAgICAgICAgICAgIHJldHVybiBzZWxm',
+            'Ll9qc29uKHsib2siOiBUcnVlfSkKCiAgICAgICAgaWYgcGF0aC5zdGFydHN3aXRoKCIvZmlsZS8iKToKICAgICAgICAgICAgcSA9IHBhcnNl',
+            'X3FzKHVybHBhcnNlKHNlbGYucGF0aCkucXVlcnkpCiAgICAgICAgICAgIHdhbnRfcmF3ID0gKHEuZ2V0KCJyYXciKSBvciBbIjAiXSlbMF0g',
+            'aW4gKCIxIiwgInRydWUiLCAieWVzIikKICAgICAgICAgICAgcmV0dXJuIHNlbGYuc2VydmVfbWVkaWEodW5xdW90ZShwYXRoW2xlbigiL2Zp',
+            'bGUvIik6XSksIHdhbnRfcmF3KQoKICAgICAgICBpZiBwYXRoID09ICIvcmV2ZWFsIjoKICAgICAgICAgICAgcSA9IHBhcnNlX3FzKHVybHBh',
+            'cnNlKHNlbGYucGF0aCkucXVlcnkpCiAgICAgICAgICAgIGZvbGRlciA9IChxLmdldCgicGF0aCIpIG9yIFsiIl0pWzBdCiAgICAgICAgICAg',
+            'IHJldHVybiBzZWxmLl9qc29uKHsib2siOiByZXZlYWwoZm9sZGVyKX0pCgogICAgICAgIHJldHVybiBzZWxmLl9qc29uKHsiZXJyb3IiOiAi',
+            'bm90IGZvdW5kIn0sIDQwNCkKCiAgICBkZWYgZG9fUE9TVChzZWxmKToKICAgICAgICBwYXRoID0gdXJscGFyc2Uoc2VsZi5wYXRoKS5wYXRo',
+            'CiAgICAgICAgZGF0YSA9IHNlbGYuX2JvZHkoKQoKICAgICAgICBpZiBwYXRoID09ICIvaW5mbyI6CiAgICAgICAgICAgIHVybCA9IChkYXRh',
+            'LmdldCgidXJsIikgb3IgIiIpLnN0cmlwKCkKICAgICAgICAgICAgaWYgbm90IHVybDoKICAgICAgICAgICAgICAgIHJldHVybiBzZWxmLl9q',
+            'c29uKHsiZXJyb3IiOiAidXJsIHJlcXVpcmVkIn0sIDQwMCkKICAgICAgICAgICAgamlkID0gbmV3X2pvYigiaW5mbyIsIHsidXJsIjogdXJs',
+            'fSkKICAgICAgICAgICAgdGhyZWFkaW5nLlRocmVhZCh0YXJnZXQ9d29ya2VyX2luZm8sIGFyZ3M9KGppZCwgdXJsKSwgZGFlbW9uPVRydWUp',
+            'LnN0YXJ0KCkKICAgICAgICAgICAgcmV0dXJuIHNlbGYuX2pzb24oeyJqb2IiOiBqaWR9KQoKICAgICAgICBpZiBwYXRoID09ICIvcHJveHki',
+            'OgogICAgICAgICAgICB1cmwgPSAoZGF0YS5nZXQoInVybCIpIG9yICIiKS5zdHJpcCgpCiAgICAgICAgICAgIGlmIG5vdCB1cmw6CiAgICAg',
+            'ICAgICAgICAgICByZXR1cm4gc2VsZi5fanNvbih7ImVycm9yIjogInVybCByZXF1aXJlZCJ9LCA0MDApCiAgICAgICAgICAgIGhlaWdodCA9',
+            'IGludChkYXRhLmdldCgiaGVpZ2h0Iikgb3IgMjQwKQogICAgICAgICAgICB2aWQgPSBkYXRhLmdldCgiaWQiKSBvciByZS5zdWIociJcVysi',
+            'LCAiIiwgdXJsKVstMTE6XQogICAgICAgICAgICBzY3J1YiA9IGRhdGEuZ2V0KCJzY3J1YiIsIFRydWUpCiAgICAgICAgICAgIGppZCA9IG5l',
+            'd19qb2IoInByb3h5IiwgeyJ1cmwiOiB1cmwsICJoZWlnaHQiOiBoZWlnaHQsICJpZCI6IHZpZH0pCiAgICAgICAgICAgIHRocmVhZGluZy5U',
+            'aHJlYWQodGFyZ2V0PXdvcmtlcl9wcm94eSwgYXJncz0oamlkLCB1cmwsIHZpZCwgaGVpZ2h0LCBzY3J1YiksCiAgICAgICAgICAgICAgICAg',
+            'ICAgICAgICAgICAgZGFlbW9uPVRydWUpLnN0YXJ0KCkKICAgICAgICAgICAgcmV0dXJuIHNlbGYuX2pzb24oeyJqb2IiOiBqaWR9KQoKICAg',
+            'ICAgICBpZiBwYXRoID09ICIvZXh0cmFjdCI6CiAgICAgICAgICAgIGlmIG5vdCBkYXRhLmdldCgiY2xpcHMiKToKICAgICAgICAgICAgICAg',
+            'IHJldHVybiBzZWxmLl9qc29uKHsiZXJyb3IiOiAiY2xpcHMgcmVxdWlyZWQifSwgNDAwKQogICAgICAgICAgICBqaWQgPSBuZXdfam9iKCJl',
+            'eHRyYWN0IiwgeyJjb3VudCI6IGxlbihkYXRhWyJjbGlwcyJdKX0pCiAgICAgICAgICAgIHRocmVhZGluZy5UaHJlYWQodGFyZ2V0PXdvcmtl',
+            'cl9leHRyYWN0LCBhcmdzPShqaWQsIGRhdGEpLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgIGRhZW1vbj1UcnVlKS5zdGFydCgpCiAg',
+            'ICAgICAgICAgIHJldHVybiBzZWxmLl9qc29uKHsiam9iIjogamlkfSkKCiAgICAgICAgaWYgcGF0aCA9PSAiL2luc3RhbGwteXRkbHAiOgog',
+            'ICAgICAgICAgICBvaywgb3V0ID0gaW5zdGFsbF95dGRscCgpCiAgICAgICAgICAgIHJldHVybiBzZWxmLl9qc29uKHsib2siOiBvaywgIm91',
+            'dHB1dCI6IG91dFstMjAwMDpdfSkKCiAgICAgICAgcmV0dXJuIHNlbGYuX2pzb24oeyJlcnJvciI6ICJub3QgZm91bmQifSwgNDA0KQoKICAg',
+            'ICMgLS0tLSBtZWRpYSBzdHJlYW1pbmcgd2l0aCBSYW5nZSBzdXBwb3J0IChuZWVkZWQgZm9yIDx2aWRlbz4gc2Vla2luZykgLS0tLQogICAg',
+            'ZGVmIHNlcnZlX21lZGlhKHNlbGYsIGppZCwgd2FudF9yYXc9RmFsc2UpOgogICAgICAgIGogPSBqb2JfZ2V0KGppZCkKICAgICAgICBmcGF0',
+            'aCA9ICgoaiBvciB7fSkuZ2V0KCJyYXdfZmlsZSIpIGlmIHdhbnRfcmF3IGVsc2UgTm9uZSkgb3IgKGogb3Ige30pLmdldCgiZmlsZSIpCiAg',
+            'ICAgICAgaWYgbm90IGZwYXRoIG9yIG5vdCBvcy5wYXRoLmlzZmlsZShmcGF0aCk6CiAgICAgICAgICAgIHJldHVybiBzZWxmLl9qc29uKHsi',
+            'ZXJyb3IiOiAiZmlsZSBub3QgcmVhZHkifSwgNDA0KQoKICAgICAgICBzaXplID0gb3MucGF0aC5nZXRzaXplKGZwYXRoKQogICAgICAgIGN0',
+            'eXBlID0gbWltZXR5cGVzLmd1ZXNzX3R5cGUoZnBhdGgpWzBdIG9yICJ2aWRlby9tcDQiCiAgICAgICAgcm5nID0gc2VsZi5oZWFkZXJzLmdl',
+            'dCgiUmFuZ2UiKQoKICAgICAgICBzdGFydCwgZW5kID0gMCwgc2l6ZSAtIDEKICAgICAgICBzdGF0dXMgPSAyMDAKICAgICAgICBpZiBybmc6',
+            'CiAgICAgICAgICAgIG0gPSByZS5tYXRjaChyImJ5dGVzPShcZCopLShcZCopIiwgcm5nLnN0cmlwKCkpCiAgICAgICAgICAgIGlmIG06CiAg',
+            'ICAgICAgICAgICAgICBnMSwgZzIgPSBtLmdyb3VwKDEpLCBtLmdyb3VwKDIpCiAgICAgICAgICAgICAgICBpZiBnMToKICAgICAgICAgICAg',
+            'ICAgICAgICBzdGFydCA9IGludChnMSkKICAgICAgICAgICAgICAgICAgICBlbmQgPSBpbnQoZzIpIGlmIGcyIGVsc2Ugc2l6ZSAtIDEKICAg',
+            'ICAgICAgICAgICAgIGVsaWYgZzI6ICAgICAgICAgICAgICAgICAgICAgICMgc3VmZml4IHJhbmdlOiBieXRlcz0tNTAwCiAgICAgICAgICAg',
+            'ICAgICAgICAgc3RhcnQgPSBtYXgoMCwgc2l6ZSAtIGludChnMikpCiAgICAgICAgICAgICAgICBpZiBzdGFydCA+PSBzaXplOgogICAgICAg',
+            'ICAgICAgICAgICAgIHNlbGYuc2VuZF9yZXNwb25zZSg0MTYpCiAgICAgICAgICAgICAgICAgICAgc2VsZi5zZW5kX2hlYWRlcigiQ29udGVu',
+            'dC1SYW5nZSIsICJieXRlcyAqLyVkIiAlIHNpemUpCiAgICAgICAgICAgICAgICAgICAgc2VsZi5fY29ycygpCiAgICAgICAgICAgICAgICAg',
+            'ICAgc2VsZi5lbmRfaGVhZGVycygpCiAgICAgICAgICAgICAgICAgICAgcmV0dXJuCiAgICAgICAgICAgICAgICBlbmQgPSBtaW4oZW5kLCBz',
+            'aXplIC0gMSkKICAgICAgICAgICAgICAgIHN0YXR1cyA9IDIwNgoKICAgICAgICBsZW5ndGggPSBlbmQgLSBzdGFydCArIDEKICAgICAgICBz',
+            'ZWxmLnNlbmRfcmVzcG9uc2Uoc3RhdHVzKQogICAgICAgIHNlbGYuc2VuZF9oZWFkZXIoIkNvbnRlbnQtVHlwZSIsIGN0eXBlKQogICAgICAg',
+            'IHNlbGYuc2VuZF9oZWFkZXIoIkFjY2VwdC1SYW5nZXMiLCAiYnl0ZXMiKQogICAgICAgIHNlbGYuc2VuZF9oZWFkZXIoIkNvbnRlbnQtTGVu',
+            'Z3RoIiwgc3RyKGxlbmd0aCkpCiAgICAgICAgaWYgc3RhdHVzID09IDIwNjoKICAgICAgICAgICAgc2VsZi5zZW5kX2hlYWRlcigiQ29udGVu',
+            'dC1SYW5nZSIsICJieXRlcyAlZC0lZC8lZCIgJSAoc3RhcnQsIGVuZCwgc2l6ZSkpCiAgICAgICAgc2VsZi5zZW5kX2hlYWRlcigiQ2FjaGUt',
+            'Q29udHJvbCIsICJwdWJsaWMsIG1heC1hZ2U9MzYwMCIpCiAgICAgICAgc2VsZi5fY29ycygpCiAgICAgICAgc2VsZi5lbmRfaGVhZGVycygp',
+            'CgogICAgICAgIHRyeToKICAgICAgICAgICAgd2l0aCBvcGVuKGZwYXRoLCAicmIiKSBhcyBmaDoKICAgICAgICAgICAgICAgIGZoLnNlZWso',
+            'c3RhcnQpCiAgICAgICAgICAgICAgICBsZWZ0ID0gbGVuZ3RoCiAgICAgICAgICAgICAgICB3aGlsZSBsZWZ0ID4gMDoKICAgICAgICAgICAg',
+            'ICAgICAgICBjaHVuayA9IGZoLnJlYWQobWluKDI1NiAqIDEwMjQsIGxlZnQpKQogICAgICAgICAgICAgICAgICAgIGlmIG5vdCBjaHVuazoK',
+            'ICAgICAgICAgICAgICAgICAgICAgICAgYnJlYWsKICAgICAgICAgICAgICAgICAgICBzZWxmLndmaWxlLndyaXRlKGNodW5rKQogICAgICAg',
+            'ICAgICAgICAgICAgIGxlZnQgLT0gbGVuKGNodW5rKQogICAgICAgIGV4Y2VwdCAoQnJva2VuUGlwZUVycm9yLCBDb25uZWN0aW9uUmVzZXRF',
+            'cnJvcik6CiAgICAgICAgICAgIHBhc3MgICAgICAgICAgIyB0aGUgYnJvd3NlciBhYm9ydGVkIHRoZSByYW5nZSAtIGNvbXBsZXRlbHkgbm9y',
+            'bWFsCgoKZGVmIHJldmVhbChmb2xkZXIpOgogICAgdHJ5OgogICAgICAgIGlmIG9zLm5hbWUgPT0gIm50IjoKICAgICAgICAgICAgb3Muc3Rh',
+            'cnRmaWxlKGZvbGRlcikgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIyBub3FhOiBTNjA2CiAgICAgICAgZWxpZiBzeXMucGxh',
+            'dGZvcm0gPT0gImRhcndpbiI6CiAgICAgICAgICAgIHN1YnByb2Nlc3MuUG9wZW4oWyJvcGVuIiwgZm9sZGVyXSkKICAgICAgICBlbHNlOgog',
+            'ICAgICAgICAgICBzdWJwcm9jZXNzLlBvcGVuKFsieGRnLW9wZW4iLCBmb2xkZXJdKQogICAgICAgIHJldHVybiBUcnVlCiAgICBleGNlcHQg',
+            'RXhjZXB0aW9uOgogICAgICAgIHJldHVybiBGYWxzZQoKClFVSUVUID0gRmFsc2UKCgpkZWYgbWFpbigpOgogICAgZ2xvYmFsIE9VVFBVVF9E',
+            'SVIsIENBQ0hFX0RJUiwgUVVJRVQKICAgIGFwID0gYXJncGFyc2UuQXJndW1lbnRQYXJzZXIoZGVzY3JpcHRpb249IkNsaXBGb3JnZSBCcmlk',
+            'Z2UiKQogICAgYXAuYWRkX2FyZ3VtZW50KCItLXBvcnQiLCB0eXBlPWludCwgZGVmYXVsdD04NzY1KQogICAgYXAuYWRkX2FyZ3VtZW50KCIt',
+            'LWhvc3QiLCBkZWZhdWx0PSIxMjcuMC4wLjEiKQogICAgYXAuYWRkX2FyZ3VtZW50KCItLW91dCIsIGRlZmF1bHQ9Tm9uZSwgaGVscD0id2hl',
+            'cmUgZXh0cmFjdGVkIGNsaXBzIGdvIikKICAgIGFwLmFkZF9hcmd1bWVudCgiLS1jYWNoZSIsIGRlZmF1bHQ9Q0FDSEVfRElSLCBoZWxwPSJ3',
+            'aGVyZSBwcm94eSBjb3BpZXMgbGl2ZSIpCiAgICBhcC5hZGRfYXJndW1lbnQoIi0tcXVpZXQiLCBhY3Rpb249InN0b3JlX3RydWUiKQogICAg',
+            'YXJncyA9IGFwLnBhcnNlX2FyZ3MoKQoKICAgIE9VVFBVVF9ESVIgPSBvcy5wYXRoLmFic3BhdGgoYXJncy5vdXQpIGlmIGFyZ3Mub3V0IGVs',
+            'c2UgZGVmYXVsdF9vdXRwdXRfZGlyKCkKICAgIENBQ0hFX0RJUiA9IG9zLnBhdGguYWJzcGF0aChhcmdzLmNhY2hlKQogICAgUVVJRVQgPSBh',
+            'cmdzLnF1aWV0CiAgICBvcy5tYWtlZGlycyhDQUNIRV9ESVIsIGV4aXN0X29rPVRydWUpCiAgICB0cnk6CiAgICAgICAgb3MubWFrZWRpcnMo',
+            'T1VUUFVUX0RJUiwgZXhpc3Rfb2s9VHJ1ZSkKICAgIGV4Y2VwdCBPU0Vycm9yOgogICAgICAgIE9VVFBVVF9ESVIgPSBvcy5wYXRoLmpvaW4o',
+            'SE9NRSwgIkNsaXBGb3JnZV9PdXRwdXQiKQogICAgICAgIG9zLm1ha2VkaXJzKE9VVFBVVF9ESVIsIGV4aXN0X29rPVRydWUpCgogICAgdCA9',
+            'IGZpbmRfdG9vbHMoKQogICAgcHJpbnQoIj0iICogNjIpCiAgICBwcmludCgiICBDbGlwRm9yZ2UgQnJpZGdlIHYlcyIgJSBWRVJTSU9OKQog',
+            'ICAgcHJpbnQoIj0iICogNjIpCiAgICBwcmludCgiICBMaXN0ZW5pbmcgOiBodHRwOi8vJXM6JWQiICUgKGFyZ3MuaG9zdCwgYXJncy5wb3J0',
+            'KSkKICAgIHByaW50KCIgIFByb3hpZXMgICA6ICVzIiAlIENBQ0hFX0RJUikKICAgIHByaW50KCIgIENsaXBzICAgICA6ICVzIiAlIE9VVFBV',
+            'VF9ESVIpCiAgICBwcmludCgiICB5dC1kbHAgICAgOiAlcyIgJSAoeXRkbHBfdmVyc2lvbigpIG9yICJOT1QgRk9VTkQgIC0+ICBwaXAgaW5z',
+            'dGFsbCAtVSB5dC1kbHAiKSkKICAgIHByaW50KCIgIGZmbXBlZyAgICA6ICVzIiAlICh0WyJmZm1wZWciXSBvciAiTk9UIEZPVU5EICAocmVj',
+            'b21tZW5kZWQpIikpCiAgICBwcmludCgiPSIgKiA2MikKICAgIHByaW50KCIgIExlYXZlIHRoaXMgd2luZG93IG9wZW4sIHRoZW4gdXNlIENs',
+            'aXBGb3JnZSBQcm8gaW4geW91ciBicm93c2VyLiIpCiAgICBwcmludCgiICBQcmVzcyBDdHJsK0MgdG8gc3RvcC4iKQogICAgcHJpbnQoKQoK',
+            'ICAgIHNydiA9IFRocmVhZGluZ0hUVFBTZXJ2ZXIoKGFyZ3MuaG9zdCwgYXJncy5wb3J0KSwgSGFuZGxlcikKICAgIHNydi5kYWVtb25fdGhy',
+            'ZWFkcyA9IFRydWUKICAgIHRyeToKICAgICAgICBzcnYuc2VydmVfZm9yZXZlcigpCiAgICBleGNlcHQgS2V5Ym9hcmRJbnRlcnJ1cHQ6CiAg',
+            'ICAgICAgcHJpbnQoIlxuICBCcmlkZ2Ugc3RvcHBlZC4iKQogICAgICAgIHNydi5zaHV0ZG93bigpCgoKaWYgX19uYW1lX18gPT0gIl9fbWFp',
+            'bl9fIjoKICAgIG1haW4oKQo=',
         ].join('');
 
         /** Windows: one .bat that unpacks the bridge, fetches yt-dlp and runs it. */
@@ -6846,11 +7492,12 @@ start_bridge.bat
             if (!Bridge.online) { notify('Start the bridge first', 'error'); return; }
             var btn = $('installYtdlpBtn');
             if (btn) { btn.disabled = true; btn.textContent = '⏳ Installing yt-dlp…'; }
-            showJob('Installing yt-dlp', 'This takes 10–60 seconds…');
-            D.jobBar.style.width = '45%';
+            var ij = jobStart({ kind: 'install', label: '🔧 Installing yt-dlp',
+                message: 'This takes 10–60 seconds…', cancellable: false });
+            jobPatch(ij, { pct: 45 });
             try {
                 var r = await bridgePost('/install-ytdlp', {}, 420000);
-                hideJob();
+                jobEnd(ij);
                 if (r.ok) {
                     notify('yt-dlp installed — you are ready to go', 'success');
                 } else {
@@ -6858,7 +7505,7 @@ start_bridge.bat
                     console.log(r.output);
                 }
             } catch (e) {
-                hideJob();
+                jobEnd(ij);
                 notify('Install request failed: ' + e.message, 'error');
             }
             if (btn) { btn.disabled = false; btn.textContent = '🔧 Install yt-dlp automatically'; }
@@ -6964,6 +7611,158 @@ start_bridge.bat
         }
 
         /* ==========================================================
+         *  SHORTCUTS REFERENCE  +  LOOP / ZOOM HELPERS
+         * ========================================================== */
+        var SHORTCUTS = [
+            ['Playback', [
+                ['Play / pause', ['Space']],
+                ['Back / forward 1s', ['←', '→']],
+                ['One frame', ['⇧', '←/→']],
+                ['Jump 5s', ['Ctrl', '←/→']],
+                ['Previous / next clip', ['↑', '↓']],
+                ['Loop the clip you are on', ['L']],
+                ['Speed down / up', ['⇧', ',', '.']]
+            ]],
+            ['Cutting', [
+                ['Split at playhead', ['M']],
+                ['Set IN / OUT', ['I', 'O']],
+                ['Add IN→OUT as a clip', ['Enter']],
+                ['Trim clip start / end to playhead', ['[', ']']],
+                ['Duplicate clip', ['Ctrl', 'D']],
+                ['Delete selected clip', ['Del']],
+                ['Clear IN / OUT', ['Esc']]
+            ]],
+            ['Selecting', [
+                ['Keep / skip clip at playhead', ['S', 'D']],
+                ['Select all / none', ['A', '⇧A']],
+                ['Invert selection', ['⇧', 'I']],
+                ['Undo / redo', ['Ctrl+Z', 'Ctrl+Y']]
+            ]],
+            ['View', [
+                ['Zoom in / out', ['+', '−']],
+                ['Fit whole video', ['0']],
+                ['Zoom to current clip', ['Z']],
+                ['Zoom at cursor', ['Ctrl', 'wheel']],
+                ['Scroll timeline', ['⇧', 'wheel']],
+                ['Shortcuts', ['?']]
+            ]],
+            ['Videos & jobs', [
+                ['Switch to video 1–9', ['1', '…', '9']],
+                ['Previous / next video', ['Ctrl', '↑/↓']],
+                ['Get proxy for this video', ['P']],
+                ['Save project', ['Ctrl', 'S']],
+                ['Download script', ['E']]
+            ]]
+        ];
+
+        function openShortcuts() {
+            var g = $('keysGrid');
+            g.innerHTML = SHORTCUTS.map(function (sect) {
+                return '<div class="keys-sect"><h4>' + esc(sect[0]) + '</h4>'
+                    + sect[1].map(function (r) {
+                        return '<div class="keys-row"><span>' + esc(r[0]) + '</span><span>'
+                            + r[1].map(function (k) { return '<span class="key-hint">' + esc(k) + '</span>'; }).join('')
+                            + '</span></div>';
+                    }).join('')
+                    + '</div>';
+            }).join('');
+            $('keysModal').classList.add('open');
+        }
+        function closeShortcuts() { $('keysModal').classList.remove('open'); }
+
+        /* ---- loop the clip you are working on (best friend of trimming) ---- */
+        var loopClipId = null;
+
+        function toggleLoopClip() {
+            var v = V(); if (!v) return;
+            // If anything is looping, L always stops it. Playback drifts inside
+            // the loop, so comparing against the clip under the playhead made
+            // the second press start a different loop instead of stopping.
+            if (loopClipId) {
+                loopClipId = null;
+                previewStopAt = null;
+                renderTimeline();
+                notify('Loop off', 'info');
+                return;
+            }
+            var i = clipAtPlayhead();
+            if (i < 0) { notify('Playhead is not inside a clip', 'warning'); return; }
+            var c = v.clips[i];
+            {
+                loopClipId = c.id;
+                previewStopAt = null;
+                P.seek(c.start);
+                P.play();
+                notify('Looping clip ' + (i + 1) + ' · press L to stop', 'success');
+            }
+            renderTimeline();
+        }
+
+        function loopedClip() {
+            var v = V(); if (!v || !loopClipId) return null;
+            return v.clips.find(function (c) { return c.id === loopClipId; }) || null;
+        }
+
+        function zoomToCurrentClip() {
+            var v = V(); if (!v) return;
+            var i = selClip >= 0 ? selClip : clipAtPlayhead();
+            if (i < 0 || !v.clips[i]) { notify('No clip selected', 'warning'); return; }
+            var c = v.clips[i], d = duration();
+            if (!d) return;
+            var span = Math.max(0.5, (c.end - c.start) * 1.5);
+            timelineZoom = clamp(d / span, 1, 120);
+            $('zoomLabel').textContent = timelineZoom <= 1 ? '1x' : timelineZoom.toFixed(1) + 'x';
+            D.timeline.style.width = (timelineZoom * 100) + '%';
+            renderRuler(); renderTimeline(); syncFilmstripWidth();
+            var sc = D.timelineScroll;
+            var mid = (c.start + c.end) / 2 / d;
+            sc.scrollLeft = Math.max(0, mid * D.timeline.offsetWidth - sc.offsetWidth / 2);
+            notify('Zoomed to clip ' + (i + 1), 'info');
+        }
+
+        function trimToPlayhead(which) {
+            var v = V(); if (!v) return;
+            var i = selClip >= 0 ? selClip : clipAtPlayhead();
+            if (i < 0 || !v.clips[i]) { notify('No clip under the playhead', 'warning'); return; }
+            var c = v.clips[i], t = P.time();
+            pushUndo();
+            if (which === 'start') {
+                if (t >= c.end - 0.05) { undoStack.pop(); notify('That would empty the clip', 'error'); return; }
+                c.start = t;
+            } else {
+                if (t <= c.start + 0.05) { undoStack.pop(); notify('That would empty the clip', 'error'); return; }
+                c.end = t;
+            }
+            afterClipsChanged(true);
+            notify('Clip ' + (i + 1) + ' ' + which + ' set to ' + fmtMs(t), 'success');
+        }
+
+        function duplicateClip() {
+            var v = V(); if (!v) return;
+            var i = selClip >= 0 ? selClip : clipAtPlayhead();
+            if (i < 0 || !v.clips[i]) { notify('No clip selected', 'warning'); return; }
+            var c = v.clips[i], len = c.end - c.start, d = duration();
+            var start = Math.min(c.end, d - len);
+            pushUndo();
+            addClip(start, Math.min(start + len, d), null, true);
+            afterClipsChanged();
+            notify('Clip duplicated', 'success');
+        }
+
+        function stepVideo(delta) {
+            if (!videos.length) return;
+            selectVideo(clamp(cur + delta, 0, videos.length - 1));
+        }
+
+        function bumpSpeed(dir) {
+            var sel = $('speedSelect');
+            var i = clamp(sel.selectedIndex + dir, 0, sel.options.length - 1);
+            sel.selectedIndex = i;
+            setPlaybackSpeed();
+            notify('Speed ' + sel.value + '×', 'info');
+        }
+
+        /* ==========================================================
          *  KEYBOARD
          * ========================================================== */
         var keyThrottled = false;
@@ -6974,19 +7773,35 @@ start_bridge.bat
                 if (e.key === 'Escape') e.target.blur();
                 return;
             }
-            if ($('setupModal').classList.contains('open') && e.key === 'Escape') { closeSetup(); return; }
+            if (e.key === 'Escape') {
+                if ($('keysModal').classList.contains('open')) { closeShortcuts(); return; }
+                if ($('setupModal').classList.contains('open')) { closeSetup(); return; }
+            }
 
             var k = e.key.toLowerCase();
+            // A button keeps focus after a click, so Space would re-trigger it
+            // instead of playing. Take focus back for the shortcuts we own.
+            if (e.target && e.target.tagName === 'BUTTON' &&
+                (k === ' ' || k === 'm' || k === 'i' || k === 'o' || k === 'l' ||
+                 k === 'arrowleft' || k === 'arrowright' || k === 'arrowup' || k === 'arrowdown')) {
+                e.target.blur();
+            }
             switch (k) {
                 case 'm': e.preventDefault(); markCut(); break;
-                case 'i': e.preventDefault(); setInPoint(); break;
+                case 'i':
+                    e.preventDefault();
+                    e.shiftKey ? invertSelection() : setInPoint();
+                    break;
                 case 'o': e.preventDefault(); setOutPoint(); break;
                 case 'enter': e.preventDefault(); commitInOut(); break;
                 case 's':
                     if (e.ctrlKey || e.metaKey) { e.preventDefault(); saveProject(); }
                     else { e.preventDefault(); selectClipAtPlayhead(true); }
                     break;
-                case 'd': e.preventDefault(); selectClipAtPlayhead(false); break;
+                case 'd':
+                    e.preventDefault();
+                    (e.ctrlKey || e.metaKey) ? duplicateClip() : selectClipAtPlayhead(false);
+                    break;
                 case ' ': e.preventDefault(); togglePlay(); break;
                 case 'arrowleft':
                 case 'arrowright': {
@@ -7003,8 +7818,30 @@ start_bridge.bat
                     seekRelative(delta);
                     break;
                 }
-                case 'arrowup': e.preventDefault(); seekToNextClip(); break;
-                case 'arrowdown': e.preventDefault(); seekToPrevClip(); break;
+                case 'arrowup':
+                    e.preventDefault();
+                    (e.ctrlKey || e.metaKey) ? stepVideo(-1) : seekToNextClip();
+                    break;
+                case 'arrowdown':
+                    e.preventDefault();
+                    (e.ctrlKey || e.metaKey) ? stepVideo(1) : seekToPrevClip();
+                    break;
+                case 'l': e.preventDefault(); toggleLoopClip(); break;
+                case 'z':
+                    if (e.ctrlKey || e.metaKey) break;      // handled below as undo
+                    e.preventDefault(); zoomToCurrentClip(); break;
+                case '[': e.preventDefault(); trimToPlayhead('start'); break;
+                case ']': e.preventDefault(); trimToPlayhead('end'); break;
+                case 'a':
+                    e.preventDefault();
+                    e.shiftKey ? deselectAllClips() : selectAllClips();
+                    break;
+                case 'p': e.preventDefault(); fetchProxyForCurrent(); break;
+                case 'e': e.preventDefault(); downloadScript(currentTab); break;
+                case ',': if (e.shiftKey) { e.preventDefault(); bumpSpeed(-1); } break;
+                case '.': if (e.shiftKey) { e.preventDefault(); bumpSpeed(1); } break;
+                case '?': e.preventDefault(); openShortcuts(); break;
+                case '/': if (e.shiftKey) { e.preventDefault(); openShortcuts(); } break;
                 case 'delete':
                 case 'backspace':
                     if (selClip >= 0) { e.preventDefault(); removeClip(selClip); }
@@ -7074,11 +7911,13 @@ start_bridge.bat
             cacheDom();
             initPlayheadDrag();
             initTimelineHover();
+            initTimelineWheel();
             initDragDrop();
             startPlayheadLoop();
 
             $('rippleBtn').classList.toggle('active', rippleEdges);
             $('fsToggleBtn').classList.add('active');
+            setFilmstripEnabled(filmstripEnabled());
 
             $('urlInput').addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') { e.preventDefault(); addFromInput(); }

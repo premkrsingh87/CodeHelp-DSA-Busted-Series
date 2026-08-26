@@ -82,13 +82,43 @@ Hovering anywhere on the timeline scrub-previews that frame below it without mov
 
 ### Keyboard
 
+Press <kbd>?</kbd> in the app for the full sheet.
+
 | | | | |
 |---|---|---|---|
 | `M` split | `I`/`O` in / out | `Enter` add clip | `Space` play |
+| `[` `]` trim start / end to playhead | `L` loop this clip | `Z` zoom to clip | `Ctrl+D` duplicate |
 | `←` `→` ±1s | `⇧←` `⇧→` ±1 frame | `Ctrl←` `Ctrl→` ±5s | `↑` `↓` next / prev clip |
-| `S`/`D` keep / skip clip | `Ctrl+Z` / `Ctrl+Y` undo / redo | `+` `-` `0` zoom | `1`–`9` switch video |
+| `S`/`D` keep / skip | `A` / `⇧A` all / none | `⇧I` invert | `Del` delete clip |
+| `+` `−` `0` zoom | `Ctrl`+wheel zoom at cursor | `⇧`+wheel scroll | `Z` zoom to clip |
+| `1`–`9` switch video | `Ctrl↑` `Ctrl↓` prev / next video | `P` proxy this video | `E` download script |
+| `Ctrl+Z` / `Ctrl+Y` undo / redo | `Ctrl+S` save project | `?` shortcuts | `Esc` clear IN/OUT |
 
----
+### Working on several videos at once
+
+Downloads run in the background and in parallel — start a proxy on one video and
+keep cutting another while it works. Every running task gets its own row in the dock
+at the bottom right with its own progress and cancel button, and each queue card shows
+its own download bar. Nothing a background job does can disturb the video you are
+editing.
+
+### Speed and memory
+
+* **Proxies are re-encoded with a keyframe every second.** Seeking a video costs a
+  decode from the previous keyframe; yt-dlp's source usually has them ~10s apart, which
+  is why scrubbing a long video feels sluggish even at 240p. Measured on a 20:50 clip,
+  this takes the median seek from **76 ms to 25 ms**. The extra pass takes ~15s, runs in
+  the background, and is cached. Turn it off by sending `scrub: false` if you prefer.
+* **The filmstrip is off by default.** Building one costs a seek per frame — the single
+  most expensive thing the app can do. Switch it on per session with the
+  **🎞 Filmstrip** button; switching it off frees every frame it held.
+* **One decoder per video, shared** by thumbnails, the filmstrip and the hover preview,
+  with seeks serialised. At most two videos keep a decoder alive at a time.
+* **Clip thumbnails are lazy** — only cards you can actually see are captured, and if a
+  filmstrip exists the nearest frame is reused for free.
+* **Scrubbing is decoupled from decoding.** The playhead tracks your cursor every frame
+  while the actual seek is throttled and uses `fastSeek`, so the bar never lags behind
+  the mouse.
 
 ## Export
 
