@@ -823,7 +823,7 @@
             position: relative;
             width: 100%;
             aspect-ratio: 16 / 9;
-            max-width: calc(52vh * 16 / 9);
+            max-width: calc(41vh * 16 / 9);
             margin-inline: auto;
             overflow: hidden;
             border-radius: 12px;
@@ -970,7 +970,7 @@
 
         .timeline-container {
             position: relative;
-            height: 140px;
+            height: 120px;
             cursor: crosshair;
             min-width: 100%;
             background: var(--bg-secondary);
@@ -1025,10 +1025,12 @@
            the red cut markers remain the thing your eye goes to. --- */
         .tl-clip {
             position: absolute;
-            top: 3px;
-            height: calc(100% - 34px);
-            border-radius: 5px;
-            cursor: grab;
+            top: 2px;
+            height: calc(100% - 32px);
+            border-radius: 4px;
+            /* passive, like the reference's segments: clicks fall through to
+               the timeline so the playhead always moves */
+            pointer-events: none;
             z-index: 6;
             overflow: visible;
             opacity: 0.30;
@@ -1036,8 +1038,8 @@
             touch-action: none;
         }
 
-        .tl-clip:hover {
-            opacity: 0.52;
+        .tl-clip.hovered {
+            opacity: 0.5;
             z-index: 8;
         }
 
@@ -1051,8 +1053,8 @@
             opacity: 0.09;
         }
 
-        .tl-clip.deselected:hover {
-            opacity: 0.2;
+        .tl-clip.deselected.hovered {
+            opacity: 0.18;
         }
 
         .tl-clip.looping {
@@ -1101,7 +1103,8 @@
             bottom: 0;
             width: 11px;
             cursor: ew-resize;
-            z-index: 3;
+            pointer-events: auto;
+            z-index: 7;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1116,8 +1119,8 @@
             transition: background 0.15s;
         }
 
-        .tl-clip:hover .tl-handle::after {
-            background: rgba(255, 255, 255, 0.75);
+        .tl-clip.hovered .tl-handle::after {
+            background: rgba(255, 255, 255, 0.8);
         }
 
         .tl-handle:hover::after {
@@ -1573,30 +1576,21 @@
         }
 
         /* ============ FRAME PREVIEW ============ */
-        /* Scrub preview follows the cursor instead of owning a strip of the
-           page, so the picture, the timeline and the transport all stay on
-           screen together. */
+        /* The panel the SceneCut reference parks under the timeline: the frame
+           on the left, what you are looking at in the middle, frame-step on the
+           right. It follows the playhead live while you drag. */
         .frame-preview-panel {
-            position: fixed;
-            z-index: 400;
-            width: 268px;
-            border: 1px solid var(--border-light);
-            border-radius: 12px;
-            background: rgba(14, 14, 24, 0.97);
-            backdrop-filter: blur(10px);
+            position: relative;
+            margin-top: 8px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: var(--bg-secondary);
             overflow: hidden;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65);
-            pointer-events: none;
-            opacity: 0;
-            transform: translateY(6px);
-            transition: opacity 0.12s ease, transform 0.12s ease;
-            display: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
-        .frame-preview-panel.showing {
-            display: block;
-            opacity: 1;
-            transform: translateY(0);
+        .frame-preview-panel:hover {
+            border-color: var(--border-light);
         }
 
         .frame-preview-panel.hover-active {
@@ -1626,15 +1620,18 @@
         }
 
         .frame-preview-inner {
-            display: block;
+            display: flex;
+            align-items: stretch;
+            gap: 0;
         }
 
         .frame-preview-canvas-wrap {
             position: relative;
-            width: 100%;
-            height: 151px;
+            width: 224px;
+            height: 126px;
+            flex-shrink: 0;
             background: #000;
-            border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border);
             overflow: hidden;
         }
 
@@ -1647,27 +1644,30 @@
 
         .frame-preview-time-badge {
             position: absolute;
-            bottom: 8px;
+            bottom: 7px;
             left: 50%;
             transform: translateX(-50%);
             background: linear-gradient(135deg, #7c5cfc, #a78bfa);
             color: white;
-            padding: 4px 14px;
+            padding: 3px 12px;
             border-radius: 8px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             white-space: nowrap;
             box-shadow: 0 3px 12px rgba(124, 92, 252, 0.5);
+            letter-spacing: 0.5px;
             z-index: 5;
         }
 
         .frame-preview-info {
-            padding: 8px 11px;
+            flex: 1;
+            min-width: 0;
+            padding: 6px 14px;
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
         }
 
         .fp-label {
@@ -1676,6 +1676,15 @@
             text-transform: uppercase;
             letter-spacing: 1.5px;
             color: var(--text-secondary);
+        }
+
+        .fp-scene-info {
+            font-size: 11px;
+            color: var(--text-primary);
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .fp-badge {
@@ -1690,7 +1699,11 @@
         }
 
         .frame-preview-nav {
-            display: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 0 12px;
+            border-left: 1px solid var(--border);
         }
 
         .fp-nav-btn {
@@ -1710,7 +1723,25 @@
             border-color: rgba(124, 92, 252, 0.3);
         }
 
+        @media (max-width: 768px) {
+            .frame-preview-inner {
+                flex-direction: column;
+            }
 
+            .frame-preview-canvas-wrap {
+                width: 100%;
+                height: 180px;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .frame-preview-nav {
+                border-left: none;
+                border-top: 1px solid var(--border);
+                padding: 8px 12px;
+                justify-content: center;
+            }
+        }
 
         /* ============ CLIP CARDS ============ */
         .clip-card {
@@ -2680,26 +2711,42 @@
             </div>
         </div>
 
-        <p class="text-[10px] text-[var(--text-secondary)] mt-1.5">
-            Drag anywhere to move the playhead · drag a red ● to move that cut, click it to merge ·
-            drag a band to move the clip, its edges to trim ·
-            <span class="key-hint">⇧</span>drag carves a new clip ·
-            <span class="key-hint">Ctrl</span>+wheel zooms at the cursor
+        <p class="text-[10px] text-[var(--text-secondary)] mt-1 truncate">
+            Drag to move the playhead · drag a red ● to move that cut, click it to merge · clip edges trim ·
+            <span class="key-hint">⇧</span>drag carves · <span class="key-hint">⌥</span>drag slides ·
+            <span class="key-hint">Ctrl</span>+wheel zooms
         </p>
 
-        <!-- frame preview -->
-        <div class="frame-preview-panel" id="framePreview">
-            <div class="fp-hover-indicator">👁 SCRUB</div>
+        <!-- frame preview, under the timeline like the reference -->
+        <div class="frame-preview-panel" id="framePreview" style="display:none;">
+            <div class="fp-hover-indicator">👁 Hover preview</div>
             <div class="frame-preview-inner">
                 <div class="frame-preview-canvas-wrap">
-                    <canvas id="fpCanvas" width="640" height="360"></canvas>
+                    <canvas id="fpCanvas" width="448" height="252"></canvas>
                     <div class="frame-preview-time-badge" id="fpTimeBadge">0:00</div>
                 </div>
                 <div class="frame-preview-info">
-                    <span class="text-[10px] truncate" id="fpClipInfo">No clips yet</span>
-                    <span id="fpClipBadge"></span>
-                    <span class="fp-badge hidden-imp" id="fpPos">0:00.000</span>
-                    <span class="fp-badge hidden-imp" id="fpPct">0%</span>
+                    <div>
+                        <div class="fp-label">🎬 Current frame</div>
+                        <div class="fp-scene-info mt-1" id="fpClipInfo">No clips yet</div>
+                    </div>
+                    <div>
+                        <div class="fp-label">Position</div>
+                        <div class="flex gap-1.5 mt-0.5 flex-wrap">
+                            <span class="fp-badge" id="fpPos"
+                                style="background:rgba(0,212,170,0.1);color:var(--success);border:1px solid rgba(0,212,170,0.2);">0:00.000</span>
+                            <span class="fp-badge" id="fpPct"
+                                style="background:rgba(124,92,252,0.1);color:var(--accent-light);border:1px solid rgba(124,92,252,0.2);">0%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="fp-label">Clip</div>
+                        <div class="mt-0.5" id="fpClipBadge"></div>
+                    </div>
+                </div>
+                <div class="frame-preview-nav">
+                    <button class="fp-nav-btn" onclick="seekRelative(-1/30)" title="Previous frame (Shift+←)">◀</button>
+                    <button class="fp-nav-btn" onclick="seekRelative(1/30)" title="Next frame (Shift+→)">▶</button>
                 </div>
             </div>
         </div>
@@ -2724,8 +2771,8 @@
                         style="border-color:rgba(0,212,170,0.3)" title="Add the IN→OUT range as a clip (Enter)">✚ Add
                         Clip</button>
                     <div class="h-5 w-px bg-[var(--border)]"></div>
-                    <button onclick="markCut()" class="ctrl-btn mark-btn" title="Split the clip under the playhead (M)">
-                        ✂ Split Here <span
+                    <button onclick="markCut()" class="ctrl-btn mark-btn" title="Mark a cut at the playhead — press it again on that cut to take it back out (M)">
+                        ✂ Mark Cut <span
                             class="key-hint !text-[9px] !h-4 !min-w-4 !bg-white/20 !border-white/30 !text-white">M</span>
                     </button>
                     <button id="quickSelectBtn" onclick="toggleClipAtPlayhead()" class="ctrl-btn"
@@ -2747,7 +2794,7 @@
                 </div>
 
                 <div class="flex items-center gap-2 mt-2 text-[10px] text-[var(--text-secondary)] flex-wrap">
-                    <span class="key-hint">M</span> split ·
+                    <span class="key-hint">M</span> mark/unmark cut ·
                     <span class="key-hint">I</span>/<span class="key-hint">O</span> in-out ·
                     <span class="key-hint">[</span>/<span class="key-hint">]</span> trim ·
                     <span class="key-hint">L</span> loop ·
@@ -3847,13 +3894,9 @@ start_bridge.bat
             renderQueue();
             renderClips();
             regenerateScript();
-            if (canReadFrames()) {
-                initFramePreview();
-                rebuildFilmstrip();
-            } else {
-                hideScrubPopover();
-                D.filmstripContainer.style.display = 'none';
-            }
+            initFramePreview();
+            if (canReadFrames()) rebuildFilmstrip();
+            else D.filmstripContainer.style.display = 'none';
             zoomTimeline(0);
         }
 
@@ -3957,8 +4000,8 @@ start_bridge.bat
             updateChaptersUI(); updateProxyUI(); syncProxyPanel();
             regenerateScript(); updateStats();
             D.filmstripContainer.style.display = 'none';
-            hideScrubPopover();
-            if (canReadFrames()) { initFramePreview(); rebuildFilmstrip(); }
+            initFramePreview();
+            if (canReadFrames()) rebuildFilmstrip();
         }
 
         function removeVideo(i, ev) {
@@ -4046,6 +4089,7 @@ start_bridge.bat
 
         function updatePlayerUI() {
             var v = V();
+            syncFramePreviewPanel();
             var tag = $('playerSrcTag');
             var titleEl = D.playerTitle;
             if (!v) {
@@ -4593,6 +4637,7 @@ start_bridge.bat
             D.currentTime.textContent = s;
             D.playheadTooltip.textContent = s;
             updateFilmstripPlayhead(t);
+            trackFramePreview(t);
         }
 
         /* ---- playhead drag ---- */
@@ -4643,6 +4688,7 @@ start_bridge.bat
                 D.currentTime.textContent = str;
                 D.playheadTooltip.textContent = str;
                 updateFilmstripPlayhead(t);
+                trackFramePreview(t);      // the preview answers the drag
             }
 
             function throttledSeek(t) {
@@ -4676,6 +4722,7 @@ start_bridge.bat
                 if (timer) { clearTimeout(timer); timer = null; }
                 scrubSeek(pending, true);        // land exactly, not on a keyframe
                 syncPlayhead(pending);
+                setTimeout(function () { trackFramePreview(pending, true); }, 90);
                 if (wasPlaying) P.play();
             }
             document.addEventListener('mousemove', move);
@@ -4692,17 +4739,29 @@ start_bridge.bat
 
         /* ---- click empty timeline to seek ---- */
         function timelineMouseDown(event) {
-            if (draggingPlayhead || dragState) return;
-            if (event.target.closest('.tl-clip')) return;
+            if (draggingPlayhead || dragState || cutDrag) return;
             if (event.target === D.playhead || D.playhead.contains(event.target)) return;
+            if (event.target.closest('.tl-handle')) return;      // trim handles own their drag
             var d = duration();
             if (!d) { notify('Load a preview (or set a duration) first', 'warning'); return; }
+
             if (event.shiftKey) {
                 event.preventDefault();
-                beginRangeDrag(event);   // Shift+drag = carve a clip out of the range
-            } else {
-                startScrub(event, true); // plain press/drag = move the playhead
+                beginRangeDrag(event);            // ⇧drag = carve a clip out of the range
+                return;
             }
+            if (event.altKey) {                   // ⌥drag = slide a whole clip
+                var rect = D.timeline.getBoundingClientRect();
+                var t = clamp((event.clientX - rect.left) / rect.width, 0, 1) * d;
+                var v = V();
+                var idx = v ? v.clips.findIndex(function (c) { return t >= c.start && t <= c.end; }) : -1;
+                if (idx >= 0) {
+                    event.preventDefault();
+                    startClipDrag(idx, 'move', event);
+                    return;
+                }
+            }
+            startScrub(event, true);              // anything else moves the playhead
         }
 
         /* ---- snapping: edges land on the playhead and neighbouring cuts ---- */
@@ -4878,18 +4937,26 @@ start_bridge.bat
 
         /* ---- clip move / resize ---- */
         function attachClipDragHandlers() {
-            D.timeline.querySelectorAll('.tl-clip').forEach(function (el) {
-                el.addEventListener('mousedown', onClipMouseDown);
+            D.timeline.querySelectorAll('.tl-handle').forEach(function (h) {
+                h.addEventListener('mousedown', onClipMouseDown);
             });
         }
 
         function onClipMouseDown(e) {
             if (e.button !== 0) return;
+            var handleEl = e.target.closest ? e.target.closest('.tl-handle') : null;
+            if (!handleEl) return;               // the band itself is passive now
             e.preventDefault(); e.stopPropagation();
-            var el = e.currentTarget;
-            var idx = parseInt(el.dataset.idx, 10);
-            var v = V(); if (!v) return;
-            var handle = e.target.dataset ? e.target.dataset.handle : null;
+            var el = handleEl.closest('.tl-clip');
+            if (!el) return;
+            startClipDrag(parseInt(el.dataset.idx, 10), handleEl.dataset.handle, e, el);
+        }
+
+        function startClipDrag(idx, mode, e, el) {
+            var v = V(); if (!v || !v.clips[idx]) return;
+            el = el || D.timeline.querySelector('.tl-clip[data-idx="' + idx + '"]');
+            if (!el) return;
+            var handle = (mode === 'left' || mode === 'right') ? mode : null;
 
             selClip = idx;
             highlightClipCard(idx);
@@ -5132,6 +5199,8 @@ start_bridge.bat
         function afterClipsChanged(skipThumbs) {
             renderTimeline(); renderClips(); updateStats(); regenerateScript();
             renderQueue(); persist();
+            fpLastClipKey = null;
+            updateFramePreviewInfo(fpLastT);      // where the panel is looking, not where the decoder is
             if (!skipThumbs) scheduleThumbs();
         }
 
@@ -5156,47 +5225,73 @@ start_bridge.bat
             return c;
         }
 
-        /** M — split whatever clip sits under the playhead; if none, split the whole video. */
+        /** M — mark a cut at the playhead, the way the reference does it: it
+         *  always resolves to something. Inside a clip it splits, in a gap it
+         *  claims the gap, and sitting on top of an existing cut it takes that
+         *  cut back out again, so M is mark and unmark in one key. */
         function markCut() {
             var v = V(); if (!v) { notify('Select a video first', 'warning'); return; }
             var d = duration();
             if (!d) { notify('No duration yet — load a preview or set one', 'warning'); return; }
-            var t = P.mode !== 'none' ? P.time() : 0;
-            if (t <= 0.05 || t >= d - 0.05) { notify('Move the playhead away from the very start/end', 'warning'); return; }
+            var t = clamp(P.mode !== 'none' ? P.time() : 0, 0, d);
+            var EPS = 0.04;       // "the playhead is sitting on this edge"
+            var MIN = 0.05;       // the shortest clip we will ever make
 
-            pushUndo();
-            var hit = -1;
-            for (var i = 0; i < v.clips.length; i++) {
-                if (t > v.clips[i].start + 0.05 && t < v.clips[i].end - 0.05) { hit = i; break; }
+            // 1 — on an existing cut between two touching clips: unmark it.
+            for (var i = 0; i < v.clips.length - 1; i++) {
+                var a = v.clips[i], b = v.clips[i + 1];
+                if (b.start - a.end <= EPS && Math.abs(t - a.end) <= EPS) {
+                    mergeAtBoundary(i, 'Cut at ' + fmtMs(a.end) + ' removed — M cuts it again');
+                    return;
+                }
             }
-            if (hit >= 0) {
-                var c = v.clips[hit];
-                var tail = { id: uid(), start: t, end: c.end, name: null, sel: c.sel };
-                c.end = t;
-                v.clips.splice(hit + 1, 0, tail);
+
+            // 2 — inside a clip with room on both sides: split it there.
+            for (var j = 0; j < v.clips.length; j++) {
+                var c = v.clips[j];
+                if (t > c.start + MIN && t < c.end - MIN) {
+                    pushUndo();
+                    var tail = { id: uid(), start: t, end: c.end, name: null, sel: c.sel };
+                    c.end = t;
+                    v.clips.splice(j + 1, 0, tail);
+                    afterClipsChanged();
+                    notify('Cut at ' + fmtMs(t), 'success');
+                    return;
+                }
+            }
+
+            // 3 — nothing marked yet: the first cut splits the whole video.
+            if (!v.clips.length) {
+                var at = clamp(t, MIN, d - MIN);
+                pushUndo();
+                v.clips.push({ id: uid(), start: 0, end: at, name: null, sel: true });
+                v.clips.push({ id: uid(), start: at, end: d, name: null, sel: true });
                 afterClipsChanged();
-                notify('Split at ' + fmtMs(t), 'success');
-            } else if (!v.clips.length) {
-                v.clips.push({ id: uid(), start: 0, end: t, name: null, sel: true });
-                v.clips.push({ id: uid(), start: t, end: d, name: null, sel: true });
-                afterClipsChanged();
-                notify('Video split into 2 clips at ' + fmtMs(t), 'success');
-            } else {
-                // playhead is in a gap — make a clip that fills it
-                var lo = 0, hi = d;
-                v.clips.forEach(function (c2) {
-                    if (c2.end <= t) lo = Math.max(lo, c2.end);
-                    if (c2.start >= t) hi = Math.min(hi, c2.start);
-                });
-                if (hi - lo < 0.1) { undoStack.pop(); notify('No room for a clip here', 'warning'); return; }
+                notify('Video split into 2 clips at ' + fmtMs(at), 'success');
+                return;
+            }
+
+            // 4 — in a gap between clips: claim the whole gap as a new clip.
+            var lo = 0, hi = d;
+            v.clips.forEach(function (c2) {
+                if (c2.end <= t + EPS) lo = Math.max(lo, c2.end);
+                if (c2.start >= t - EPS) hi = Math.min(hi, c2.start);
+            });
+            if (hi - lo >= MIN) {
+                pushUndo();
                 v.clips.push({ id: uid(), start: lo, end: hi, name: null, sel: true });
-                v.clips.sort(function (a, b) { return a.start - b.start; });
+                v.clips.sort(function (a2, b2) { return a2.start - b2.start; });
                 afterClipsChanged();
-                notify('Filled the gap ' + fmtMs(lo) + ' → ' + fmtMs(hi), 'success');
+                notify('Clip added ' + fmtMs(lo) + ' → ' + fmtMs(hi), 'success');
+                return;
             }
+
+            // 5 — only the very first/last frame is left, where a cut adds nothing.
+            notify('The playhead is at the very ' + (t < d / 2 ? 'start' : 'end')
+                + ' — move it into the video to cut', 'info');
         }
 
-        function mergeAtBoundary(i) {
+        function mergeAtBoundary(i, msg) {
             var v = V(); if (!v || i < 0 || i >= v.clips.length - 1) return;
             pushUndo();
             var a = v.clips[i], b = v.clips[i + 1];
@@ -5205,7 +5300,7 @@ start_bridge.bat
             v.clips.splice(i + 1, 1);
             selClip = -1;
             afterClipsChanged();
-            notify('Merged into one clip · ' + fmtDur(a.end - a.start), 'success');
+            notify(msg || ('Merged into one clip · ' + fmtDur(a.end - a.start)), 'success');
         }
 
         function removeClip(i, ev) {
@@ -6426,37 +6521,84 @@ start_bridge.bat
         /* ==========================================================
          *  HOVER SCRUB  +  FRAME PREVIEW
          * ========================================================== */
-        var fpBusy = false, fpQueued = null, fpHoverTimer = null;
+        var fpBusy = false, fpQueued = null, fpHoverTimer = null, fpLastPaint = 0;
 
         function initFramePreview() {
             var v = V();
-            fpBusy = false; fpQueued = null;
-            hideScrubPopover();
-            if (!v || !canReadFrames() || !v.mediaUrl) return;
+            fpBusy = false; fpQueued = null; fpLastClipKey = null; fpLastT = 0;
+            setScrubHover(false);
+            syncFramePreviewPanel();
+            if (!v) return;
+            updateFramePreviewInfo(P.mode !== 'none' ? P.time() : 0);
+            if (!canReadFrames() || !v.mediaUrl) {
+                paintFpPlaceholder(v.source === 'embed'
+                    ? 'YouTube embed — no frame preview'
+                    : 'Load a proxy to preview frames');
+                return;
+            }
             var entry = acquireMedia(v);
             if (entry) entry.ready.then(function () { drawFramePreview(P.time()); }).catch(function () { });
         }
 
-        /** Park the scrub preview just above the cursor, clamped to the window. */
-        function showScrubPopover(clientX, clientY) {
-            if (!canReadFrames()) return;
-            var el = D.framePreview;
-            el.classList.add('showing');
-            var w = el.offsetWidth || 268, h = el.offsetHeight || 190;
-            var x = clamp(clientX - w / 2, 8, window.innerWidth - w - 8);
-            var y = clientY - h - 18;
-            if (y < 8) y = clientY + 24;          // flip below when short on room
-            el.style.left = x + 'px';
-            el.style.top = y + 'px';
-        }
-        function hideScrubPopover() {
-            if (D.framePreview) D.framePreview.classList.remove('showing');
+        /** The panel belongs to a loaded video, so it appears with one and
+         *  goes away with the empty state - never a black box on an empty app. */
+        function syncFramePreviewPanel() {
+            if (!D.framePreview) return;
+            D.framePreview.style.display = V() ? 'block' : 'none';
         }
 
-        function destroyFramePreview() { fpBusy = false; fpQueued = null; hideScrubPopover(); }
+        function setScrubHover(on) {
+            if (D.framePreview) D.framePreview.classList.toggle('hover-active', !!on);
+        }
+        function hideScrubPopover() { setScrubHover(false); }
 
-        /** Coalescing preview draw on the shared decoder. Only the newest
-         *  request survives, so fast mouse movement never queues up work. */
+        function destroyFramePreview() {
+            fpBusy = false; fpQueued = null;
+            setScrubHover(false);
+            syncFramePreviewPanel();
+        }
+
+        function paintFpPlaceholder(msg) {
+            var cv = D.fpCanvas; if (!cv) return;
+            try {
+                var g = cv.getContext('2d', { alpha: false });
+                g.fillStyle = '#08080f';
+                g.fillRect(0, 0, cv.width, cv.height);
+                g.fillStyle = 'rgba(160,160,190,0.55)';
+                g.font = '500 20px system-ui, sans-serif';
+                g.textAlign = 'center';
+                g.textBaseline = 'middle';
+                g.fillText(msg, cv.width / 2, cv.height / 2);
+            } catch (e) { }
+        }
+
+        /** Cheapest possible preview: the player already decoded this frame, so
+         *  copy it straight off the element instead of seeking a second decoder.
+         *  This is what keeps dragging the playhead free of extra decode work. */
+        function drawFramePreviewFromPlayer() {
+            if (P.mode !== 'html5' || !canReadFrames()) return false;
+            var el = D.localVideo;
+            if (!el || el.readyState < 2) return false;
+            try {
+                var cv = D.fpCanvas;
+                cv.getContext('2d', { alpha: false }).drawImage(el, 0, 0, cv.width, cv.height);
+                return true;
+            } catch (e) { return false; }
+        }
+
+        /** Follow the playhead: text every time, picture at most ~20/sec. */
+        function trackFramePreview(t, force) {
+            if (!D.framePreview || D.framePreview.style.display === 'none') return;
+            updateFramePreviewInfo(t);
+            var now = performance.now();
+            if (!force && now - fpLastPaint < 50) return;
+            fpLastPaint = now;
+            drawFramePreviewFromPlayer();
+        }
+
+        /** Coalescing preview draw on the shared decoder, used for hovering a
+         *  point the player is not sitting on. Only the newest request survives,
+         *  so fast mouse movement never queues up work. */
         function drawFramePreview(t) {
             var v = V();
             if (!v || !canReadFrames()) return;
@@ -6478,25 +6620,36 @@ start_bridge.bat
             });
         }
 
+        var fpLastClipKey = null, fpLastT = 0;
+
         function updateFramePreviewInfo(t) {
-            var d = duration(); if (!d) return;
-            D.fpTimeBadge.textContent = fmtMs(t);
-            D.fpPos.textContent = fmtMs(t);
-            D.fpPct.textContent = (t / d * 100).toFixed(1) + '%';
+            if (!D.fpTimeBadge) return;
+            var d = duration();
+            fpLastT = t;
+            var str = fmtMs(t);
+            D.fpTimeBadge.textContent = str;
+            D.fpPos.textContent = str;
+            D.fpPct.textContent = d ? (t / d * 100).toFixed(1) + '%' : '0%';
             var v = V();
             var idx = -1;
             if (v) for (var i = 0; i < v.clips.length; i++) {
                 if (t >= v.clips[i].start && t <= v.clips[i].end) { idx = i; break; }
             }
-            if (idx >= 0) {
-                var c = v.clips[idx];
+            // This runs on every playback frame, so only touch the clip rows
+            // when the answer actually changed.
+            var c = idx >= 0 ? v.clips[idx] : null;
+            var key = c ? (c.id + '|' + idx + '|' + c.sel + '|' + c.start + '|' + c.end + '|' + c.name)
+                : ((v && v.clips.length) ? 'gap' : 'none');
+            if (key === fpLastClipKey) return;
+            fpLastClipKey = key;
+            if (c) {
                 var color = COLORS[idx % COLORS.length];
                 D.fpClipInfo.textContent = clipName(v, cur, idx) + ' · ' + fmtDur(c.end - c.start);
                 D.fpClipBadge.innerHTML = '<span class="fp-badge" style="background:' + color
                     + '22;color:' + color + ';border:1px solid ' + color + '55;">Clip ' + (idx + 1)
                     + ' · ' + (c.sel ? 'included ✓' : 'skipped ✕') + '</span>';
             } else {
-                D.fpClipInfo.textContent = (v && v.clips.length) ? 'Between clips' : 'No clips yet';
+                D.fpClipInfo.textContent = (v && v.clips.length) ? 'Between clips' : 'No clips yet — press M to cut';
                 D.fpClipBadge.innerHTML = '<span class="fp-badge" style="background:rgba(124,124,160,0.12);'
                     + 'color:var(--text-secondary);border:1px solid var(--border);">—</span>';
             }
@@ -6513,19 +6666,20 @@ start_bridge.bat
                 D.hoverCursor.style.left = (pct * 100) + '%';
                 D.hoverCursor.classList.add('visible');
                 D.hoverTooltip.textContent = fmtMs(t);
-                showScrubPopover(e.clientX, tl.getBoundingClientRect().top);
+                setScrubHover(true);
                 updateFramePreviewInfo(t);
                 clearTimeout(fpHoverTimer);
                 fpHoverTimer = setTimeout(function () { drawFramePreview(t); }, 55);
             });
             tl.addEventListener('mouseleave', function () {
                 D.hoverCursor.classList.remove('visible');
-                hideScrubPopover();
+                setScrubHover(false);
                 clearTimeout(fpHoverTimer);
+                // back to whatever the playhead is actually parked on
+                trackFramePreview(P.mode !== 'none' ? P.time() : 0, true);
             });
-            // dragging a clip or the playhead should not leave a stale popover
             document.addEventListener('mouseup', function () {
-                if (!D.timeline.matches(':hover')) hideScrubPopover();
+                if (!D.timeline.matches(':hover')) setScrubHover(false);
             });
         }
 
@@ -7993,9 +8147,10 @@ start_bridge.bat
                 ['Speed down / up', ['⇧', ',', '.']]
             ]],
             ['Cutting', [
-                ['Split at playhead', ['M']],
+                ['Mark a cut · again on the cut unmarks it', ['M']],
                 ['Drag timeline', ['scrub']],
                 ['Carve a clip by dragging', ['⇧', 'drag']],
+                ['Slide a whole clip', ['⌥', 'drag']],
                 ['Move a cut / merge it', ['drag ●', 'click ●']],
                 ['Set IN / OUT', ['I', 'O']],
                 ['Add IN→OUT as a clip', ['Enter']],
