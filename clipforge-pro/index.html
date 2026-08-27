@@ -213,7 +213,7 @@
 @media (min-width:640px){.sm\:block{display:block}.sm\:flex-row{flex-direction:row}.sm\:px-6{padding-left:1.5rem;padding-right:1.5rem}}
 @media (min-width:768px){.md\:flex{display:flex}.md\:grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}.md\:grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}}
 @media (min-width:1024px){.lg\:grid-cols-4{grid-template-columns:repeat(4, minmax(0, 1fr))}}
-@media (min-width:1280px){.xl\:col-span-3{grid-column:span 3 / span 3}.xl\:col-span-6{grid-column:span 6 / span 6}.xl\:grid-cols-12{grid-template-columns:repeat(12, minmax(0, 1fr))}}
+@media (min-width:1280px){.xl\:col-span-2{grid-column:span 2 / span 2}.xl\:col-span-3{grid-column:span 3 / span 3}.xl\:col-span-6{grid-column:span 6 / span 6}.xl\:col-span-7{grid-column:span 7 / span 7}.xl\:grid-cols-12{grid-template-columns:repeat(12, minmax(0, 1fr))}}
 
     </style>
     <style>
@@ -731,6 +731,96 @@
             background: linear-gradient(180deg, var(--accent), var(--success));
         }
 
+        /* The card leads with its queue number - the same number the 1-9 keys
+           use - and gives the title two full lines, because "which video is
+           this" is answered by the title, not by the eleven-character id. */
+        .queue-thumb-box {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .queue-num {
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 4px;
+            border-radius: 6px;
+            background: var(--accent);
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+            border: 1.5px solid var(--bg-card);
+        }
+
+        .queue-item.active .queue-num {
+            background: var(--success);
+            color: #06060c;
+        }
+
+        .queue-title {
+            font-size: 11.5px;
+            font-weight: 600;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            word-break: break-word;
+        }
+
+        .queue-meta {
+            font-size: 9.5px;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .queue-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+
+        .queue-act {
+            width: 22px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 11px;
+            line-height: 1;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+
+        .queue-act:hover {
+            background: rgba(124, 92, 252, 0.18);
+            border-color: rgba(124, 92, 252, 0.35);
+            color: var(--accent-light);
+        }
+
+        .queue-act.danger:hover {
+            background: rgba(248, 113, 113, 0.18);
+            border-color: rgba(248, 113, 113, 0.35);
+            color: var(--danger);
+        }
+
         .queue-thumb {
             width: 76px;
             height: 43px;
@@ -815,27 +905,78 @@
             border: 1px solid rgba(251, 191, 36, 0.25);
         }
 
+        .hdr-export,
+        .hdr-extract {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            border-radius: 9px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .hdr-export {
+            background: rgba(239, 68, 68, 0.14);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .hdr-export:hover {
+            background: rgba(239, 68, 68, 0.24);
+            color: #fecaca;
+        }
+
+        .hdr-extract {
+            background: rgba(0, 212, 170, 0.14);
+            color: var(--success);
+            border: 1px solid rgba(0, 212, 170, 0.3);
+        }
+
+        .hdr-extract:hover {
+            background: rgba(0, 212, 170, 0.24);
+        }
+
+        .hdr-export:disabled,
+        .hdr-extract:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
         /* ============ PLAYER ============ */
-        /* The picture is capped by viewport height so the timeline underneath is
-           always on screen - no scrolling between the frame and the cut you are
-           making. On tall displays the cap never kicks in. */
+        /* --video-h is measured at runtime: the picture takes every pixel left
+           over once the timeline, the frame preview and the transport have their
+           space, so the whole editor fills the window exactly and never scrolls
+           between the frame and the cut you are making. The stack is then
+           clamped to the width that height implies, which is what makes the
+           timeline and the picture the same size to the pixel. */
+        #editorStack {
+            width: 100%;
+            max-width: var(--stack-w, 100%);
+            margin-inline: auto;
+        }
+
+        .player-title {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .video-wrap {
             position: relative;
             width: 100%;
-            aspect-ratio: 16 / 9;
-            max-width: calc(41vh * 16 / 9);
+            height: var(--video-h, 380px);
             margin-inline: auto;
             overflow: hidden;
             border-radius: 12px;
             background: #000;
             border: 1px solid var(--border);
-        }
-
-        @supports not (aspect-ratio: 16 / 9) {
-            .video-wrap {
-                height: 0;
-                padding-bottom: 56.25%;
-            }
         }
 
         .video-wrap>video,
@@ -2554,6 +2695,11 @@
                         <span id="statDuration" class="font-bold text-[var(--success)] ml-1.5 mono">0:00</span>
                     </div>
                 </div>
+                <button onclick="downloadScriptSelected()" class="hdr-export" id="hdrExportBtn"
+                    title="Download the extract script for every selected clip (E)">⬇ <span
+                        id="hdrExportLabel">.bat</span></button>
+                <button onclick="extractViaBridge()" class="hdr-extract" id="hdrExtractBtn"
+                    title="Extract the selected clips now through the local bridge">⚡ Extract</button>
                 <button id="bridgeChip" class="bridge-chip checking" onclick="openSetup()" title="Local bridge status">
                     <span class="status-dot"></span><span id="bridgeChipText">Checking bridge…</span>
                 </button>
@@ -2618,17 +2764,20 @@
             </section>
 
             <!-- ---------- Player ---------- -->
-            <section class="xl:col-span-6 card card-glow p-4 fade-in">
-                <div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
-                    <div class="flex items-center gap-2 min-w-0">
-                        <div
-                            class="w-6 h-6 rounded-lg bg-[var(--accent)] flex items-center justify-center text-white font-bold text-[11px]">
-                            2</div>
-                        <h2 class="text-sm font-semibold flex-shrink-0">Preview</h2>
-                        <span id="playerSrcTag" class="src-tag none">no source</span>
-                    </div>
-                    <p id="playerTitle" class="text-[11px] text-[var(--text-secondary)] truncate max-w-full">—</p>
+            <section class="xl:col-span-7 card card-glow p-4 fade-in">
+                <div class="flex items-center gap-2 min-w-0 mb-2">
+                    <div
+                        class="w-6 h-6 rounded-lg bg-[var(--accent)] flex items-center justify-center text-white font-bold text-[11px]">
+                        2</div>
+                    <h2 class="text-sm font-semibold flex-shrink-0">Preview</h2>
+                    <span id="playerSrcTag" class="src-tag none">no source</span>
                 </div>
+
+                <!-- Picture, timeline, preview and transport all live in one
+                     column sized to the picture, so every one of them is
+                     exactly as wide as the frame you are cutting. -->
+                <div id="editorStack">
+                <p id="playerTitle" class="player-title" title="">—</p>
 
                 <div class="video-wrap" id="videoWrap">
                     <video id="localVideo" playsinline preload="auto" style="display:none;"></video>
@@ -2663,7 +2812,9 @@
                     title="Draw the audio waveform behind the timeline">🔊 Wave</button>
                 <button class="fs-ctrl" id="fsEnableBtn" onclick="toggleFilmstripEnabled()"
                     title="Filmstrip is off (saves memory). Click to build one for this video.">🎞 Film ✕</button>
-                <button class="fs-ctrl" onclick="openShortcuts()" title="Keyboard shortcuts (?)">⌨</button>
+                <button class="fs-ctrl" onclick="openShortcuts()" title="All keyboard shortcuts (?)">⌨</button>
+                <button class="fs-ctrl" id="fillWidthBtn" onclick="toggleFillWidth()"
+                    title="Wide = the picture takes the whole column (the page may scroll). Screen = the whole editor on one screen.">⤢ Wide</button>
                 <div class="h-4 w-px bg-[var(--border)]"></div>
                 <span class="text-[10px] text-[var(--text-secondary)]">Zoom</span>
                 <button class="zoom-btn" onclick="zoomTimeline(-1)" title="Zoom out">−</button>
@@ -2773,7 +2924,7 @@
                 </div>
 
                 <!-- transport -->
-                <div class="flex flex-wrap items-center gap-1.5 mt-3">
+                <div id="transportRow" class="flex flex-wrap items-center gap-1.5 mt-3">
                     <button onclick="togglePlay()" class="ctrl-btn" title="Space">⏯ Play</button>
                     <div class="h-5 w-px bg-[var(--border)]"></div>
                     <button onclick="seekRelative(-10)" class="ctrl-btn">−10s</button>
@@ -2813,23 +2964,11 @@
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 mt-2 text-[10px] text-[var(--text-secondary)] flex-wrap">
-                    <span class="key-hint">M</span> mark/unmark cut ·
-                    <span class="key-hint">I</span>/<span class="key-hint">O</span> in-out ·
-                    <span class="key-hint">[</span>/<span class="key-hint">]</span> trim ·
-                    <span class="key-hint">L</span> loop ·
-                    <span class="key-hint">Z</span> zoom to clip ·
-                    <span class="key-hint">S</span>/<span class="key-hint">D</span> keep-skip ·
-                    <span class="key-hint">Space</span> play ·
-                    <span class="key-hint">⇧←→</span> frame ·
-                    <button onclick="openShortcuts()"
-                        class="underline hover:text-[var(--accent-light)] cursor-pointer">all shortcuts
-                        <span class="key-hint">?</span></button>
-                </div>
+                </div><!-- /editorStack -->
             </section>
 
             <!-- ---------- Source + split methods ---------- -->
-            <section class="xl:col-span-3 flex flex-col gap-4 fade-in">
+            <section class="xl:col-span-2 flex flex-col gap-4 fade-in">
 
                 <!-- proxy engine -->
                 <div class="card p-4">
@@ -3947,6 +4086,7 @@ start_bridge.bat
             regenerateScript();
             initFramePreview();
             scheduleCache();
+            scheduleFit();
             if (canReadFrames()) rebuildFilmstrip();
             else D.filmstripContainer.style.display = 'none';
             zoomTimeline(0);
@@ -4017,9 +4157,15 @@ start_bridge.bat
                     }
                 } catch (e) { /* fall through to noembed */ }
             }
-            // No bridge: at least get a title (CORS-friendly oEmbed proxy)
+            // No bridge: at least get a title (CORS-friendly oEmbed proxy).
+            // Bounded, because an offline machine must not leave the card
+            // sitting on skeleton bars for ever.
             try {
-                var r = await fetch('https://noembed.com/embed?url=' + encodeURIComponent(v.url));
+                var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                var to = setTimeout(function () { if (ctl) ctl.abort(); }, 6000);
+                var r = await fetch('https://noembed.com/embed?url=' + encodeURIComponent(v.url),
+                    ctl ? { signal: ctl.signal } : undefined);
+                clearTimeout(to);
                 var d = await r.json();
                 if (d && d.title) v.title = d.title;
                 if (d && d.author_name) v.uploader = d.author_name;
@@ -4055,8 +4201,22 @@ start_bridge.bat
             cacheClear();
             initFramePreview();
             scheduleCache();
+            scheduleFit();
             renderDetectPanel();
             if (canReadFrames()) rebuildFilmstrip();
+        }
+
+        /** Give a video a name you will recognise in a queue of twenty. */
+        function renameVideo(i, ev) {
+            if (ev) ev.stopPropagation();
+            var v = videos[i]; if (!v) return;
+            var cur0 = v.title || v.fileName || v.id || '';
+            var next = prompt('Name for this video (used in clip names and output files):', cur0);
+            if (next === null) return;
+            next = next.trim();
+            v.title = next || null;
+            renderQueue(); updatePlayerUI(); regenerateScript(); persist();
+            notify(next ? 'Renamed to "' + next + '"' : 'Name cleared', 'success');
         }
 
         function removeVideo(i, ev) {
@@ -4065,7 +4225,7 @@ start_bridge.bat
             if (v && v.clips.length && !confirm('Remove "' + (v.title || v.id || v.fileName) + '" and its '
                 + v.clips.length + ' clip(s)?')) return;
             if (v && v.mediaUrl && v.mediaUrl.startsWith('blob:')) URL.revokeObjectURL(v.mediaUrl);
-            if (v) dropDetect(v.uid);
+            if (v) { dropDetect(v.uid); pruneHistory(v.uid); }
             videos.splice(i, 1);
             if (videos.length === 0) { cur = -1; P.teardown(); cacheClear(); }
             else if (cur >= videos.length) cur = videos.length - 1;
@@ -4078,7 +4238,7 @@ start_bridge.bat
             if (!confirm('Clear the whole queue (' + videos.length + ' video(s))?')) return;
             videos.forEach(function (v) {
                 if (v.mediaUrl && v.mediaUrl.startsWith('blob:')) URL.revokeObjectURL(v.mediaUrl);
-                dropDetect(v.uid);
+                dropDetect(v.uid); pruneHistory(v.uid);
             });
             videos = []; cur = -1; selClip = -1;
             P.teardown();
@@ -4112,18 +4272,27 @@ start_bridge.bat
                 var dj = detectJob(v.uid);
                 var djBusy = dj && (dj.state === 'queued' || dj.state === 'running');
                 var bar = job ? (job.pct || 0) : (djBusy ? dj.pct : 0);
+                var ytUrl = v.url || (v.id ? 'https://www.youtube.com/watch?v=' + v.id : '');
+                var meta = [];
+                if (v.uploader) meta.push(esc(v.uploader));
+                if (v.duration) meta.push(fmt(v.duration));
+                if (v.id && v.kind !== 'local') meta.push(esc(v.id));
+                if (v.fileName) meta.push(esc(v.fileName));
                 return '<div class="queue-item ' + (i === cur ? 'active' : '') + '" data-uid="' + v.uid
                     + '" onclick="selectVideo(' + i + ')">'
                     + '<div class="flex items-start gap-2.5">'
+                    + '<div class="queue-thumb-box">'
                     + (v.thumbnail
                         ? '<img class="queue-thumb" src="' + esc(v.thumbnail) + '" alt="" loading="lazy" onerror="this.outerHTML=\'<div class=&quot;queue-thumb-ph&quot;>🎬</div>\'">'
                         : '<div class="queue-thumb-ph">🎬</div>')
+                    + '<span class="queue-num" title="Press ' + (i + 1) + ' to jump to this video">'
+                    + (i + 1) + '</span>'
+                    + '</div>'
                     + '<div class="flex-1 min-w-0">'
                     + (v.loadingInfo
                         ? '<div class="skeleton mb-1.5" style="width:85%"></div><div class="skeleton" style="width:55%"></div>'
-                        : '<p class="text-[11.5px] font-semibold truncate leading-tight" title="' + esc(title) + '">' + esc(title) + '</p>'
-                        + '<p class="text-[9.5px] text-[var(--text-secondary)] mono truncate mt-0.5">'
-                        + esc(v.id || v.fileName) + (v.duration ? ' · ' + fmt(v.duration) : '') + '</p>')
+                        : '<p class="queue-title" title="' + esc(title) + '">' + esc(title) + '</p>'
+                        + '<p class="queue-meta">' + (meta.join(' · ') || '—') + '</p>')
                     + '<div class="flex items-center gap-1.5 mt-1.5 flex-wrap">'
                     + '<span class="src-tag ' + tagClass + '">' + tagText + '</span>'
                     + '<span class="text-[9.5px] text-[var(--accent-light)] font-bold">' + v.clips.length + ' clip'
@@ -4140,7 +4309,14 @@ start_bridge.bat
                     + '<div class="queue-progress-fill" style="width:' + bar.toFixed(1) + '%"></div>'
                     + '</div>'
                     + '</div>'
-                    + '<button onclick="removeVideo(' + i + ',event)" class="text-[var(--text-secondary)] hover:text-[var(--danger)] p-1 text-xs" title="Remove">✕</button>'
+                    + '<div class="queue-actions">'
+                    + (ytUrl
+                        ? '<a href="' + esc(ytUrl) + '" target="_blank" rel="noopener noreferrer"'
+                        + ' onclick="event.stopPropagation()" class="queue-act" title="Open on YouTube in a new tab">↗</a>'
+                        : '')
+                    + '<button onclick="renameVideo(' + i + ',event)" class="queue-act" title="Rename this video">✎</button>'
+                    + '<button onclick="removeVideo(' + i + ',event)" class="queue-act danger" title="Remove">✕</button>'
+                    + '</div>'
                     + '</div></div>';
             }).join('');
         }
@@ -4153,6 +4329,7 @@ start_bridge.bat
             $('statVideos').textContent = videos.length;
             $('statClips').textContent = totalClips;
             $('statDuration').textContent = fmt(totalDur);
+            syncHeaderExport();
         }
 
         function updatePlayerUI() {
@@ -4540,7 +4717,6 @@ start_bridge.bat
         /* ==========================================================
          *  TIMELINE
          * ========================================================== */
-        var _tlNodes = [];            // clip / cut / io elements currently on the timeline
         var draggingPlayhead = false;
         var dragState = null;
 
@@ -4606,11 +4782,63 @@ start_bridge.bat
             ruler.appendChild(frag);
         }
 
+        /* The timeline only builds what is on screen. At 1x with 200 cuts that
+           is still everything, but two things keep the node count sane: cuts
+           closer together than a few pixels cannot be grabbed individually so
+           only one of them gets a marker, and zooming in renders the window
+           rather than the whole video. Nodes are pooled and handlers are
+           delegated, so a re-render reuses elements instead of churning them. */
+        var _tlPool = { clip: [], cut: [], io: [], range: [] };
+        var _tlLive = [];
+        var _tlWindow = { from: -1, to: -1, zoom: -1 };
+        var CUT_MIN_PX = 7;
+
+        function poolTake(kind, cls) {
+            var el = _tlPool[kind].pop();
+            if (!el) { el = document.createElement('div'); }
+            el.className = cls;
+            el.removeAttribute('style');
+            return el;
+        }
+
+        function releaseTimelineNodes() {
+            for (var i = 0; i < _tlLive.length; i++) {
+                var rec = _tlLive[i];
+                if (rec.el.parentNode) rec.el.parentNode.removeChild(rec.el);
+                if (_tlPool[rec.kind].length < 400) _tlPool[rec.kind].push(rec.el);
+            }
+            _tlLive.length = 0;
+        }
+
+        /** The slice of the video the scroller is showing, padded either side.
+         *  Takes the already-measured width: every offsetWidth read forces a
+         *  synchronous layout, and at high zoom that is most of the cost. */
+        function timelineViewSpan(d, w) {
+            var sc = D.timelineScroll;
+            if (!sc || w <= 0) return { from: 0, to: d, w: w };
+            var vis = sc.offsetWidth, sl = sc.scrollLeft, pad = vis * 0.6;
+            return {
+                from: clamp((sl - pad) / w, 0, 1) * d,
+                to: clamp((sl + vis + pad) / w, 0, 1) * d,
+                w: w
+            };
+        }
+
+        /** First index whose clip could still touch `from` (clips are sorted),
+         *  so a 600-cut video does not walk 600 clips to draw the 20 on screen. */
+        function firstClipFrom(list, from) {
+            var lo = 0, hi = list.length;
+            while (lo < hi) {
+                var mid = (lo + hi) >> 1;
+                if (list[mid].end < from) lo = mid + 1; else hi = mid;
+            }
+            return lo;
+        }
+
         function renderTimeline() {
             var tl = D.timeline;
             if (!tl) return;
-            _tlNodes.forEach(function (n) { if (n.parentNode) n.parentNode.removeChild(n); });
-            _tlNodes = [];
+            releaseTimelineNodes();
             hideSnapLine();
 
             var d = duration();
@@ -4618,24 +4846,28 @@ start_bridge.bat
             if (!d || !v) { updateQuickSelectBtn(); return; }
 
             var tlWidth = tl.offsetWidth || 900;
+            var view = timelineViewSpan(d, tlWidth);
+            _tlWindow = { from: view.from, to: view.to, zoom: timelineZoom };
+            var pxPerSec = tlWidth / d;
             var frag = document.createDocumentFragment();
             var list = v.clips;
 
             // in/out staging range
             if (inPoint !== null && outPoint !== null && outPoint > inPoint) {
-                var rng = document.createElement('div');
-                rng.className = 'io-range';
+                var rng = poolTake('range', 'io-range');
                 rng.style.cssText = 'left:' + (inPoint / d * 100) + '%;width:'
                     + ((outPoint - inPoint) / d * 100) + '%;';
-                frag.appendChild(rng); _tlNodes.push(rng);
+                frag.appendChild(rng); _tlLive.push({ el: rng, kind: 'range' });
             }
 
-            // clips
-            list.forEach(function (c, i) {
+            // clips - only the ones the window touches, found by search rather
+            // than by walking every clip in the video
+            for (var i = firstClipFrom(list, view.from); i < list.length; i++) {
+                var c = list[i];
+                if (c.start > view.to) break;
                 var color = COLORS[i % COLORS.length];
-                var el = document.createElement('div');
-                el.className = 'tl-clip' + (i === selClip ? ' selected' : '') + (c.sel ? '' : ' deselected')
-                    + (loopClipId === c.id ? ' looping' : '');
+                var el = poolTake('clip', 'tl-clip' + (i === selClip ? ' selected' : '')
+                    + (c.sel ? '' : ' deselected') + (loopClipId === c.id ? ' looping' : ''));
                 el.dataset.idx = i;
                 var wpct = Math.max(0.05, (c.end - c.start) / d * 100);
                 el.style.cssText = 'left:' + (c.start / d * 100) + '%;width:' + wpct + '%;'
@@ -4654,37 +4886,52 @@ start_bridge.bat
                     + '<div class="tl-handle right" data-handle="right"></div>';
                 el.title = clipName(v, cur, i) + '   ' + fmtMs(c.start) + ' → ' + fmtMs(c.end)
                     + '   (' + fmtDur(c.end - c.start) + ')';
-                frag.appendChild(el); _tlNodes.push(el);
-            });
+                frag.appendChild(el); _tlLive.push({ el: el, kind: 'clip' });
+            }
 
-            // cut markers where two clips touch: drag to move the boundary,
-            // click to merge - the reference's interaction, which is far more
-            // discoverable than reaching for a 10px clip edge
-            for (var i = 0; i < list.length - 1; i++) {
-                if (Math.abs(list[i].end - list[i + 1].start) > 0.02) continue;
-                var cut = document.createElement('div');
-                cut.className = 'tl-cut';
-                cut.style.left = (list[i].end / d * 100) + '%';
-                cut.setAttribute('data-t', fmtMs(list[i].end));
-                cut.setAttribute('data-cut', i);
-                cut.title = 'Drag to move this cut · click to merge clip ' + (i + 1) + ' and ' + (i + 2);
-                cut.addEventListener('mousedown', onCutMouseDown);
-                frag.appendChild(cut); _tlNodes.push(cut);
+            /* Cut markers where two clips touch: drag to move the boundary, click
+               to merge. Two cuts less than CUT_MIN_PX apart overlap into one blob
+               nobody can aim at, so only the first of such a run gets a marker -
+               zoom in and the rest appear. */
+            var lastCutPx = -1e9;
+            for (var k = firstClipFrom(list, view.from); k < list.length - 1; k++) {
+                if (Math.abs(list[k].end - list[k + 1].start) > 0.02) continue;
+                var t = list[k].end;
+                if (t > view.to) break;
+                if (t < view.from) continue;
+                var px = t * pxPerSec;
+                if (px - lastCutPx < CUT_MIN_PX) continue;
+                lastCutPx = px;
+                var cut = poolTake('cut', 'tl-cut');
+                cut.style.left = (t / d * 100) + '%';
+                cut.setAttribute('data-t', fmtMs(t));
+                cut.setAttribute('data-cut', k);
+                cut.title = 'Drag to move this cut · click to merge clip ' + (k + 1) + ' and ' + (k + 2);
+                frag.appendChild(cut); _tlLive.push({ el: cut, kind: 'cut' });
             }
 
             // in / out markers
             [['in', inPoint], ['out', outPoint]].forEach(function (pair) {
                 if (pair[1] === null) return;
-                var m = document.createElement('div');
-                m.className = 'io-marker ' + pair[0];
+                var m = poolTake('io', 'io-marker ' + pair[0]);
                 m.style.left = (pair[1] / d * 100) + '%';
-                frag.appendChild(m); _tlNodes.push(m);
+                frag.appendChild(m); _tlLive.push({ el: m, kind: 'io' });
             });
 
             tl.appendChild(frag);
-            attachClipDragHandlers();
             updateIOBadge();
             updateQuickSelectBtn();
+        }
+
+        /** Re-render only when the scroller has moved out of the padded window. */
+        function renderTimelineIfScrolled() {
+            var d = duration(); if (!d) return;
+            if (timelineZoom !== _tlWindow.zoom) { renderTimeline(); return; }
+            var sc = D.timelineScroll, w = D.timeline.offsetWidth || 1;
+            if (!sc) return;
+            var from = clamp(sc.scrollLeft / w, 0, 1) * d;
+            var to = clamp((sc.scrollLeft + sc.offsetWidth) / w, 0, 1) * d;
+            if (from < _tlWindow.from || to > _tlWindow.to) renderTimeline();
         }
 
         function updateIOBadge() {
@@ -5082,7 +5329,7 @@ start_bridge.bat
                 if (rangeDrag.el && rangeDrag.el.parentNode) rangeDrag.el.parentNode.removeChild(rangeDrag.el);
                 rangeDrag = null;
                 if (moved && b - a > 0.15) {
-                    pushUndo();
+                    pushUndo('carved a clip');
                     addClip(a, b, null, true);
                     afterClipsChanged();
                     notify('Clip added · ' + fmt(a) + ' → ' + fmt(b) + '  (' + fmtDur(b - a) + ')', 'success');
@@ -5097,17 +5344,18 @@ start_bridge.bat
         /* ---- cut marker: drag moves the boundary, a plain click merges ---- */
         var cutDrag = null;
 
-        function onCutMouseDown(e) {
+        function onCutMouseDown(e, cutEl) {
             if (e.button !== 0) return;
             e.preventDefault(); e.stopPropagation();
             var v = V(); if (!v) return;
-            var idx = parseInt(e.currentTarget.getAttribute('data-cut'), 10);
+            cutEl = cutEl || e.currentTarget;
+            var idx = parseInt(cutEl.getAttribute('data-cut'), 10);
             var a = v.clips[idx], b = v.clips[idx + 1];
             if (!a || !b) return;
 
-            pushUndo();
+            pushUndo('moved the cut at ' + fmtMs(a.end));
             cutDrag = {
-                idx: idx, el: e.currentTarget, startX: e.clientX, moved: false,
+                idx: idx, el: cutEl, startX: e.clientX, moved: false,
                 rect: D.timeline.getBoundingClientRect(), d: duration(),
                 origA: { start: a.start, end: a.end }, origB: { start: b.start, end: b.end },
                 raf: null, lastEvent: e
@@ -5176,10 +5424,17 @@ start_bridge.bat
         }
 
         /* ---- clip move / resize ---- */
+        /* One listener on the container instead of one per handle: pooled nodes
+           can then be reused without ever stacking handlers on them. */
         function attachClipDragHandlers() {
-            D.timeline.querySelectorAll('.tl-handle').forEach(function (h) {
-                h.addEventListener('mousedown', onClipMouseDown);
-            });
+            if (D.timeline._tlDelegated) return;
+            D.timeline._tlDelegated = true;
+            D.timeline.addEventListener('mousedown', function (e) {
+                if (e.button !== 0 || !e.target.closest) return;
+                var cut = e.target.closest('.tl-cut');
+                if (cut) { onCutMouseDown(e, cut); return; }
+                if (e.target.closest('.tl-handle')) onClipMouseDown(e);
+            }, true);
         }
 
         function onClipMouseDown(e) {
@@ -5203,7 +5458,7 @@ start_bridge.bat
 
             var rect = D.timeline.getBoundingClientRect();
             var d = duration();
-            pushUndo();
+            pushUndo('dragged a clip');
 
             dragState = {
                 idx: idx,
@@ -5352,7 +5607,10 @@ start_bridge.bat
                 scheduleCache();
             }, { passive: false });
             // any scroll changes which slice of the video is on screen
-            D.timelineScroll.addEventListener('scroll', function () { scheduleCache(); }, { passive: true });
+            D.timelineScroll.addEventListener('scroll', function () {
+                scheduleCache();
+                renderTimelineIfScrolled();
+            }, { passive: true });
         }
 
         /** While playing zoomed in, keep the playhead on screen. */
@@ -5410,33 +5668,64 @@ start_bridge.bat
             return 'V' + (vIdx + 1) + '_Clip_' + pad(cIdx + 1, padWidth(v.clips.length));
         }
 
-        function pushUndo() {
+        /* Undo is per video and it says what it undid. The reference names every
+           step ("Restored cut at 3:41.200") and puts the selection back the way
+           it was, which is what makes marking cuts feel safe; a bare "Undone"
+           on a shared stack does not. Each entry also remembers which video it
+           belongs to, so undoing after switching videos edits the right one. */
+        function pushUndo(label) {
             var v = V(); if (!v) return;
-            undoStack.push(JSON.stringify({ vIdx: cur, clips: v.clips }));
-            if (undoStack.length > 60) undoStack.shift();
+            undoStack.push({
+                uid: v.uid, label: label || null, selClip: selClip,
+                clips: JSON.stringify(v.clips)
+            });
+            if (undoStack.length > 80) undoStack.shift();
             redoStack = [];
+        }
+
+        function snapshotOf(v, label) {
+            return { uid: v.uid, label: label || null, selClip: selClip, clips: JSON.stringify(v.clips) };
+        }
+
+        function applySnapshot(snap) {
+            var v = videoByUid(snap.uid);
+            if (!v) return null;
+            var inverse = snapshotOf(v, snap.label);
+            v.clips = JSON.parse(snap.clips);
+            v._thumbs = {};
+            var idx = videos.indexOf(v);
+            if (idx !== cur) {
+                // the step belongs to another video - go there so the change is visible
+                selectVideo(idx);
+            }
+            selClip = (snap.selClip !== undefined && snap.selClip < v.clips.length) ? snap.selClip : -1;
+            afterClipsChanged(true);
+            return inverse;
         }
 
         function undoAction() {
             if (!undoStack.length) { notify('Nothing to undo', 'warning'); return; }
-            var v = V(); if (!v) return;
-            redoStack.push(JSON.stringify({ vIdx: cur, clips: v.clips }));
-            var snap = JSON.parse(undoStack.pop());
-            if (videos[snap.vIdx]) videos[snap.vIdx].clips = snap.clips;
-            selClip = -1;
-            afterClipsChanged(true);
-            notify('Undone', 'success');
+            var snap = undoStack.pop();
+            var inverse = applySnapshot(snap);
+            if (!inverse) { notify('That step belonged to a video that is gone', 'warning'); return; }
+            redoStack.push(inverse);
+            notify(snap.label ? 'Undone — ' + snap.label : 'Undone', 'success');
         }
 
         function redoAction() {
             if (!redoStack.length) { notify('Nothing to redo', 'warning'); return; }
-            var v = V(); if (!v) return;
-            undoStack.push(JSON.stringify({ vIdx: cur, clips: v.clips }));
-            var snap = JSON.parse(redoStack.pop());
-            if (videos[snap.vIdx]) videos[snap.vIdx].clips = snap.clips;
-            selClip = -1;
-            afterClipsChanged(true);
-            notify('Redone', 'success');
+            var snap = redoStack.pop();
+            var inverse = applySnapshot(snap);
+            if (!inverse) { notify('That step belonged to a video that is gone', 'warning'); return; }
+            undoStack.push(inverse);
+            notify(snap.label ? 'Redone — ' + snap.label : 'Redone', 'success');
+        }
+
+        /** Drop any history that points at a video which no longer exists. */
+        function pruneHistory(uid) {
+            var keep = function (e) { return e.uid !== uid; };
+            undoStack = undoStack.filter(keep);
+            redoStack = redoStack.filter(keep);
         }
 
         function afterClipsChanged(skipThumbs) {
@@ -5449,7 +5738,7 @@ start_bridge.bat
 
         function sortClips() {
             var v = V(); if (!v || !v.clips.length) return;
-            pushUndo();
+            pushUndo('sorted the clips');
             v.clips.sort(function (a, b) { return a.start - b.start; });
             selClip = -1;
             afterClipsChanged();
@@ -5493,7 +5782,7 @@ start_bridge.bat
             for (var j = 0; j < v.clips.length; j++) {
                 var c = v.clips[j];
                 if (t > c.start + MIN && t < c.end - MIN) {
-                    pushUndo();
+                    pushUndo('cut at ' + fmtMs(t));
                     var tail = { id: uid(), start: t, end: c.end, name: null, sel: c.sel };
                     c.end = t;
                     v.clips.splice(j + 1, 0, tail);
@@ -5506,7 +5795,7 @@ start_bridge.bat
             // 3 — nothing marked yet: the first cut splits the whole video.
             if (!v.clips.length) {
                 var at = clamp(t, MIN, d - MIN);
-                pushUndo();
+                pushUndo('split into 2 clips');
                 v.clips.push({ id: uid(), start: 0, end: at, name: null, sel: true });
                 v.clips.push({ id: uid(), start: at, end: d, name: null, sel: true });
                 afterClipsChanged();
@@ -5521,7 +5810,7 @@ start_bridge.bat
                 if (c2.start >= t - EPS) hi = Math.min(hi, c2.start);
             });
             if (hi - lo >= MIN) {
-                pushUndo();
+                pushUndo('filled the gap');
                 v.clips.push({ id: uid(), start: lo, end: hi, name: null, sel: true });
                 v.clips.sort(function (a2, b2) { return a2.start - b2.start; });
                 afterClipsChanged();
@@ -5536,7 +5825,7 @@ start_bridge.bat
 
         function mergeAtBoundary(i, msg) {
             var v = V(); if (!v || i < 0 || i >= v.clips.length - 1) return;
-            pushUndo();
+            pushUndo('merged clips ' + (i + 1) + ' and ' + (i + 2));
             var a = v.clips[i], b = v.clips[i + 1];
             a.end = b.end;
             if (!a.name && !b.name) { /* keep auto naming */ }
@@ -5549,7 +5838,7 @@ start_bridge.bat
         function removeClip(i, ev) {
             if (ev) ev.stopPropagation();
             var v = V(); if (!v || !v.clips[i]) return;
-            pushUndo();
+            pushUndo('removed clip ' + (i + 1));
             v.clips.splice(i, 1);
             if (selClip === i) selClip = -1; else if (selClip > i) selClip--;
             afterClipsChanged();
@@ -5561,7 +5850,7 @@ start_bridge.bat
             var n = v.clips.filter(function (c) { return c.sel; }).length;
             if (!n) { notify('No clips selected', 'warning'); return; }
             if (!confirm('Delete ' + n + ' selected clip(s)?')) return;
-            pushUndo();
+            pushUndo('removed ' + n + ' clip(s)');
             v.clips = v.clips.filter(function (c) { return !c.sel; });
             selClip = -1;
             afterClipsChanged();
@@ -5571,7 +5860,7 @@ start_bridge.bat
         function clearClips() {
             var v = V(); if (!v || !v.clips.length) return;
             if (!confirm('Remove all ' + v.clips.length + ' clips from this video?')) return;
-            pushUndo();
+            pushUndo('cleared all clips');
             v.clips = [];
             selClip = -1;
             afterClipsChanged();
@@ -5580,7 +5869,7 @@ start_bridge.bat
 
         function nudgeClip(i, edge, delta) {
             var v = V(); if (!v || !v.clips[i]) return;
-            pushUndo();
+            pushUndo('nudged clip ' + (i + 1));
             var c = v.clips[i], d = duration(), MIN = 0.05;
             if (edge === 'start') {
                 var ns = clamp(c.start + delta, 0, c.end - MIN);
@@ -5658,7 +5947,7 @@ start_bridge.bat
                 notify('Set both IN (I) and OUT (O) first', 'warning'); return;
             }
             if (outPoint <= inPoint) { notify('OUT must come after IN', 'error'); return; }
-            pushUndo();
+            pushUndo('added the IN→OUT clip');
             addClip(inPoint, outPoint, null, true);
             inPoint = null; outPoint = null;
             afterClipsChanged();
@@ -5701,6 +5990,7 @@ start_bridge.bat
             });
             updateSelectedBadge();
             updateQuickSelectBtn();
+            syncHeaderExport();      // the header buttons act on the selection
         }
 
         function updateSelectedBadge() {
@@ -6024,7 +6314,7 @@ start_bridge.bat
             if (!ranges.length) { notify('Nothing to add', 'warning'); return; }
             if (v.clips.length && !confirm('Replace the existing ' + v.clips.length
                 + ' clip(s) with ' + ranges.length + ' new one(s)?')) return;
-            pushUndo();
+            pushUndo('replaced the clips');
             v.clips = ranges.map(function (r) {
                 return { id: uid(), start: r.start, end: r.end, name: r.name || null, sel: true };
             });
@@ -6808,6 +7098,7 @@ start_bridge.bat
         function filmstripEnabled() { return localStorage.getItem('clipforge.filmstrip') === 'on'; }
 
         function setFilmstripEnabled(on) {
+            setTimeout(scheduleFit, 0);
             try { localStorage.setItem('clipforge.filmstrip', on ? 'on' : 'off'); } catch (e) { }
             var btn = $('fsEnableBtn');
             if (btn) {
@@ -6844,6 +7135,7 @@ start_bridge.bat
         }
 
         function toggleFilmstrip() {          // collapse / expand, keeps the frames
+            setTimeout(scheduleFit, 0);
             filmstripVisible = !filmstripVisible;
             $('filmstripOuter').style.display = filmstripVisible ? '' : 'none';
             var b = $('fsToggleBtn');
@@ -7023,14 +7315,99 @@ start_bridge.bat
 
         /** The panel belongs to a loaded video, so it appears with one and
          *  goes away with the empty state - never a black box on an empty app. */
-        var FP_SIZES = ['s', 'm', 'l', 'xl'];
-        var FP_SIZE_NAMES = { s: 'small', m: 'medium', l: 'large', xl: 'huge' };
+        /* ==========================================================
+         *  EDITOR FIT
+         *  The picture, the timeline, the frame preview and the transport are
+         *  one column. Rather than guess a viewport fraction, measure what the
+         *  other three need and hand the rest to the picture - then clamp the
+         *  column to the width that height implies, so the timeline lines up
+         *  with the frame exactly.
+         * ========================================================== */
+        var MIN_VIDEO_H = 200, MIN_STACK_W = 600, fitRaf = 0;
+        var fillWidth = true;           // true = picture takes the whole column, page may scroll
+
+        function stackColumnWidth(col) {
+            var cs = getComputedStyle(col);
+            return col.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+        }
+
+        /** Height of everything under the picture, measured as it stands now. */
+        function belowPictureHeight() {
+            var h = 0;
+            [$('timelineSection'), $('transportRow')].forEach(function (el) {
+                if (!el || el.offsetParent === null) return;
+                var s2 = getComputedStyle(el);
+                h += el.offsetHeight + parseFloat(s2.marginTop || 0) + parseFloat(s2.marginBottom || 0);
+            });
+            return h;
+        }
+
+        function fitEditor() {
+            var stack = $('editorStack'), wrap = D.videoWrap;
+            if (!stack || !wrap) return;
+            var root = document.documentElement, col = stack.parentNode;
+            var colW = stackColumnWidth(col);
+            if (colW <= 0) return;
+
+            if (fillWidth) {
+                // the picture owns the whole column; the timeline matches it by
+                // definition, and the page scrolls if that is taller than the window
+                root.style.setProperty('--stack-w', '100%');
+                root.style.setProperty('--video-h', Math.round(colW * 9 / 16) + 'px');
+                return;
+            }
+
+            var pad = parseFloat(getComputedStyle(col).paddingBottom || 0) + 14;
+            var h = MIN_VIDEO_H, w = colW;
+
+            /* Two passes. The first reads the column at full width; applying its
+               answer may narrow the stack enough to wrap the timeline controls, so
+               the second reads again at the width actually in force. Without this
+               the fit feeds on itself - a shorter picture makes a taller timeline
+               makes a shorter picture. */
+            for (var pass = 0; pass < 2; pass++) {
+                var top = wrap.getBoundingClientRect().top;
+                var avail = window.innerHeight - top - belowPictureHeight() - pad;
+                h = Math.max(MIN_VIDEO_H, Math.round(Math.min(avail, colW * 9 / 16)));
+                w = Math.min(colW, Math.max(MIN_STACK_W, Math.round(h * 16 / 9)));
+                root.style.setProperty('--video-h', h + 'px');
+                root.style.setProperty('--stack-w', w + 'px');
+            }
+        }
+
+        function toggleFillWidth() {
+            fillWidth = !fillWidth;
+            try { localStorage.setItem('cf_fill_width', fillWidth ? '1' : '0'); } catch (e) { }
+            var b = $('fillWidthBtn');
+            if (b) { b.classList.toggle('active', fillWidth); b.textContent = fillWidth ? '⤢ Wide' : '⛶ Screen'; }
+            scheduleFit();
+            notify(fillWidth
+                ? 'Wide — the picture takes the whole column, the page scrolls if it has to'
+                : 'Screen — the whole editor on one screen', 'info');
+        }
+
+        /** Coalesce: a fit reads layout, so never run more than one a frame. */
+        function scheduleFit() {
+            if (fitRaf) return;
+            fitRaf = requestAnimationFrame(function () {
+                fitRaf = 0;
+                fitEditor();
+                renderRuler();
+                renderTimeline();
+                scheduleCache();
+            });
+        }
+
+        var FP_SIZES = ['s', 'm', 'l', 'xl', 'off'];
+        var FP_SIZE_NAMES = { s: 'small', m: 'medium', l: 'large', xl: 'huge', off: 'hidden' };
         var fpSize = 'm';
 
         function applyFramePreviewSize(size, quiet) {
             fpSize = FP_SIZES.indexOf(size) >= 0 ? size : 'm';
             if (D.framePreview) D.framePreview.setAttribute('data-size', fpSize);
             try { localStorage.setItem('cf_fp_size', fpSize); } catch (e) { }
+            syncFramePreviewPanel();
+            scheduleFit();
             if (!quiet) notify('Preview frame · ' + FP_SIZE_NAMES[fpSize], 'info');
         }
 
@@ -7040,7 +7417,7 @@ start_bridge.bat
 
         function syncFramePreviewPanel() {
             if (!D.framePreview) return;
-            D.framePreview.style.display = V() ? 'block' : 'none';
+            D.framePreview.style.display = (V() && fpSize !== 'off') ? 'block' : 'none';
         }
 
         function setScrubHover(on) {
@@ -7226,6 +7603,24 @@ start_bridge.bat
                 b.classList.toggle('active', b.dataset.tab === t);
             });
             regenerateScript();
+            syncHeaderExport();
+        }
+
+        /** The header buttons mirror step 5, so the script is one click away
+         *  from anywhere on the page. */
+        function syncHeaderExport() {
+            var lbl = $('hdrExportLabel'), btn = $('hdrExportBtn'), ex = $('hdrExtractBtn');
+            if (!lbl) return;
+            lbl.textContent = '.' + (EXT_FOR_TAB[currentTab] || 'bat');
+            var n = allClipRows(true).length;
+            btn.disabled = !n;
+            ex.disabled = !n;
+            btn.title = n
+                ? 'Download the ' + EXT_FOR_TAB[currentTab] + ' script for ' + n + ' selected clip(s)  (E)'
+                : 'Select some clips first';
+            ex.title = n
+                ? 'Extract ' + n + ' selected clip(s) now through the local bridge'
+                : 'Select some clips first';
         }
 
         function outExt() { return quality === 'audio' ? 'mp3' : container; }
@@ -8644,7 +9039,8 @@ start_bridge.bat
                 ['Previous / next clip', ['↑', '↓']],
                 ['Loop the clip you are on', ['L']],
                 ['Speed down / up', ['⇧', ',', '.']],
-                ['Preview frame size', [',']]
+                ['Preview frame size', [',']],
+                ['Wide picture / one screen', ['⇧', 'W']]
             ]],
             ['Cutting', [
                 ['Mark a cut · again on the cut unmarks it', ['M']],
@@ -8752,7 +9148,7 @@ start_bridge.bat
             var i = selClip >= 0 ? selClip : clipAtPlayhead();
             if (i < 0 || !v.clips[i]) { notify('No clip under the playhead', 'warning'); return; }
             var c = v.clips[i], t = P.time();
-            pushUndo();
+            pushUndo('trimmed a clip edge');
             if (which === 'start') {
                 if (t >= c.end - 0.05) { undoStack.pop(); notify('That would empty the clip', 'error'); return; }
                 c.start = t;
@@ -8770,7 +9166,7 @@ start_bridge.bat
             if (i < 0 || !v.clips[i]) { notify('No clip selected', 'warning'); return; }
             var c = v.clips[i], len = c.end - c.start, d = duration();
             var start = Math.min(c.end, d - len);
-            pushUndo();
+            pushUndo('trimmed a clip edge');
             addClip(start, Math.min(start + len, d), null, true);
             afterClipsChanged();
             notify('Clip duplicated', 'success');
@@ -8867,6 +9263,7 @@ start_bridge.bat
                 case 'e': e.preventDefault(); downloadScript(currentTab); break;
                 case ',': e.preventDefault(); if (e.shiftKey) bumpSpeed(-1); else cycleFramePreviewSize(); break;
                 case '.': if (e.shiftKey) { e.preventDefault(); bumpSpeed(1); } break;
+                case 'w': if (e.shiftKey) { e.preventDefault(); toggleFillWidth(); } break;
                 case '?': e.preventDefault(); openShortcuts(); break;
                 case '/': if (e.shiftKey) { e.preventDefault(); openShortcuts(); } break;
                 case 'delete':
@@ -8937,6 +9334,7 @@ start_bridge.bat
         function init() {
             cacheDom();
             initPlayheadDrag();
+            attachClipDragHandlers();
             initTimelineHover();
             initTimelineWheel();
             initDragDrop();
@@ -8948,6 +9346,12 @@ start_bridge.bat
             var savedSize = 'm';
             try { savedSize = localStorage.getItem('cf_fp_size') || 'm'; } catch (e) { }
             applyFramePreviewSize(savedSize, true);
+            try {
+                var fw = localStorage.getItem('cf_fill_width');
+                if (fw !== null) fillWidth = fw === '1';
+            } catch (e) { }
+            $('fillWidthBtn').classList.toggle('active', fillWidth);
+            $('fillWidthBtn').textContent = fillWidth ? '⤢ Wide' : '⛶ Screen';
 
             DETECT_MAX = detectMaxDefault();
             try {
@@ -8978,7 +9382,13 @@ start_bridge.bat
                         if (waveformOn) drawWaveform();
                     });
                 }).observe(D.timeline);
+                // the picture takes whatever the rest of the column leaves it,
+                // so a change in any of them re-fits
+                new ResizeObserver(function () { scheduleFit(); })
+                    .observe($('editorStack').parentNode);
             }
+            window.addEventListener('resize', scheduleFit);
+            fitEditor();
 
             window.addEventListener('beforeunload', function (e) {
                 var n = videos.reduce(function (a, v) { return a + v.clips.length; }, 0);
