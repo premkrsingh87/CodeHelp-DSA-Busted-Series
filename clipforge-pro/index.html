@@ -4035,6 +4035,22 @@ start_bridge.bat
             };
         }
 
+        /* Counting clips does not need their export ranges. allClipRows builds
+           a row object and an exportRange per clip; calling it purely to show
+           "12 selected of 40" made every edit pay for work only the exporter
+           needs. */
+        function clipCounts() {
+            var includeAll = $('allVideosToggle') ? $('allVideosToggle').checked : true;
+            var sel = 0, all = 0;
+            for (var i = 0; i < videos.length; i++) {
+                if (!includeAll && i !== cur) continue;
+                var cl = videos[i].clips;
+                all += cl.length;
+                for (var j = 0; j < cl.length; j++) if (cl[j].sel) sel++;
+            }
+            return { selected: sel, total: all };
+        }
+
         function allClipRows(onlySelected) {
             // Flattened [{video, clip, vIdx, cIdx, out}] across the queue.
             // `out` is what every exporter writes - never clip.start/clip.end.
@@ -4261,6 +4277,7 @@ start_bridge.bat
                 if (this.mode === 'html5') { D.localVideo.currentTime = t; }
                 else if (this.mode === 'yt' && this.ytReady) { try { this.yt.seekTo(t, true); } catch (e) { } }
                 syncPlayhead(t);
+                wakePlayheadLoop();
             },
             paused: function () {
                 if (this.mode === 'html5') return D.localVideo.paused;
@@ -4270,12 +4287,15 @@ start_bridge.bat
             play: function () {
                 if (this.mode === 'html5') { var p = D.localVideo.play(); if (p && p.catch) p.catch(function () { }); }
                 else if (this.mode === 'yt' && this.ytReady) { try { this.yt.playVideo(); } catch (e) { } }
+                wakePlayheadLoop();
             },
             pause: function () {
                 if (this.mode === 'html5') D.localVideo.pause();
                 else if (this.mode === 'yt' && this.ytReady) { try { this.yt.pauseVideo(); } catch (e) { } }
+                wakePlayheadLoop();
             },
             rate: function (r) {
+                wakePlayheadLoop();
                 this._rate = r;
                 if (this.mode === 'html5') D.localVideo.playbackRate = r;
                 else if (this.mode === 'yt' && this.ytReady) { try { this.yt.setPlaybackRate(r); } catch (e) { } }
@@ -4350,6 +4370,8 @@ start_bridge.bat
                             refreshAfterMediaLoad(v);
                             resolve(true);
                         },
+                        onStateChange: function () { wakePlayheadLoop(); },
+                        onPlaybackRateChange: function () { wakePlayheadLoop(); },
                         onError: function () {
                             notify('This video cannot be embedded. Use a proxy copy instead.', 'error');
                             resolve(false);
@@ -4433,6 +4455,7 @@ start_bridge.bat
             if (canReadFrames()) rebuildFilmstrip();
             else D.filmstripContainer.style.display = 'none';
             zoomTimeline(0);
+            wakePlayheadLoop();
         }
 
         /* ==========================================================
@@ -5070,6 +5093,7 @@ start_bridge.bat
             else timelineZoom = Math.max(timelineZoom / 1.5, 1);
             $('zoomLabel').textContent = timelineZoom <= 1 ? '1x' : timelineZoom.toFixed(1) + 'x';
             D.timeline.style.width = (timelineZoom * 100) + '%';
+            geoInvalidate();
             renderRuler();
             renderTimeline();
             syncFilmstripWidth();
@@ -5132,6 +5156,33 @@ start_bridge.bat
            only one of them gets a marker, and zooming in renders the window
            rather than the whole video. Nodes are pooled and handlers are
            delegated, so a re-render reuses elements instead of churning them. */
+        /* Reading a geometry property after a DOM write forces the browser to
+           lay out again, there and then. The timeline and the clip list each
+           write DOM and each read geometry, so calling them one after another
+           - which is what every edit does - made each pay for the other's
+           write: 17ms and 12ms alone became 53ms and 29ms chained.
+
+           They all want the same handful of numbers, and inside one frame those
+           numbers cannot meaningfully change, so read them once and hand out
+           the same answer until the frame ends. */
+        var _geo = null;
+
+        function geo() {
+            if (_geo) return _geo;
+            var tl = D.timeline, sc = D.timelineScroll, cl = D.clipsList;
+            _geo = {
+                tlW: (tl && tl.offsetWidth) || 900,
+                scLeft: sc ? sc.scrollLeft : 0,
+                scW: sc ? sc.offsetWidth : 900,
+                clipTop: cl ? cl.scrollTop : 0,
+                clipH: (cl && cl.clientHeight) || 640
+            };
+            requestAnimationFrame(function () { _geo = null; });
+            return _geo;
+        }
+
+        function geoInvalidate() { _geo = null; }
+
         var RIBBON = ['#7c5cfc', '#3f3a72'];   // two tints for very dense strips
         var _tlPool = { clip: [], cut: [], io: [], range: [] };
         var _tlLive = [];
@@ -5166,7 +5217,8 @@ start_bridge.bat
         function timelineViewSpan(d, w) {
             var sc = D.timelineScroll;
             if (!sc || w <= 0) return { from: 0, to: d, w: w };
-            var vis = sc.offsetWidth, sl = sc.scrollLeft, pad = vis * 0.6;
+            var g = geo();
+            var vis = g.scW, sl = g.scLeft, pad = vis * 0.6;
             return {
                 from: clamp((sl - pad) / w, 0, 1) * d,
                 to: clamp((sl + vis + pad) / w, 0, 1) * d,
@@ -5195,7 +5247,7 @@ start_bridge.bat
             var v = V();
             if (!d || !v) { updateQuickSelectBtn(); return; }
 
-            var tlWidth = tl.offsetWidth || 900;
+            var tlWidth = geo().tlW;
             var view = timelineViewSpan(d, tlWidth);
             _tlWindow = { from: view.from, to: view.to, zoom: timelineZoom };
             var pxPerSec = tlWidth / d;
@@ -5314,10 +5366,10 @@ start_bridge.bat
         function renderTimelineIfScrolled() {
             var d = duration(); if (!d) return;
             if (timelineZoom !== _tlWindow.zoom) { renderTimeline(); return; }
-            var sc = D.timelineScroll, w = D.timeline.offsetWidth || 1;
+            var g = geo(), sc = D.timelineScroll, w = g.tlW || 1;
             if (!sc) return;
-            var from = clamp(sc.scrollLeft / w, 0, 1) * d;
-            var to = clamp((sc.scrollLeft + sc.offsetWidth) / w, 0, 1) * d;
+            var from = clamp(g.scLeft / w, 0, 1) * d;
+            var to = clamp((g.scLeft + g.scW) / w, 0, 1) * d;
             if (from < _tlWindow.from || to > _tlWindow.to) renderTimeline();
         }
 
@@ -5339,7 +5391,7 @@ start_bridge.bat
             var s = fmtMs(t);
             D.currentTime.textContent = s;
             D.playheadTooltip.textContent = s;
-            updateFilmstripPlayhead(t);
+            updateFilmstripPlayhead(t, d);
             trackFramePreview(t);
         }
 
@@ -5537,6 +5589,7 @@ start_bridge.bat
             previewStopAt = null;
             if (wasPlaying) P.pause();
             ph.classList.add('dragging');
+            wakePlayheadLoop();
             document.body.style.userSelect = 'none';
             document.body.style.cursor = 'ew-resize';
 
@@ -5995,6 +6048,7 @@ start_bridge.bat
             }, { passive: false });
             // any scroll changes which slice of the video is on screen
             D.timelineScroll.addEventListener('scroll', function () {
+                geoInvalidate();
                 scheduleCache();
                 renderTimelineIfScrolled();
             }, { passive: true });
@@ -6013,22 +6067,74 @@ start_bridge.bat
         }
 
         /* ---- playhead sync loop ---- */
-        function startPlayheadLoop() {
-            var last = -1;
-            function tick() {
-                if (P.mode !== 'none' && !draggingPlayhead) {
-                    var t = P.time();
-                    if (Math.abs(t - last) > 0.002) {
-                        last = t;
-                        syncPlayhead(t);
-                        if (filmstripFollow) scrollFilmstripToPlayhead(t);
-                        if (!P.paused()) followPlayhead(t);
-                        maybeStopAtClipEnd(t);
-                    }
+        /* The playhead loop used to run a callback every frame for the life of
+           the page, whether or not anything was moving. Now it parks itself
+           after a stretch of stillness and is woken by the things that actually
+           move the playhead, so an idle editor costs the machine nothing. */
+        var _phRunning = false, _phLast = -1, _phIdle = 0, _phGuard = 0;
+        var PH_IDLE_FRAMES = 90;         // ~1.5s of no movement before parking
+        var PH_GUARD_MS = 300;           // how often a parked loop checks for life
+
+        function playheadTick() {
+            if (P.mode === 'none') { parkPlayheadLoop(); return; }
+            var moving = false;
+            if (!draggingPlayhead) {
+                var t = P.time();
+                if (Math.abs(t - _phLast) > 0.002) {
+                    _phLast = t;
+                    moving = true;
+                    syncPlayhead(t);
+                    if (filmstripFollow) scrollFilmstripToPlayhead(t);
+                    if (!P.paused()) followPlayhead(t);
+                    maybeStopAtClipEnd(t);
                 }
-                requestAnimationFrame(tick);
             }
-            requestAnimationFrame(tick);
+            // playing, dragging or looping means keep watching regardless
+            if (moving || draggingPlayhead || !P.paused() || loopClipId !== null
+                || previewStopAt !== null) {
+                _phIdle = 0;
+            } else if (++_phIdle > PH_IDLE_FRAMES) {
+                parkPlayheadLoop();
+                return;
+            }
+            requestAnimationFrame(playheadTick);
+        }
+
+        /* Parking is only ever an optimisation, never a behaviour change, so a
+           parked loop keeps a cheap heartbeat running. Every path that moves
+           the playhead wakes it directly; the heartbeat is the backstop that
+           catches anything exotic (the native <video> controls, YouTube's own
+           chrome, a cast device) within a third of a second instead of leaving
+           the playhead stranded. */
+        function parkPlayheadLoop() {
+            _phRunning = false;
+            if (_phGuard) return;
+            _phGuard = setInterval(function () {
+                if (_phRunning || P.mode === 'none') return;
+                if (!P.paused() || Math.abs(P.time() - _phLast) > 0.002) wakePlayheadLoop();
+            }, PH_GUARD_MS);
+        }
+
+        /** Anything that can move the playhead calls this. */
+        function wakePlayheadLoop() {
+            _phIdle = 0;
+            if (_phRunning) return;
+            _phRunning = true;
+            if (_phGuard) { clearInterval(_phGuard); _phGuard = 0; }
+            requestAnimationFrame(playheadTick);
+        }
+
+        function startPlayheadLoop() { wakePlayheadLoop(); }
+
+        /* The <video> keeps its native controls, so the user can start playback
+           without going through P.play(). These events cover that. */
+        function initMediaWake() {
+            var el = D.localVideo;
+            if (!el) return;
+            ['play', 'playing', 'seeking', 'seeked', 'ratechange', 'pause', 'ended']
+                .forEach(function (ev) {
+                    el.addEventListener(ev, wakePlayheadLoop, { passive: true });
+                });
         }
 
         function maybeStopAtClipEnd(t) {
@@ -6060,26 +6166,65 @@ start_bridge.bat
            it was, which is what makes marking cuts feel safe; a bare "Undone"
            on a shared stack does not. Each entry also remembers which video it
            belongs to, so undoing after switching videos edits the right one. */
+        /* A snapshot only has to carry what an undo restores. Serialising the
+           clip objects wholesale also copied the memoised search keys hanging
+           off them, roughly doubling every step for nothing; positional arrays
+           halve it again. Eighty steps of a 900-clip project used to be several
+           megabytes of dead string — now it is a fraction of that, and the
+           budget below keeps it bounded however big the project gets. */
+        var UNDO_STEPS = 80;             // never keep more steps than this
+        var UNDO_CHARS = 4e6;            // …nor more than this much text
+        var UNDO_KEEP = 12;              // …but always keep at least this many
+
+        function packClips(list) {
+            var out = new Array(list.length);
+            for (var i = 0; i < list.length; i++) {
+                var c = list[i];
+                out[i] = c.name
+                    ? [c.id, c.start, c.end, c.sel ? 1 : 0, c.name]
+                    : [c.id, c.start, c.end, c.sel ? 1 : 0];
+            }
+            return JSON.stringify(out);
+        }
+
+        function unpackClips(packed) {
+            var raw = JSON.parse(packed), out = new Array(raw.length);
+            for (var i = 0; i < raw.length; i++) {
+                var a = raw[i];
+                out[i] = { id: a[0], start: a[1], end: a[2], sel: !!a[3], name: a[4] || null };
+            }
+            return out;
+        }
+
+        function trimUndoStack() {
+            while (undoStack.length > UNDO_STEPS) undoStack.shift();
+            var chars = 0;
+            for (var i = 0; i < undoStack.length; i++) chars += undoStack[i].clips.length;
+            while (undoStack.length > UNDO_KEEP && chars > UNDO_CHARS) {
+                chars -= undoStack.shift().clips.length;
+            }
+        }
+
         function pushUndo(label) {
             var v = V(); if (!v) return;
             undoStack.push({
                 uid: v.uid, label: label || null, selClip: selClip,
-                clips: JSON.stringify(v.clips)
+                clips: packClips(v.clips)
             });
-            if (undoStack.length > 80) undoStack.shift();
+            trimUndoStack();
             redoStack = [];
             syncHistoryUI();
         }
 
         function snapshotOf(v, label) {
-            return { uid: v.uid, label: label || null, selClip: selClip, clips: JSON.stringify(v.clips) };
+            return { uid: v.uid, label: label || null, selClip: selClip, clips: packClips(v.clips) };
         }
 
         function applySnapshot(snap) {
             var v = videoByUid(snap.uid);
             if (!v) return null;
             var inverse = snapshotOf(v, snap.label);
-            v.clips = JSON.parse(snap.clips);
+            v.clips = unpackClips(snap.clips);
             v._thumbs = {};
             var idx = videos.indexOf(v);
             if (idx !== cur) {
@@ -6107,6 +6252,7 @@ start_bridge.bat
             var inverse = applySnapshot(snap);
             if (!inverse) { notify('That step belonged to a video that is gone', 'warning'); return; }
             undoStack.push(inverse);
+            trimUndoStack();
             syncHistoryUI();
             notify(snap.label ? 'Redone — ' + snap.label : 'Redone', 'success');
         }
@@ -6406,8 +6552,8 @@ start_bridge.bat
 
         function updateSelectedBadge() {
             var v = V();
-            var n = v ? v.clips.filter(function (c) { return c.sel; }).length : 0;
-            var t = v ? v.clips.length : 0;
+            var t = v ? v.clips.length : 0, n = 0;
+            if (v) for (var i = 0; i < t; i++) if (v.clips[i].sel) n++;
             $('selectedBadge').textContent = n + '/' + t + ' selected';
             $('clipsBadge').textContent = t + ' clip' + (t === 1 ? '' : 's');
         }
@@ -6461,27 +6607,23 @@ start_bridge.bat
         /* ==========================================================
          *  CLIPS  —  card list
          * ========================================================== */
-        function renderClips() {
-            var v = V();
-            var el = D.clipsList;
-            var list = v ? v.clips : [];
-            $('clipSearchWrap').style.display = list.length > 4 ? '' : 'none';
-            updateSelectedBadge();
+        /* The clip list is virtualised. A 900-cut project is 900 cards of 43
+           nodes each, and every card holds a 320x180 canvas - rebuilding that on
+           every mark cost most of a second and left ~200MB of canvas backing
+           store alive. Only the rows near the scroller are built now; spacers
+           above and below keep the scrollbar honest, and the same cards are
+           rebuilt as you scroll. Nothing about a card changed. */
+        var _clipRowH = 0;              // measured once from a real card
+        var _clipRowNeedsMeasure = true, _clipViewH = 0;
+        var _clipWin = { from: -1, to: -1, n: -1 };
+        var _clipIdx = [];              // clip indices passing the filter, in order
+        var CLIP_OVERSCAN = 4;
 
-            if (!list.length) {
-                el.innerHTML = '<div class="text-center py-10 text-[var(--text-secondary)]">'
-                    + '<p class="text-3xl mb-2">✂️</p><p class="text-sm">No clips yet</p>'
-                    + '<p class="text-[11px] mt-1 opacity-75">Load a preview, then press '
-                    + '<span class="key-hint">M</span> to split, or use auto-detect / chapters / interval.</p></div>';
-                return;
-            }
-
-            var ext = container;
-            var html = list.map(function (c, i) {
+        function clipCardHtml(v, c, i, list, ext) {
                 var color = COLORS[i % COLORS.length];
                 var name = clipName(v, cur, i);
                 var dur = Math.max(0, c.end - c.start);
-                var search = [i + 1, name, fmt(c.start), fmt(c.end), fmtMs(c.start), fmtMs(c.end)].join(' ').toLowerCase();
+                var search = clipSearchKey(v, i);
 
                 return '<div class="clip-card' + (i === selClip ? ' active' : '') + '" data-idx="' + i
                     + '" data-search="' + esc(search) + '">'
@@ -6537,25 +6679,113 @@ start_bridge.bat
                         : '')
                     + '</div>'
                     + '</div></div></div>';
-            }).join('');
+        }
 
-            el.innerHTML = html;
+        function buildClipIndex(v) {
+            var q = clipFilter;
+            _clipIdx.length = 0;
+            if (!v) return;
+            for (var i = 0; i < v.clips.length; i++) {
+                if (!q || clipSearchKey(v, i).indexOf(q) !== -1) _clipIdx.push(i);
+            }
+        }
+
+        /** The searchable text for a clip, cached until the clip changes. */
+        function clipSearchKey(v, i) {
+            var c = v.clips[i];
+            var stamp = i + '|' + c.start + '|' + c.end + '|' + (c.name || '');
+            if (c._sk !== stamp) {
+                c._sk = stamp;
+                c._skv = [i + 1, clipName(v, cur, i), fmt(c.start), fmt(c.end),
+                    fmtMs(c.start), fmtMs(c.end)].join(' ').toLowerCase();
+            }
+            return c._skv;
+        }
+
+        function renderClips() {
+            var v = V();
+            var el = D.clipsList;
+            var list = v ? v.clips : [];
+            $('clipSearchWrap').style.display = list.length > 4 ? '' : 'none';
+            updateSelectedBadge();
+
+            if (!list.length) {
+                _clipIdx.length = 0;
+                _clipWin = { from: -1, to: -1, n: -1 };
+                el.innerHTML = '<div class="text-center py-10 text-[var(--text-secondary)]">'
+                    + '<p class="text-3xl mb-2">✂️</p><p class="text-sm">No clips yet</p>'
+                    + '<p class="text-[11px] mt-1 opacity-75">Load a preview, then press '
+                    + '<span class="key-hint">M</span> to split, or use auto-detect / chapters / interval.</p></div>';
+                $('clipSearchCount').textContent = '';
+                return;
+            }
+
+            buildClipIndex(v);
+            _clipWin = { from: -1, to: -1, n: -1 };     // force a rebuild
+            paintClipWindow();
+        }
+
+        /** Build just the rows the scroller can show, plus a little either side. */
+        function paintClipWindow() {
+            var v = V(); if (!v || !_clipIdx.length) return;
+            var el = D.clipsList, list = v.clips, ext = container;
+            var total = _clipIdx.length;
+
+            if (!_clipRowH) _clipRowH = 190;            // refined from a real card below
+            var g = geo();
+            var per = Math.max(1, Math.ceil(g.clipH / _clipRowH));
+            var first = Math.max(0, Math.floor(g.clipTop / _clipRowH) - CLIP_OVERSCAN);
+            var last = Math.min(total, first + per + CLIP_OVERSCAN * 2);
+
+            if (first === _clipWin.from && last === _clipWin.to && total === _clipWin.n) return;
+            _clipWin = { from: first, to: last, n: total };
+
+            var parts = [];
+            if (first > 0) parts.push('<div style="height:' + (first * _clipRowH) + 'px"></div>');
+            for (var k = first; k < last; k++) {
+                var i = _clipIdx[k];
+                parts.push(clipCardHtml(v, list[i], i, list, ext));
+            }
+            if (last < total) parts.push('<div style="height:' + ((total - last) * _clipRowH) + 'px"></div>');
+            el.innerHTML = parts.join('');
+
+            /* Measure a real card once, not on every paint. getBoundingClientRect
+               on freshly written DOM forces a synchronous layout, and doing that
+               inside every render turned a 27ms update into 92ms. */
+            if (_clipRowNeedsMeasure) {
+                var card = el.querySelector('.clip-card');
+                if (card) {
+                    _clipRowNeedsMeasure = false;
+                    var h = Math.round(card.getBoundingClientRect().height) + 12;   // + space-y-3
+                    if (h > 40 && Math.abs(h - _clipRowH) > 2) {
+                        _clipRowH = h;
+                        _clipWin = { from: -1, to: -1, n: -1 };
+                        return paintClipWindow();
+                    }
+                }
+            }
+
+            $('clipSearchCount').textContent = clipFilter ? total + '/' + list.length : '';
             paintCachedThumbs();
-            if (clipFilter) filterClips();
             scheduleThumbs();
         }
 
+        function initClipListScroll() {
+            var el = D.clipsList, raf = 0;
+            el.addEventListener('scroll', function () {
+                if (raf) return;
+                raf = requestAnimationFrame(function () { raf = 0; geoInvalidate(); paintClipWindow(); });
+            }, { passive: true });
+        }
+
         function filterClips() {
-            var q = ($('clipSearch').value || '').trim().toLowerCase();
-            clipFilter = q;
-            var cards = D.clipsList.querySelectorAll('.clip-card');
-            var shown = 0;
-            cards.forEach(function (card) {
-                var match = !q || (card.dataset.search || '').indexOf(q) !== -1;
-                card.style.display = match ? '' : 'none';
-                if (match) shown++;
-            });
-            $('clipSearchCount').textContent = q ? shown + '/' + cards.length : '';
+            clipFilter = ($('clipSearch').value || '').trim().toLowerCase();
+            _clipViewH = 0;
+            var v = V(); if (!v) return;
+            buildClipIndex(v);
+            D.clipsList.scrollTop = 0;
+            _clipWin = { from: -1, to: -1, n: -1 };
+            paintClipWindow();
         }
 
         /* ---- clip thumbnails ----------------------------------------------
@@ -6597,7 +6827,10 @@ start_bridge.bat
         function paintCachedThumbs() {
             var v = V(); if (!v) return;
             v._thumbs = v._thumbs || {};
-            v.clips.forEach(function (c, i) {
+            // only rows that are actually on screen have a canvas to paint
+            D.clipsList.querySelectorAll('.clip-card').forEach(function (card) {
+                var i = parseInt(card.dataset.idx, 10);
+                var c = v.clips[i]; if (!c) return;
                 if (paintThumb(i, v._thumbs[c.id])) return;
                 var fs = nearestFilmstripFrame(v, c.start);
                 if (fs && paintThumb(i, fs)) return;
@@ -7544,6 +7777,7 @@ start_bridge.bat
             });
             var strip = D.filmstripStrip;
             if (strip) strip.innerHTML = '';
+            fsInvalidate();
         }
 
         function toggleFilmstrip() {          // collapse / expand, keeps the frames
@@ -7681,26 +7915,51 @@ start_bridge.bat
             frag.appendChild(ph);
             strip.innerHTML = '';
             strip.appendChild(frag);
+            fsInvalidate();
             updateFilmstripPlayhead(P.time());
         }
 
         function syncFilmstripWidth() {
+            fsInvalidate();
             var v = V();
             if (v && v.filmstrip && v.filmstrip.length) renderFilmstrip();
             if (waveformOn) drawWaveform();
         }
 
-        function updateFilmstripPlayhead(t) {
-            var ph = $('fsPlayhead');
-            var d = duration();
-            if (!ph || !d) return;
-            ph.style.left = clamp(t / d, 0, 1) * 100 + '%';
+        /* Both of these run on every playhead frame, so neither may hit the
+           DOM for something it can remember. The element handle is stable until
+           the strip is rebuilt, and the strip's width only changes on zoom,
+           rebuild or resize — reading offsetWidth per frame was forcing a
+           synchronous layout for a number that had not moved. */
+        var _fsPhEl = null, _fsGeo = null;
+
+        function fsInvalidate() { _fsPhEl = null; _fsGeo = null; }
+
+        function fsGeo() {
+            if (!_fsGeo) {
+                _fsGeo = {
+                    w: D.filmstripStrip ? D.filmstripStrip.offsetWidth : 0,
+                    cw: D.filmstripScroll ? D.filmstripScroll.clientWidth : 0
+                };
+            }
+            return _fsGeo;
+        }
+
+        function updateFilmstripPlayhead(t, d) {
+            if (!_fsPhEl) {
+                _fsPhEl = $('fsPlayhead');
+                if (!_fsPhEl) return;
+            }
+            d = d || duration();
+            if (!d) return;
+            _fsPhEl.style.left = clamp(t / d, 0, 1) * 100 + '%';
         }
 
         function scrollFilmstripToPlayhead(t) {
             var d = duration(); if (!d) return;
-            var sc = D.filmstripScroll;
-            sc.scrollLeft = Math.max(0, (t / d) * D.filmstripStrip.offsetWidth - sc.clientWidth / 2);
+            var sc = D.filmstripScroll, g = fsGeo();
+            if (!g.w) return;
+            sc.scrollLeft = Math.max(0, (t / d) * g.w - g.cw / 2);
         }
 
         /* ==========================================================
@@ -7810,6 +8069,7 @@ start_bridge.bat
                 fitEditor();
                 requestAnimationFrame(function () {
                     fitRaf = 0;
+                    geoInvalidate();
                     renderRuler();
                     renderTimeline();
                     syncFilmstripWidth();
@@ -8019,6 +8279,7 @@ start_bridge.bat
         }
         function switchTab(t) {
             currentTab = t;
+            _scriptDirty = true;
             document.querySelectorAll('[data-tab]').forEach(function (b) {
                 b.classList.toggle('active', b.dataset.tab === t);
             });
@@ -8032,7 +8293,7 @@ start_bridge.bat
             var lbl = $('hdrExportLabel'), btn = $('hdrExportBtn'), ex = $('hdrExtractBtn');
             if (!lbl) return;
             lbl.textContent = '.' + (EXT_FOR_TAB[currentTab] || 'bat');
-            var n = allClipRows(true).length;
+            var n = clipCounts().selected;
             btn.disabled = !n;
             ex.disabled = !n;
             btn.title = n
@@ -8563,13 +8824,28 @@ start_bridge.bat
             return gen(rows);
         }
 
-        function regenerateScript() {
-            var rows = allClipRows(true);
-            var allRows = allClipRows(false);
-            $('scriptScope').textContent = rows.length + ' selected of ' + allRows.length;
-            updateSelectedBadge();
+        /* Building the export text means walking every clip and formatting a
+           command per clip - real work at nine hundred clips, and it was being
+           redone on every single edit even though the panel showing it is often
+           scrolled far off screen. Now an edit only marks it stale; the text is
+           built when something actually needs it, and an IntersectionObserver
+           builds it the moment the panel comes into view. */
+        var _scriptDirty = true, _scriptObs = null, _scriptOnScreen = false;
 
-            if (!allRows.length) {
+        function regenerateScript() {
+            _scriptDirty = true;
+            var n = clipCounts();
+            $('scriptScope').textContent = n.selected + ' selected of ' + n.total;
+            updateSelectedBadge();
+            if (_scriptOnScreen) buildScriptNow();
+        }
+
+        /** Bring the on-screen script up to date, if it is not already. */
+        function buildScriptNow() {
+            if (!_scriptDirty) return;
+            _scriptDirty = false;
+            var rows = allClipRows(true), allRows = clipCounts().total;
+            if (!allRows) {
                 D.scriptOutput.textContent = 'Add clips to generate a script.';
                 return;
             }
@@ -8579,6 +8855,18 @@ start_bridge.bat
                 return;
             }
             D.scriptOutput.textContent = buildScript(currentTab, rows);
+        }
+
+        function initScriptPanelWatch() {
+            if (typeof IntersectionObserver === 'undefined' || !D.scriptOutput) return;
+            /* The observer keeps the flag, so nothing on the edit path ever has
+               to measure the panel - a getBoundingClientRect there would force a
+               layout right after the clip list wrote its DOM. */
+            _scriptObs = new IntersectionObserver(function (entries) {
+                entries.forEach(function (e) { _scriptOnScreen = e.isIntersecting; });
+                if (_scriptOnScreen) buildScriptNow();
+            }, { rootMargin: '200px' });
+            _scriptObs.observe(D.scriptOutput);
         }
 
         function scriptFileName(tab, rows, tag) {
@@ -8716,6 +9004,7 @@ start_bridge.bat
         }
 
         function copyScript() {
+            buildScriptNow();
             var text = D.scriptOutput.textContent;
             if (!text || text.length < 40) { notify('Nothing to copy yet', 'warning'); return; }
             copyText(text, 'Script copied to clipboard');
@@ -9762,6 +10051,7 @@ start_bridge.bat
             if (loopClipId) {
                 loopClipId = null;
                 previewStopAt = null;
+                wakePlayheadLoop();
                 renderTimeline();
                 notify('Loop off', 'info');
                 return;
@@ -9991,10 +10281,13 @@ start_bridge.bat
         function init() {
             cacheDom();
             initPlayheadDrag();
+            initClipListScroll();
+            initScriptPanelWatch();
             attachClipDragHandlers();
             initTimelineHover();
             initTimelineWheel();
             initDragDrop();
+            initMediaWake();
             startPlayheadLoop();
 
             $('rippleBtn').classList.toggle('active', rippleEdges);
@@ -10041,6 +10334,7 @@ start_bridge.bat
                 new ResizeObserver(function () {
                     if (raf) cancelAnimationFrame(raf);
                     raf = requestAnimationFrame(function () {
+                        fsInvalidate();
                         scheduleCache();
                         renderRuler(); renderTimeline();
                         if (waveformOn) drawWaveform();
@@ -10051,7 +10345,10 @@ start_bridge.bat
                 new ResizeObserver(function () { scheduleFit(); })
                     .observe($('editorStack').parentNode);
             }
-            window.addEventListener('resize', scheduleFit);
+            window.addEventListener('resize', function () {
+                _clipRowNeedsMeasure = true; _clipViewH = 0;
+                scheduleFit();
+            });
             fitEditor();
 
             window.addEventListener('beforeunload', function (e) {
