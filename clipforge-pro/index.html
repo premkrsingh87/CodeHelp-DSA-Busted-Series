@@ -1513,6 +1513,53 @@
             background: #00ffcc;
         }
 
+        /* While a drag is geared down, say so: the cursor changes and the
+           playhead's own readout picks up a ring, so it is obvious why the
+           timeline suddenly moves slowly. */
+        body.fine-drag,
+        body.fine-drag * {
+            cursor: col-resize !important;
+        }
+
+        body.fine-drag .playhead {
+            width: 4px;
+            margin-left: -2px;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55), 0 0 14px rgba(0, 255, 204, 0.75);
+        }
+
+        body.fine-drag .playhead-tooltip::after {
+            content: ' · fine';
+            opacity: 0.75;
+        }
+
+        /* The time readout doubles as a jump-to box. It looks identical until
+           you point at it. */
+        #currentTime {
+            cursor: text;
+            border-radius: 5px;
+            padding: 1px 4px;
+            margin: -1px -4px;
+            transition: background 0.12s ease, box-shadow 0.12s ease;
+        }
+
+        #currentTime:hover {
+            background: rgba(0, 212, 170, 0.12);
+            box-shadow: inset 0 0 0 1px rgba(0, 212, 170, 0.4);
+        }
+
+        #currentTimeInput {
+            width: 8.5ch;
+            background: rgba(0, 212, 170, 0.12);
+            border: 1px solid var(--accent);
+            border-radius: 5px;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 0 4px;
+            outline: none;
+        }
+
         .playhead-tooltip {
             position: absolute;
             top: -36px;
@@ -2912,7 +2959,9 @@
         <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
             <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest">Timeline</span>
-                <span class="text-[13px] mono text-[var(--accent-light)] font-bold" id="currentTime">0:00.000</span>
+                <span class="text-[13px] mono text-[var(--accent-light)] font-bold" id="currentTime"
+                    title="Click to type an exact timestamp (1:23.400, 83.4, or 1:02:03)"
+                    onclick="beginTimeEntry()">0:00.000</span>
                 <span class="text-[10px] text-[var(--text-secondary)]">/</span>
                 <span class="text-[11px] mono text-[var(--text-secondary)]" id="totalDuration">0:00</span>
                 <span class="badge-pill bg-[var(--success)]/10 text-[var(--success)] ml-1" id="tlInOut"
@@ -2996,7 +3045,7 @@
         <p class="text-[10px] text-[var(--text-secondary)] mt-0.5 truncate">
             Drag to move the playhead · drag a red ● to move that cut, click it to merge · clip edges trim ·
             <span class="key-hint">⇧</span>drag carves · <span class="key-hint">⌥</span>drag slides ·
-            <span class="key-hint">Ctrl</span>+wheel zooms
+            <span class="key-hint">Ctrl</span>+wheel zooms · hold <span class="key-hint">⇧/⌥</span> mid-drag for fine
         </p>
 
         <!-- frame preview, under the timeline like the reference -->
@@ -4323,6 +4372,60 @@ start_bridge.bat
         }
         function seekTo(t) { P.seek(t); }
 
+        /* ---- type an exact timestamp ----
+           Hunting for 1:23.400 by dragging is a game of pixels no amount of
+           zoom entirely wins. Clicking the readout turns it into a box; it
+           accepts 1:23.4, 83.4, or 1:02:03.500 and puts the playhead exactly
+           there. Nothing about the layout changes until you click it. */
+        function parseTimecode(str) {
+            if (str === null || str === undefined) return null;
+            var t = String(str).trim().replace(',', '.');
+            if (!t) return null;
+            if (!/^\d{1,2}(:\d{1,2}){0,2}(\.\d{1,3})?$|^\d+(\.\d{1,3})?$/.test(t)) return null;
+            var parts = t.split(':').map(parseFloat);
+            if (parts.some(function (n) { return isNaN(n); })) return null;
+            var secs = 0;
+            for (var i = 0; i < parts.length; i++) secs = secs * 60 + parts[i];
+            return secs;
+        }
+
+        function beginTimeEntry() {
+            var d = duration();
+            if (!d) { notify('Load a preview first', 'warning'); return; }
+            var span = D.currentTime;
+            if (!span || span.style.display === 'none') return;
+            var input = document.createElement('input');
+            input.id = 'currentTimeInput';
+            input.type = 'text';
+            input.value = fmtMs(P.time());
+            input.spellcheck = false;
+            span.style.display = 'none';
+            span.parentNode.insertBefore(input, span);
+
+            var closed = false;
+            function close(commit) {
+                if (closed) return;
+                closed = true;
+                var t = commit ? parseTimecode(input.value) : null;
+                if (input.parentNode) input.parentNode.removeChild(input);
+                span.style.display = '';
+                if (commit) {
+                    if (t === null) { notify('Could not read that timestamp', 'warning'); return; }
+                    P.seek(clamp(t, 0, d));
+                    centreScrollOnPlayhead();
+                    notify('Jumped to ' + fmtMs(clamp(t, 0, d)), 'info');
+                }
+            }
+            input.addEventListener('keydown', function (e) {
+                e.stopPropagation();                       // never reaches the shortcut handler
+                if (e.key === 'Enter') { e.preventDefault(); close(true); }
+                else if (e.key === 'Escape') { e.preventDefault(); close(false); }
+            });
+            input.addEventListener('blur', function () { close(true); });
+            input.focus();
+            input.select();
+        }
+
         /* ---- YouTube IFrame API ---- */
         var ytApiLoading = false, ytApiReady = false, ytApiQueue = [];
 
@@ -5087,13 +5190,65 @@ start_bridge.bat
         var draggingPlayhead = false;
         var dragState = null;
 
+        /* ---- how far in the timeline is allowed to go ----
+           A flat ceiling of 120x is plenty for a five-minute clip and nowhere
+           near enough for a two-hour one: what matters is not the multiplier
+           but how many pixels a single frame ends up occupying. The ceiling is
+           therefore derived from the video, and only ever rises above the old
+           120 — anything short enough to have been comfortable before behaves
+           exactly as it did. */
+        var ZOOM_FRAME_PX = 3;        // a frame must be at least this wide at full zoom
+        var ZOOM_HARD_MAX = 1200;
+
+        function maxTimelineZoom() {
+            var d = duration();
+            if (!d) return 120;
+            var v = V(), fps = (v && v.fps) || 30;
+            var base = geo().tlW / Math.max(1, timelineZoom);
+            if (!(base > 0)) base = 900;
+            return clamp(Math.ceil(d * fps * ZOOM_FRAME_PX / base), 120, ZOOM_HARD_MAX);
+        }
+
+        /* One physical wheel detent is 120 deltaY units and keeps exactly the
+           step it always had. What changes is everything that is not a detent:
+           a trackpad reports a stream of small pixel deltas, and counting each
+           of those as a whole step is what sent the zoom flying past whatever
+           you were aiming at. Scaling by the real delta makes a trackpad glide
+           and leaves a mouse wheel alone. */
+        var ZOOM_NOTCH = 120;
+        var ZOOM_GAIN = 0.2231;       // e^0.2231 === 1.25, the old per-notch step
+        var ZOOM_MAX_STEP = 1;        // no single event may exceed one detent
+
+        function wheelZoomFactor(e) {
+            var dy = e.deltaY;
+            if (e.deltaMode === 1) dy *= 16;         // lines
+            else if (e.deltaMode === 2) dy *= 400;   // pages
+            var notches = clamp(-dy / ZOOM_NOTCH, -ZOOM_MAX_STEP, ZOOM_MAX_STEP);
+            return Math.exp(notches * ZOOM_GAIN);
+        }
+
+        /** Keep the zoom readout and its tooltip honest about what is on screen. */
+        function syncZoomLabel() {
+            var el = $('zoomLabel');
+            if (!el) return;
+            el.textContent = timelineZoom <= 1 ? '1x' : timelineZoom.toFixed(1) + 'x';
+            var d = duration();
+            if (!d) { el.title = ''; return; }
+            var sc = D.timelineScroll;
+            var span = sc && D.timeline.offsetWidth
+                ? d * (sc.clientWidth / D.timeline.offsetWidth) : d;
+            el.title = fmtDur(span) + ' across the window · '
+                + (span / Math.max(1, sc ? sc.clientWidth : 1) * 1000).toFixed(0) + 'ms per pixel';
+        }
+
         function zoomTimeline(dir) {
+            var hi = maxTimelineZoom();
             if (dir === 0) timelineZoom = 1;
-            else if (dir > 0) timelineZoom = Math.min(timelineZoom * 1.5, 120);
+            else if (dir > 0) timelineZoom = Math.min(timelineZoom * 1.5, hi);
             else timelineZoom = Math.max(timelineZoom / 1.5, 1);
-            $('zoomLabel').textContent = timelineZoom <= 1 ? '1x' : timelineZoom.toFixed(1) + 'x';
             D.timeline.style.width = (timelineZoom * 100) + '%';
             geoInvalidate();
+            syncZoomLabel();
             renderRuler();
             renderTimeline();
             syncFilmstripWidth();
@@ -5584,6 +5739,13 @@ start_bridge.bat
             var wasPlaying = !P.paused();
             var pending = clamp((event.clientX - rect.left) / rect.width, 0, 1) * d;
             var raf = 0, painted = -1;
+            var mods = dragMods(event);
+            var map = fineMapper(d, mods, pending);
+            /* A live pointer record rather than the last DOM event: pressing ⇧
+               without moving the mouse has to change the gearing too, and a
+               stale event object would still report the old modifiers. */
+            var ptr = { clientX: event.clientX, clientY: event.clientY,
+                shiftKey: event.shiftKey, altKey: event.altKey };
 
             draggingPlayhead = true;
             previewStopAt = null;
@@ -5600,6 +5762,11 @@ start_bridge.bat
             function frame() {
                 raf = 0;
                 if (!draggingPlayhead) return;
+                /* Scrolling first, then mapping: the same cursor position means
+                   a later time once the view has moved under it, which is what
+                   carries the playhead past the edge of the window. */
+                var scrolling = edgeScroll(ptr);
+                pending = map.time(ptr);
                 if (pending !== painted) {
                     painted = pending;
                     var pct = clamp(pending / d, 0, 1);
@@ -5612,6 +5779,8 @@ start_bridge.bat
                     drawCachedFrame(pending);      // instant, then the decode lands over it
                     scrubRequest(pending);
                 }
+                // keep running while the edge is still pulling, mouse or no mouse
+                if (scrolling) schedule();
             }
             function schedule() { if (!raf) raf = requestAnimationFrame(frame); }
 
@@ -5619,16 +5788,26 @@ start_bridge.bat
 
             function move(ev) {
                 if (!draggingPlayhead) return;
-                pending = clamp((ev.clientX - rect.left) / rect.width, 0, 1) * d;
+                ptr.clientX = ev.clientX; ptr.clientY = ev.clientY;
+                ptr.shiftKey = ev.shiftKey; ptr.altKey = ev.altKey;
+                schedule();
+            }
+            /* ⇧/⌥ pressed or released without moving the mouse still changes the
+               gearing, so the drag has to notice it. */
+            function key(ev) {
+                ptr.shiftKey = ev.shiftKey; ptr.altKey = ev.altKey;
                 schedule();
             }
             function up() {
                 draggingPlayhead = false;
+                map.done();
                 ph.classList.remove('dragging');
                 document.body.style.userSelect = '';
                 document.body.style.cursor = '';
                 document.removeEventListener('mousemove', move);
                 document.removeEventListener('mouseup', up);
+                document.removeEventListener('keydown', key);
+                document.removeEventListener('keyup', key);
                 if (raf) { cancelAnimationFrame(raf); raf = 0; }
                 scrubPumpStop();
                 scrubSeek(pending, true);        // land exactly, not on a keyframe
@@ -5639,6 +5818,8 @@ start_bridge.bat
             }
             document.addEventListener('mousemove', move);
             document.addEventListener('mouseup', up);
+            document.addEventListener('keydown', key);
+            document.addEventListener('keyup', key);
         }
 
         /** Run fn once the player has actually presented a new frame. */
@@ -5691,6 +5872,90 @@ start_bridge.bat
             startScrub(event, true);              // anything else moves the playhead
         }
 
+        /* ==========================================================
+         *  DRAG FEEL  —  fine gearing and edge auto-scroll
+         *
+         *  Two things made a zoomed-in timeline unusable no matter how fast it
+         *  redrew. One: zoomed right in, a pixel is still several frames on a
+         *  long video, so an unaided hand can never land on the frame it wants.
+         *  Two: running out of viewport meant letting go, scrolling by hand and
+         *  grabbing again — which loses the position you were hunting for.
+         *
+         *  Every drag on the timeline goes through the two helpers below, so
+         *  both are fixed in one place and all four drags behave identically.
+         *  Nothing here changes what a plain drag does: hold nothing and the
+         *  timeline moves exactly as it always has.
+         * ========================================================== */
+
+        var FINE_GEAR = 6;        // a geared-down drag moves this much slower
+        var EDGE_ZONE = 64;       // px from the viewport edge that starts scrolling
+        var EDGE_SPEED = 26;      // px per frame once you are hard against it
+
+        function dragMods(e) { return { shift: !!e.shiftKey, alt: !!e.altKey }; }
+
+        /** Gearing engages on whichever of ⇧/⌥ the drag did NOT start with, so
+         *  it never collides with ⇧drag-to-carve or ⌥drag-to-slide. */
+        function fineNow(ev, startMods) {
+            return (!!ev.shiftKey && !startMods.shift) || (!!ev.altKey && !startMods.alt);
+        }
+
+        function setFineCue(on) {
+            document.body.classList.toggle('fine-drag', !!on);
+        }
+
+        /** Live pixel→time for a drag.
+         *
+         *  The rect is re-read every call because edge scrolling moves it under
+         *  the cursor, and the gearing re-anchors as it engages and releases so
+         *  the point you grabbed never jumps. */
+        function fineMapper(d, startMods, seedT) {
+            var st = { fine: false, ax: 0, at: seedT || 0, last: seedT || 0 };
+            return {
+                st: st,
+                time: function (ev) {
+                    var rect = D.timeline.getBoundingClientRect();
+                    if (!rect.width) return st.last;
+                    var raw = clamp((ev.clientX - rect.left) / rect.width, 0, 1) * d;
+                    var fine = fineNow(ev, startMods);
+                    if (fine !== st.fine) {
+                        st.fine = fine;
+                        st.ax = ev.clientX;
+                        st.at = st.last;
+                        setFineCue(fine);
+                    }
+                    var t = fine
+                        ? st.at + ((ev.clientX - st.ax) / rect.width) * d / FINE_GEAR
+                        : raw;
+                    st.last = clamp(t, 0, d);
+                    return st.last;
+                },
+                done: function () { setFineCue(false); }
+            };
+        }
+
+        /** Scroll the timeline when a drag reaches the edge of the viewport.
+         *  The ramp is quadratic, so it barely creeps as you touch the edge and
+         *  only runs when you push right into it — stiff first, fast after.
+         *  Returns true while it is still moving, so the drag keeps its frame
+         *  loop alive even when the mouse is perfectly still. */
+        function edgeScroll(ev) {
+            var sc = D.timelineScroll;
+            if (!sc || !ev || timelineZoom <= 1) return false;
+            var r = sc.getBoundingClientRect(), push = 0;
+            if (ev.clientX < r.left + EDGE_ZONE) {
+                push = -(r.left + EDGE_ZONE - ev.clientX) / EDGE_ZONE;
+            } else if (ev.clientX > r.right - EDGE_ZONE) {
+                push = (ev.clientX - (r.right - EDGE_ZONE)) / EDGE_ZONE;
+            }
+            if (!push) return false;
+            push = clamp(push, -1, 1);
+            var step = push * Math.abs(push) * EDGE_SPEED;   // quadratic ramp
+            var max = Math.max(0, sc.scrollWidth - sc.clientWidth);
+            var was = sc.scrollLeft;
+            sc.scrollLeft = clamp(was + step, 0, max);
+            return sc.scrollLeft !== was;
+        }
+
         /* ---- snapping: edges land on the playhead and neighbouring cuts ---- */
         var SNAP_PX = 7;
 
@@ -5739,13 +6004,22 @@ start_bridge.bat
             var d = duration();
             var rect = D.timeline.getBoundingClientRect();
             var t0 = clamp((event.clientX - rect.left) / rect.width, 0, 1) * d;
-            rangeDrag = { rect: rect, d: d, t0: t0, t1: t0, moved: false, el: null };
+            var rmods = dragMods(event);
+            rangeDrag = {
+                rect: rect, d: d, t0: t0, t1: t0, moved: false, el: null,
+                map: fineMapper(d, rmods, t0), raf: 0,
+                ptr: { clientX: event.clientX, clientY: event.clientY,
+                    shiftKey: event.shiftKey, altKey: event.altKey }
+            };
 
-            function move(ev) {
+            function paint() {
+                rangeDrag.raf = 0;
                 if (!rangeDrag) return;
-                var t = clamp((ev.clientX - rangeDrag.rect.left) / rangeDrag.rect.width, 0, 1) * rangeDrag.d;
-                if (Math.abs(ev.clientX - event.clientX) > 4) rangeDrag.moved = true;
+                var scrolling = edgeScroll(rangeDrag.ptr);
+                var t = rangeDrag.map.time(rangeDrag.ptr);
+                if (Math.abs(rangeDrag.ptr.clientX - event.clientX) > 4) rangeDrag.moved = true;
                 rangeDrag.t1 = t;
+                if (scrolling && !rangeDrag.raf) rangeDrag.raf = requestAnimationFrame(paint);
                 if (!rangeDrag.moved) return;
                 var a = Math.min(rangeDrag.t0, rangeDrag.t1), b = Math.max(rangeDrag.t0, rangeDrag.t1);
                 if (!rangeDrag.el) {
@@ -5758,11 +6032,29 @@ start_bridge.bat
                 rangeDrag.el.setAttribute('data-len', fmtDur(b - a));
                 D.currentTime.textContent = fmtMs(t);
             }
+            function schedule() {
+                if (rangeDrag && !rangeDrag.raf) rangeDrag.raf = requestAnimationFrame(paint);
+            }
+            function move(ev) {
+                if (!rangeDrag) return;
+                rangeDrag.ptr.clientX = ev.clientX; rangeDrag.ptr.clientY = ev.clientY;
+                rangeDrag.ptr.shiftKey = ev.shiftKey; rangeDrag.ptr.altKey = ev.altKey;
+                schedule();
+            }
+            function key(ev) {
+                if (!rangeDrag) return;
+                rangeDrag.ptr.shiftKey = ev.shiftKey; rangeDrag.ptr.altKey = ev.altKey;
+                schedule();
+            }
 
             function up() {
                 document.removeEventListener('mousemove', move);
                 document.removeEventListener('mouseup', up);
+                document.removeEventListener('keydown', key);
+                document.removeEventListener('keyup', key);
                 if (!rangeDrag) return;
+                if (rangeDrag.raf) cancelAnimationFrame(rangeDrag.raf);
+                rangeDrag.map.done();
                 var moved = rangeDrag.moved;
                 var a = snapTime(Math.min(rangeDrag.t0, rangeDrag.t1));
                 var b = snapTime(Math.max(rangeDrag.t0, rangeDrag.t1));
@@ -5779,6 +6071,8 @@ start_bridge.bat
             }
             document.addEventListener('mousemove', move);
             document.addEventListener('mouseup', up);
+            document.addEventListener('keydown', key);
+            document.addEventListener('keyup', key);
         }
 
         /* ---- cut marker: drag moves the boundary, a plain click merges ---- */
@@ -5794,22 +6088,39 @@ start_bridge.bat
             if (!a || !b) return;
 
             pushUndo('moved the cut at ' + fmtMs(a.end));
+            var cd = duration();
+            var crect = D.timeline.getBoundingClientRect();
+            var cmods = dragMods(e);
             cutDrag = {
                 idx: idx, el: cutEl, startX: e.clientX, moved: false,
-                rect: D.timeline.getBoundingClientRect(), d: duration(),
+                rect: crect, d: cd,
                 origA: { start: a.start, end: a.end }, origB: { start: b.start, end: b.end },
-                raf: null, lastEvent: e
+                raf: null,
+                mods: cmods,
+                map: fineMapper(cd, cmods,
+                    clamp((e.clientX - crect.left) / (crect.width || 1), 0, 1) * cd),
+                ptr: { clientX: e.clientX, clientY: e.clientY,
+                    shiftKey: e.shiftKey, altKey: e.altKey }
             };
             e.currentTarget.classList.add('dragging');
             document.body.style.userSelect = 'none';
             document.addEventListener('mousemove', onCutDragMove);
             document.addEventListener('mouseup', onCutDragEnd);
+            document.addEventListener('keydown', onCutDragKey);
+            document.addEventListener('keyup', onCutDragKey);
         }
 
         function onCutDragMove(e) {
             if (!cutDrag) return;
-            cutDrag.lastEvent = e;
+            cutDrag.ptr.clientX = e.clientX; cutDrag.ptr.clientY = e.clientY;
+            cutDrag.ptr.shiftKey = e.shiftKey; cutDrag.ptr.altKey = e.altKey;
             if (Math.abs(e.clientX - cutDrag.startX) > 3) cutDrag.moved = true;
+            if (!cutDrag.raf) cutDrag.raf = requestAnimationFrame(applyCutDrag);
+        }
+
+        function onCutDragKey(e) {
+            if (!cutDrag) return;
+            cutDrag.ptr.shiftKey = e.shiftKey; cutDrag.ptr.altKey = e.altKey;
             if (!cutDrag.raf) cutDrag.raf = requestAnimationFrame(applyCutDrag);
         }
 
@@ -5822,7 +6133,8 @@ start_bridge.bat
             var a = v.clips[s.idx], b = v.clips[s.idx + 1];
             if (!a || !b) return;
 
-            var t = clamp((s.lastEvent.clientX - s.rect.left) / s.rect.width, 0, 1) * d;
+            var scrolling = edgeScroll(s.ptr);
+            var t = s.map.time(s.ptr);
             t = clamp(t, s.origA.start + MIN, s.origB.end - MIN);
             var snapped = snapTime(t, s.idx);
             if (snapped > s.origA.start + MIN && snapped < s.origB.end - MIN
@@ -5840,8 +6152,9 @@ start_bridge.bat
                 eb.style.left = (b.start / d * 100) + '%';
                 eb.style.width = Math.max(0.05, (b.end - b.start) / d * 100) + '%';
             }
-            showDragTooltip(s.lastEvent, { start: a.start, end: a.end });
+            showDragTooltip(s.ptr, { start: a.start, end: a.end });
             P.seek(t);
+            if (scrolling && !s.raf) s.raf = requestAnimationFrame(applyCutDrag);
         }
 
         function onCutDragEnd() {
@@ -5851,6 +6164,9 @@ start_bridge.bat
             document.body.style.userSelect = '';
             document.removeEventListener('mousemove', onCutDragMove);
             document.removeEventListener('mouseup', onCutDragEnd);
+            document.removeEventListener('keydown', onCutDragKey);
+            document.removeEventListener('keyup', onCutDragKey);
+            cutDrag.map.done();
             hideDragTooltip(); hideSnapLine();
             var moved = cutDrag.moved, idx = cutDrag.idx;
             cutDrag = null;
@@ -5900,12 +6216,20 @@ start_bridge.bat
             var d = duration();
             pushUndo('dragged a clip');
 
+            var dmods = dragMods(e);
+            var seedT = clamp((e.clientX - rect.left) / (rect.width || 1), 0, 1) * d;
+
             dragState = {
                 idx: idx,
                 mode: handle || 'move',
                 rect: rect,
                 d: d,
                 startX: e.clientX,
+                mods: dmods,
+                t0: seedT,
+                map: fineMapper(d, dmods, seedT),
+                ptr: { clientX: e.clientX, clientY: e.clientY,
+                    shiftKey: e.shiftKey, altKey: e.altKey },
                 orig: { start: v.clips[idx].start, end: v.clips[idx].end },
                 origNeighbourLeft: idx > 0 ? { start: v.clips[idx - 1].start, end: v.clips[idx - 1].end } : null,
                 origNeighbourRight: idx < v.clips.length - 1
@@ -5915,32 +6239,41 @@ start_bridge.bat
                     && Math.abs(v.clips[idx].end - v.clips[idx + 1].start) < 0.02,
                 moved: false,
                 el: el,
-                raf: null,
-                lastEvent: e
+                raf: null
             };
             el.classList.add('dragging');
             document.body.style.cursor = handle ? 'ew-resize' : 'grabbing';
             document.body.style.userSelect = 'none';
             document.addEventListener('mousemove', onClipDragMove);
             document.addEventListener('mouseup', onClipDragEnd);
+            document.addEventListener('keydown', onClipDragKey);
+            document.addEventListener('keyup', onClipDragKey);
             showDragTooltip(e);
         }
 
         function onClipDragMove(e) {
             if (!dragState) return;
-            dragState.lastEvent = e;
+            dragState.ptr.clientX = e.clientX; dragState.ptr.clientY = e.clientY;
+            dragState.ptr.shiftKey = e.shiftKey; dragState.ptr.altKey = e.altKey;
             if (Math.abs(e.clientX - dragState.startX) > 2) dragState.moved = true;
+            if (!dragState.raf) dragState.raf = requestAnimationFrame(applyClipDrag);
+        }
+
+        function onClipDragKey(e) {
+            if (!dragState) return;
+            dragState.ptr.shiftKey = e.shiftKey; dragState.ptr.altKey = e.altKey;
             if (!dragState.raf) dragState.raf = requestAnimationFrame(applyClipDrag);
         }
 
         function applyClipDrag() {
             if (!dragState) return;
             dragState.raf = null;
-            var e = dragState.lastEvent;
             var v = V(); if (!v) return;
             var s = dragState, d = s.d;
+            var e = s.ptr;
             var clip = v.clips[s.idx];
-            var deltaSec = ((e.clientX - s.startX) / s.rect.width) * d;
+            var scrolling = edgeScroll(e);
+            var deltaSec = s.map.time(e) - s.t0;
             var MIN = 0.05;
 
             if (s.mode === 'move') {
@@ -5989,6 +6322,7 @@ start_bridge.bat
             }
             showDragTooltip(e, clip);
             if (s.mode !== 'move') P.seek(s.mode === 'left' ? clip.start : clip.end);
+            if (scrolling && !s.raf) s.raf = requestAnimationFrame(applyClipDrag);
         }
 
         function onClipDragEnd() {
@@ -6000,6 +6334,9 @@ start_bridge.bat
             document.body.style.userSelect = '';
             document.removeEventListener('mousemove', onClipDragMove);
             document.removeEventListener('mouseup', onClipDragEnd);
+            document.removeEventListener('keydown', onClipDragKey);
+            document.removeEventListener('keyup', onClipDragKey);
+            dragState.map.done();
             hideDragTooltip();
             hideSnapLine();
             var idx = dragState.idx;
@@ -6031,10 +6368,11 @@ start_bridge.bat
                     var rect = D.timeline.getBoundingClientRect();
                     var anchorT = clamp((e.clientX - rect.left) / rect.width, 0, 1) * d;
                     var before = timelineZoom;
-                    timelineZoom = clamp(timelineZoom * (e.deltaY < 0 ? 1.25 : 0.8), 1, 120);
+                    timelineZoom = clamp(timelineZoom * wheelZoomFactor(e), 1, maxTimelineZoom());
                     if (timelineZoom === before) return;
-                    $('zoomLabel').textContent = timelineZoom <= 1 ? '1x' : timelineZoom.toFixed(1) + 'x';
                     D.timeline.style.width = (timelineZoom * 100) + '%';
+                    geoInvalidate();          // the width just changed under us
+                    syncZoomLabel();
                     renderRuler(); renderTimeline(); syncFilmstripWidth();
                     // keep the time under the cursor under the cursor
                     var sc = D.timelineScroll;
@@ -9992,6 +10330,7 @@ start_bridge.bat
             ['Cutting', [
                 ['Mark a cut · again on the cut unmarks it', ['M']],
                 ['Drag timeline', ['scrub']],
+                ['Fine drag · hold mid-drag to gear down 6×', ['⇧ / ⌥']],
                 ['Carve a clip by dragging', ['⇧', 'drag']],
                 ['Slide a whole clip', ['⌥', 'drag']],
                 ['Move a cut / merge it', ['drag ●', 'click ●']],
@@ -10014,6 +10353,8 @@ start_bridge.bat
                 ['Zoom to current clip', ['Z']],
                 ['Zoom at cursor', ['Ctrl', 'wheel']],
                 ['Scroll timeline', ['⇧', 'wheel']],
+                ['Drag past the edge to keep scrolling', ['drag →|']],
+                ['Jump to an exact time', ['click the clock']],
                 ['Shortcuts', ['?']]
             ]],
             ['Videos & jobs', [
@@ -10081,9 +10422,10 @@ start_bridge.bat
             var c = v.clips[i], d = duration();
             if (!d) return;
             var span = Math.max(0.5, (c.end - c.start) * 1.5);
-            timelineZoom = clamp(d / span, 1, 120);
-            $('zoomLabel').textContent = timelineZoom <= 1 ? '1x' : timelineZoom.toFixed(1) + 'x';
+            timelineZoom = clamp(d / span, 1, maxTimelineZoom());
             D.timeline.style.width = (timelineZoom * 100) + '%';
+            geoInvalidate();
+            syncZoomLabel();
             renderRuler(); renderTimeline(); syncFilmstripWidth();
             var sc = D.timelineScroll;
             var mid = (c.start + c.end) / 2 / d;
