@@ -520,6 +520,19 @@ def worker_extract(jid, payload):
     total = len(items)
     done_files = []
 
+    # --force-keyframes-at-cuts is the whole ball game for accuracy: without it
+    # yt-dlp hands the range to ffmpeg as a stream copy, which can only cut on
+    # keyframes and so glues on whatever plays between the previous keyframe and
+    # the time you asked for - seconds of the neighbouring scene, not frames.
+    # It needs ffmpeg, so if ffmpeg is missing we refuse rather than quietly
+    # writing sloppy clips that look like a success.
+    if not tools["ffmpeg"]:
+        job_set(jid, status="error", pct=0,
+                error="FFmpeg is required for frame-accurate clips. Without it yt-dlp can "
+                      "only cut on keyframes, which leaves seconds of the neighbouring scene "
+                      "in every clip. Install FFmpeg and try again.")
+        return
+
     job_set(jid, status="running", message="Extracting %d clip(s)..." % total,
             meta={"outdir": target, "total": total})
 
@@ -535,12 +548,12 @@ def worker_extract(jid, payload):
 
         args = ["-f", fmt, "--download-sections", section, "--no-playlist",
                 "--no-part", "--force-overwrites", "--no-warnings",
+                # cut exactly where asked, for audio just as much as for video
+                "--force-keyframes-at-cuts",
                 "-o", out]
         if quality == "audio":
             args += ["-x", "--audio-format", "mp3", "--audio-quality", "0"]
         else:
-            if tools["ffmpeg"]:
-                args += ["--force-keyframes-at-cuts"]
             args += ["--merge-output-format", container]
         args += [clip.get("url")]
 
