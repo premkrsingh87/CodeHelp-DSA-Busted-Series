@@ -170,12 +170,12 @@
 .text-2xl{font-size:1.5rem;line-height:2rem}
 .text-3xl{font-size:1.875rem;line-height:2.25rem}
 .text-4xl{font-size:2.25rem;line-height:2.5rem}
-.text-\[10px\]{font-size:10px}
+.text-\[10px\]{font-size:10.5px}
 .text-\[11\.5px\]{font-size:11.5px}
-.text-\[11px\]{font-size:11px}
+.text-\[11px\]{font-size:11.5px}
 .text-\[13px\]{font-size:13px}
-.text-\[9\.5px\]{font-size:9.5px}
-.text-\[9px\]{font-size:9px}
+.text-\[9\.5px\]{font-size:10px}
+.text-\[9px\]{font-size:10px;letter-spacing:0.2px}
 .text-\[var\(--accent\)\]{color:var(--accent)}
 .text-\[var\(--accent-light\)\]{color:var(--accent-light)}
 .text-\[var\(--bg-primary\)\]{color:var(--bg-primary)}
@@ -338,23 +338,57 @@
                 'Liberation Mono', Menlo, monospace;
         }
 
+        /* Contrast is measured, not eyeballed. Every colour used for text sits
+           at 4.5:1 or better against the surface it lands on (--text-secondary
+           was 4.04:1 on hovered rows, which is why small labels read as grey
+           mush); --text-dim is the one deliberately quiet step, still above AA. */
         :root {
             --bg-primary: #06060c;
             --bg-secondary: #0e0e18;
             --bg-card: #151525;
             --bg-hover: #1e1e38;
+            --bg-raised: #1a1a30;
             --accent: #7c5cfc;
-            --accent-light: #a78bfa;
+            --accent-deep: #5f3ad6;   /* fills that carry white text */
+            --ink: #0b0b16;           /* text on a bright fill */
+            --accent-light: #b9a4ff;
             --accent-glow: rgba(124, 92, 252, 0.25);
-            --success: #00d4aa;
-            --warning: #fbbf24;
-            --danger: #f87171;
+            --success: #2ae0bd;
+            --warning: #fcc65a;
+            --danger: #ff8f8f;
             --yt: #ef4444;
             --yt-dark: #b91c1c;
-            --text-primary: #eaeaf4;
-            --text-secondary: #7c7ca0;
-            --border: #252545;
-            --border-light: #353560;
+            --text-primary: #f0f0f8;
+            --text-secondary: #9ea0c8;
+            --text-dim: #7f82ab;
+            --border: #2a2a4e;
+            --border-light: #3f3f70;
+            --ring: rgba(185, 164, 255, 0.75);
+            --ease: cubic-bezier(0.2, 0.8, 0.3, 1);
+        }
+
+        /* Motion should confirm an action, never delay it. */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
+        /* Keyboard focus has to be visible - this app is driven by its keys. */
+        :focus-visible {
+            outline: 2px solid var(--ring);
+            outline-offset: 2px;
+            border-radius: 6px;
+        }
+
+        button:focus:not(:focus-visible),
+        a:focus:not(:focus-visible) {
+            outline: none;
         }
 
         body {
@@ -368,10 +402,13 @@
 
         /* ============ CARDS & BUTTONS ============ */
         .card {
-            background: var(--bg-card);
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0) 90px),
+                var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 16px;
-            transition: border-color 0.3s ease;
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 24px rgba(0, 0, 0, 0.28);
+            transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease);
         }
 
         .card:hover {
@@ -390,7 +427,7 @@
             border-radius: 10px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.25s ease;
+            transition: all 0.16s var(--ease);
             font-size: 14px;
         }
 
@@ -416,7 +453,7 @@
             border-radius: 10px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.25s ease;
+            transition: all 0.16s var(--ease);
             font-size: 14px;
         }
 
@@ -433,11 +470,20 @@
             border-radius: 10px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.25s ease;
+            transition: all 0.16s var(--ease);
             font-size: 14px;
         }
 
-        .btn-secondary:hover {
+        .btn-secondary:disabled {
+            opacity: 0.38;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
             border-color: var(--accent);
         }
 
@@ -455,7 +501,7 @@
             border-radius: 8px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.25s ease;
+            transition: all 0.16s var(--ease);
             font-size: 12px;
         }
 
@@ -471,7 +517,7 @@
             border-radius: 10px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.25s ease;
+            transition: all 0.16s var(--ease);
             font-size: 14px;
         }
 
@@ -488,7 +534,7 @@
             border-radius: 10px;
             font-size: 14px;
             width: 100%;
-            transition: all 0.25s ease;
+            transition: all 0.16s var(--ease);
             outline: none;
         }
 
@@ -510,13 +556,24 @@
             cursor: pointer;
             font-size: 12px;
             font-weight: 500;
-            transition: all 0.2s;
+            transition: all 0.15s var(--ease);
             white-space: nowrap;
         }
 
         .ctrl-btn:hover:not(:disabled) {
             border-color: var(--accent);
-            background: rgba(124, 92, 252, 0.12);
+            background: rgba(124, 92, 252, 0.16);
+            color: #fff;
+        }
+
+        .ctrl-btn:active:not(:disabled) {
+            transform: translateY(1px);
+            background: rgba(124, 92, 252, 0.24);
+        }
+
+        .ctrl-btn:disabled {
+            opacity: 0.42;
+            cursor: not-allowed;
         }
 
         .ctrl-btn:disabled {
@@ -557,7 +614,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s;
+            transition: all 0.15s var(--ease);
+        }
+
+        .zoom-btn:active {
+            transform: translateY(1px);
         }
 
         .zoom-btn:hover {
@@ -705,7 +766,7 @@
             border-radius: 12px;
             padding: 10px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.15s var(--ease);
             position: relative;
             overflow: hidden;
         }
@@ -747,7 +808,7 @@
             height: 18px;
             padding: 0 4px;
             border-radius: 6px;
-            background: var(--accent);
+            background: var(--accent-deep);
             color: #fff;
             font-family: 'JetBrains Mono', monospace;
             font-size: 10px;
@@ -761,7 +822,7 @@
 
         .queue-item.active .queue-num {
             background: var(--success);
-            color: #06060c;
+            color: var(--ink);
         }
 
         .queue-title {
@@ -806,7 +867,7 @@
             line-height: 1;
             cursor: pointer;
             text-decoration: none;
-            transition: all 0.15s;
+            transition: all 0.13s var(--ease);
         }
 
         .queue-act:hover {
@@ -916,7 +977,7 @@
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
-            transition: all 0.2s;
+            transition: all 0.15s var(--ease);
         }
 
         .hdr-export {
@@ -1023,7 +1084,7 @@
             border-radius: 14px;
             padding: 22px 16px;
             text-align: center;
-            transition: all 0.25s ease;
+            transition: all 0.16s var(--ease);
             cursor: pointer;
             background: linear-gradient(135deg, var(--bg-secondary), rgba(124, 92, 252, 0.03));
         }
@@ -1310,6 +1371,51 @@
             border: 3px solid var(--bg-primary);
             box-shadow: 0 0 14px rgba(248, 113, 113, 0.7), 0 0 4px rgba(248, 113, 113, 0.4);
             transition: transform 0.15s ease, background 0.15s ease;
+        }
+
+        /* A 25px grab knob is right when cuts are seconds apart and wrong when
+           they are pixels apart - two hundred of them merge into one scalloped
+           red band you can neither read nor aim at. So the marker thins as the
+           cuts crowd, and the knob comes back under the pointer. */
+        /* Two-tint ribbon mode needs a touch more presence than the eight-hue
+           mode: at two pixels a band at 0.30 disappears into the panel. */
+        .timeline-container.clips-ribbon .tl-clip {
+            opacity: 0.5;
+            border-radius: 0;
+        }
+
+        .timeline-container.clips-ribbon .tl-clip.deselected {
+            opacity: 0.16;
+        }
+
+        .timeline-container.cuts-tight .tl-cut {
+            width: 3px;
+            margin-left: -1px;
+            opacity: 0.85;
+        }
+
+        .timeline-container.cuts-tight .tl-cut::after {
+            top: -5px;
+            left: -3px;
+            width: 9px;
+            height: 9px;
+            border-width: 2px;
+            box-shadow: 0 0 6px rgba(248, 113, 113, 0.55);
+        }
+
+        .timeline-container.cuts-tight .tl-cut:hover {
+            width: 5px;
+            margin-left: -2px;
+            opacity: 1;
+            z-index: 16;
+        }
+
+        .timeline-container.cuts-tight .tl-cut:hover::after {
+            top: -9px;
+            left: -10px;
+            width: 25px;
+            height: 25px;
+            border-width: 3px;
         }
 
         .tl-cut:hover::after {
@@ -1682,21 +1788,26 @@
             border-radius: 6px;
             font-size: 10px;
             cursor: pointer;
-            transition: all 0.15s;
+            transition: all 0.13s var(--ease);
             white-space: nowrap;
             font-weight: 600;
         }
 
+        .fs-ctrl:active {
+            transform: translateY(1px);
+        }
+
         .fs-ctrl:hover {
-            background: rgba(124, 92, 252, 0.15);
+            background: rgba(124, 92, 252, 0.18);
             border-color: var(--accent);
             color: var(--text-primary);
         }
 
         .fs-ctrl.active {
-            background: rgba(0, 212, 170, 0.12);
+            background: rgba(42, 224, 189, 0.16);
             border-color: var(--success);
             color: var(--success);
+            box-shadow: 0 0 0 1px rgba(42, 224, 189, 0.16) inset;
         }
 
         .fs-select {
@@ -1832,7 +1943,7 @@
         }
 
         .fp-label {
-            font-size: 9px;
+            font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1.5px;
@@ -1875,7 +1986,7 @@
             border-radius: 8px;
             font-size: 14px;
             cursor: pointer;
-            transition: all 0.15s;
+            transition: all 0.13s var(--ease);
         }
 
         .fp-nav-btn:hover {
@@ -1909,7 +2020,7 @@
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 14px;
-            transition: all 0.2s ease;
+            transition: all 0.15s var(--ease);
             overflow: hidden;
             content-visibility: auto;
             contain-intrinsic-size: auto 190px;
@@ -2048,7 +2159,7 @@
             font-size: 11px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s var(--ease);
             border: 1px solid;
             white-space: nowrap;
             display: inline-flex;
@@ -2114,7 +2225,7 @@
             border-radius: 6px;
             font-size: 10px;
             cursor: pointer;
-            transition: all 0.15s;
+            transition: all 0.13s var(--ease);
             font-family: 'JetBrains Mono', monospace;
             font-weight: 600;
         }
@@ -2126,7 +2237,8 @@
         }
 
         .nudge-lbl {
-            font-size: 9px;
+            color: var(--accent-light);
+            font-size: 10px;
             font-weight: 800;
             letter-spacing: 0.5px;
             text-transform: uppercase;
@@ -2201,7 +2313,7 @@
             border-radius: 12px;
             padding: 11px 12px;
             cursor: pointer;
-            transition: all 0.25s ease;
+            transition: all 0.16s var(--ease);
         }
 
         .method-card:hover {
@@ -2291,16 +2403,17 @@
             font-size: 12px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.25s ease;
+            transition: all 0.16s var(--ease);
             background: transparent;
             color: var(--text-secondary);
             border: 1px solid transparent;
         }
 
         .tab-btn.active {
-            background: var(--accent);
-            color: white;
+            background: var(--accent-deep);
+            color: #fff;
             border-color: var(--accent);
+            box-shadow: 0 2px 10px rgba(95, 58, 214, 0.4);
         }
 
         .tab-btn:not(.active):hover {
@@ -2316,7 +2429,7 @@
             border-radius: 6px;
             font-size: 11px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s var(--ease);
             font-family: 'JetBrains Mono', monospace;
             white-space: nowrap;
         }
@@ -2331,7 +2444,7 @@
             font-size: 11px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s var(--ease);
             background: var(--bg-secondary);
             color: var(--text-secondary);
             border: 1px solid var(--border);
@@ -2720,7 +2833,7 @@
                         class="w-6 h-6 rounded-lg bg-[var(--yt)] flex items-center justify-center text-white font-bold text-[11px]">
                         1</div>
                     <h2 class="text-sm font-semibold">Video Queue</h2>
-                    <span class="badge-pill bg-[var(--accent)]/10 text-[var(--accent-light)] ml-auto"
+                    <span class="badge-pill bg-[var(--accent)]/15 text-[var(--accent-light)] ml-auto"
                         id="queueBadge">0</span>
                 </div>
 
@@ -2767,7 +2880,7 @@
             <section class="xl:col-span-7 card card-glow p-4 fade-in">
                 <div class="flex items-center gap-2 min-w-0 mb-2">
                     <div
-                        class="w-6 h-6 rounded-lg bg-[var(--accent)] flex items-center justify-center text-white font-bold text-[11px]">
+                        class="w-6 h-6 rounded-lg bg-[var(--accent-deep)] flex items-center justify-center text-white font-bold text-[11px]">
                         2</div>
                     <h2 class="text-sm font-semibold flex-shrink-0">Preview</h2>
                     <span id="playerSrcTag" class="src-tag none">no source</span>
@@ -3137,7 +3250,7 @@
                         <div class="flex justify-between items-center mb-1.5">
                             <label class="text-xs font-semibold text-[var(--text-secondary)]">Detection
                                 sensitivity</label>
-                            <span class="text-sm font-bold text-[var(--accent)] mono" id="sensValue">50</span>
+                            <span class="text-sm font-bold text-[var(--accent-light)] mono" id="sensValue">50</span>
                         </div>
                         <input type="range" id="sensSlider" class="sensitivity-slider" min="1" max="100" value="50"
                             oninput="document.getElementById('sensValue').textContent=this.value">
@@ -3217,7 +3330,7 @@
                         class="w-6 h-6 rounded-lg bg-[var(--success)] flex items-center justify-center text-white font-bold text-[11px]">
                         4</div>
                     <h2 class="text-base font-semibold">Clips</h2>
-                    <span class="badge-pill bg-[var(--accent)]/10 text-[var(--accent-light)]" id="clipsBadge">0
+                    <span class="badge-pill bg-[var(--accent)]/15 text-[var(--accent-light)]" id="clipsBadge">0
                         clips</span>
                     <span class="badge-pill bg-[var(--success)]/15 text-[var(--success)]" id="selectedBadge">0/0
                         selected</span>
@@ -3227,8 +3340,10 @@
                     <button onclick="deselectAllClips()" class="btn-secondary text-[11px] !py-1.5 !px-3">☐ None</button>
                     <button onclick="invertSelection()" class="btn-secondary text-[11px] !py-1.5 !px-3">⇄ Invert</button>
                     <button onclick="sortClips()" class="btn-secondary text-[11px] !py-1.5 !px-3">↕ Sort</button>
-                    <button onclick="undoAction()" class="btn-secondary text-[11px] !py-1.5 !px-3">↩ Undo</button>
-                    <button onclick="redoAction()" class="btn-secondary text-[11px] !py-1.5 !px-3">↪ Redo</button>
+                    <button onclick="undoAction()" id="undoBtn"
+                        class="btn-secondary text-[11px] !py-1.5 !px-3" title="Undo (Ctrl+Z)">↩ Undo</button>
+                    <button onclick="redoAction()" id="redoBtn"
+                        class="btn-secondary text-[11px] !py-1.5 !px-3" title="Redo (Ctrl+Shift+Z)">↪ Redo</button>
                     <button onclick="removeSelectedClips()" class="btn-danger !py-1.5">✕ Delete selected</button>
                     <button onclick="clearClips()" class="btn-danger !py-1.5">🗑 Clear all</button>
                 </div>
@@ -3354,7 +3469,7 @@
                             quality, only the exact seconds you marked.</p>
                     </div>
                     <div class="p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
-                        <h4 class="font-semibold text-[var(--accent)] mb-2 text-xs">2 · Start the bridge</h4>
+                        <h4 class="font-semibold text-[var(--accent-light)] mb-2 text-xs">2 · Start the bridge</h4>
                         <div class="code-block !p-2 !text-[10.5px] !max-h-none">cd clipforge-pro/bridge
 
 # Windows
@@ -3608,6 +3723,48 @@ start_bridge.bat
                 if (m) return m[1];
             }
             return null;
+        }
+
+        /** A fill of the same hue, deepened until white text on it clears
+         *  4.5:1. #7c5cfc lands at 4.38 with white and 4.31 with black - there
+         *  is no readable ink for it, so the fill itself has to move. */
+        var _fillCache = {};
+        function _parseHex(hex) {
+            var h = String(hex).replace('#', '');
+            if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+            return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+        }
+        function _lum(c) {
+            var f = function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+            return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]);
+        }
+        function _hex(c) {
+            return '#' + c.map(function (v) { return ('0' + Math.round(v).toString(16)).slice(-2); }).join('');
+        }
+        function deepFill(hex) {
+            if (_fillCache[hex] !== undefined) return _fillCache[hex];
+            var rgb = _parseHex(hex), out = rgb, k = 0;
+            while ((1.05) / (_lum(out) + 0.05) < 4.6 && k < 1) {
+                k += 0.04;
+                out = rgb.map(function (c) { return c * (1 - k); });
+            }
+            return (_fillCache[hex] = _hex(out));
+        }
+
+        /** The same clip colour used as text on the dark panels. Anything that
+         *  does not clear 4.5:1 there is lightened until it does, so the palette
+         *  can be whatever it likes without producing unreadable labels. */
+        var _onDarkCache = {};
+        function onDark(hex) {
+            if (_onDarkCache[hex] !== undefined) return _onDarkCache[hex];
+            var rgb = _parseHex(hex), bg = _lum([14, 14, 24]);
+            var ratio = function (c) { var l = _lum(c); return (Math.max(l, bg) + 0.05) / (Math.min(l, bg) + 0.05); };
+            var out = rgb, mix = 0;
+            while (ratio(out) < 4.6 && mix < 1) {
+                mix += 0.04;
+                out = rgb.map(function (c) { return c + (255 - c) * mix; });
+            }
+            return (_onDarkCache[hex] = _hex(out));
         }
 
         function esc(s) {
@@ -4788,10 +4945,16 @@ start_bridge.bat
            only one of them gets a marker, and zooming in renders the window
            rather than the whole video. Nodes are pooled and handlers are
            delegated, so a re-render reuses elements instead of churning them. */
+        var RIBBON = ['#7c5cfc', '#3f3a72'];   // two tints for very dense strips
         var _tlPool = { clip: [], cut: [], io: [], range: [] };
         var _tlLive = [];
         var _tlWindow = { from: -1, to: -1, zoom: -1 };
-        var CUT_MIN_PX = 7;
+        var _tlFlags = { tight: null, ribbon: null };
+        /* Marker density, in pixels between neighbouring cuts:
+           under HIDE they are not markers any more, just noise, and the clip
+           bands carry the boundaries on their own; under TIGHT they render as
+           thin ticks; above it they get the full grab knob. */
+        var CUT_HIDE_PX = 3, CUT_TIGHT_PX = 34, CUT_MIN_PX = 5;
 
         function poolTake(kind, cls) {
             var el = _tlPool[kind].pop();
@@ -4851,6 +5014,7 @@ start_bridge.bat
             var pxPerSec = tlWidth / d;
             var frag = document.createDocumentFragment();
             var list = v.clips;
+            var ribbon = false;
 
             // in/out staging range
             if (inPoint !== null && outPoint !== null && outPoint > inPoint) {
@@ -4865,14 +5029,22 @@ start_bridge.bat
             for (var i = firstClipFrom(list, view.from); i < list.length; i++) {
                 var c = list[i];
                 if (c.start > view.to) break;
-                var color = COLORS[i % COLORS.length];
                 var el = poolTake('clip', 'tl-clip' + (i === selClip ? ' selected' : '')
                     + (c.sel ? '' : ' deselected') + (loopClipId === c.id ? ' looping' : ''));
                 el.dataset.idx = i;
                 var wpct = Math.max(0.05, (c.end - c.start) / d * 100);
-                el.style.cssText = 'left:' + (c.start / d * 100) + '%;width:' + wpct + '%;'
-                    + 'background:linear-gradient(150deg,' + color + ',' + color + 'cc);';
                 var wpx = wpct / 100 * tlWidth;
+                /* Eight rotating hues read as confetti once a clip is a couple of
+                   pixels wide. Below that the strip alternates two tints of the
+                   accent instead, so a hundred cuts read as one ribbon with
+                   visible divisions rather than static. */
+                var thin = wpx < 5;
+                if (thin) ribbon = true;
+                var color = thin ? (i % 2 ? RIBBON[0] : RIBBON[1]) : COLORS[i % COLORS.length];
+                // a 150deg gradient inside a two-pixel column is just a
+                // horizontal smear across the whole strip - flat reads cleaner
+                el.style.cssText = 'left:' + (c.start / d * 100) + '%;width:' + wpct + '%;background:'
+                    + (thin ? color : 'linear-gradient(150deg,' + color + ',' + color + 'cc)') + ';';
                 var inner = '';
                 if (wpx >= 54) {
                     inner = '<div class="tl-clip-inner">'
@@ -4893,14 +5065,37 @@ start_bridge.bat
                to merge. Two cuts less than CUT_MIN_PX apart overlap into one blob
                nobody can aim at, so only the first of such a run gets a marker -
                zoom in and the rest appear. */
+            /* Decide the tier from the tightest gap actually in view, not from
+               an average - one crowded stretch is what makes the strip unreadable. */
+            var minGapPx = Infinity, prevPx = null;
+            for (var g = firstClipFrom(list, view.from); g < list.length - 1; g++) {
+                if (Math.abs(list[g].end - list[g + 1].start) > 0.02) continue;
+                var gt = list[g].end;
+                if (gt > view.to) break;
+                if (gt < view.from) continue;
+                var gpx = gt * pxPerSec;
+                if (prevPx !== null) minGapPx = Math.min(minGapPx, gpx - prevPx);
+                prevPx = gpx;
+            }
+            var tight = minGapPx < CUT_TIGHT_PX;
+            var hideCuts = minGapPx < CUT_HIDE_PX;
+            // touching a class on a container with hundreds of children costs a
+            // style recalc, so only write it when the answer changed
+            var wantTight = tight && !hideCuts;
+            if (_tlFlags.tight !== wantTight) {
+                _tlFlags.tight = wantTight;
+                tl.classList.toggle('cuts-tight', wantTight);
+            }
+            var spacing = hideCuts ? Infinity : (tight ? CUT_MIN_PX : CUT_TIGHT_PX);
+
             var lastCutPx = -1e9;
-            for (var k = firstClipFrom(list, view.from); k < list.length - 1; k++) {
+            for (var k = hideCuts ? list.length : firstClipFrom(list, view.from); k < list.length - 1; k++) {
                 if (Math.abs(list[k].end - list[k + 1].start) > 0.02) continue;
                 var t = list[k].end;
                 if (t > view.to) break;
                 if (t < view.from) continue;
                 var px = t * pxPerSec;
-                if (px - lastCutPx < CUT_MIN_PX) continue;
+                if (px - lastCutPx < spacing) continue;
                 lastCutPx = px;
                 var cut = poolTake('cut', 'tl-cut');
                 cut.style.left = (t / d * 100) + '%';
@@ -4908,6 +5103,11 @@ start_bridge.bat
                 cut.setAttribute('data-cut', k);
                 cut.title = 'Drag to move this cut · click to merge clip ' + (k + 1) + ' and ' + (k + 2);
                 frag.appendChild(cut); _tlLive.push({ el: cut, kind: 'cut' });
+            }
+
+            if (_tlFlags.ribbon !== ribbon) {
+                _tlFlags.ribbon = ribbon;
+                tl.classList.toggle('clips-ribbon', ribbon);
             }
 
             // in / out markers
@@ -5565,7 +5765,7 @@ start_bridge.bat
             var idx = dragState.idx;
             dragState = null;
 
-            if (!moved) { undoStack.pop(); selectClipCard(idx); return; }
+            if (!moved) { undoStack.pop(); syncHistoryUI(); selectClipCard(idx); return; }
             renderTimeline(); renderClips(); regenerateScript(); updateStats(); persist();
         }
 
@@ -5681,6 +5881,7 @@ start_bridge.bat
             });
             if (undoStack.length > 80) undoStack.shift();
             redoStack = [];
+            syncHistoryUI();
         }
 
         function snapshotOf(v, label) {
@@ -5709,6 +5910,7 @@ start_bridge.bat
             var inverse = applySnapshot(snap);
             if (!inverse) { notify('That step belonged to a video that is gone', 'warning'); return; }
             redoStack.push(inverse);
+            syncHistoryUI();
             notify(snap.label ? 'Undone — ' + snap.label : 'Undone', 'success');
         }
 
@@ -5718,7 +5920,27 @@ start_bridge.bat
             var inverse = applySnapshot(snap);
             if (!inverse) { notify('That step belonged to a video that is gone', 'warning'); return; }
             undoStack.push(inverse);
+            syncHistoryUI();
             notify(snap.label ? 'Redone — ' + snap.label : 'Redone', 'success');
+        }
+
+        /** Show how deep the history goes and what the next step is - an undo
+         *  you cannot see is an undo you do not rely on. */
+        function syncHistoryUI() {
+            var u = $('undoBtn'), r = $('redoBtn');
+            if (!u) return;
+            var un = undoStack.length, rn = redoStack.length;
+            u.disabled = !un; r.disabled = !rn;
+            u.textContent = un ? '↩ Undo ' + un : '↩ Undo';
+            r.textContent = rn ? '↪ Redo ' + rn : '↪ Redo';
+            var last = un ? undoStack[un - 1] : null;
+            var next = rn ? redoStack[rn - 1] : null;
+            u.title = last
+                ? 'Undo ' + (last.label || 'the last change') + '   (Ctrl+Z) · ' + un + ' steps kept'
+                : 'Nothing to undo yet';
+            r.title = next
+                ? 'Redo ' + (next.label || 'that change') + '   (Ctrl+Shift+Z)'
+                : 'Nothing to redo';
         }
 
         /** Drop any history that points at a video which no longer exists. */
@@ -5726,11 +5948,13 @@ start_bridge.bat
             var keep = function (e) { return e.uid !== uid; };
             undoStack = undoStack.filter(keep);
             redoStack = redoStack.filter(keep);
+            syncHistoryUI();
         }
 
         function afterClipsChanged(skipThumbs) {
             renderTimeline(); renderClips(); updateStats(); regenerateScript();
             renderQueue(); persist();
+            syncHistoryUI();
             fpLastClipKey = null;
             updateFramePreviewInfo(fpLastT);      // where the panel is looking, not where the decoder is
             if (!skipThumbs) scheduleThumbs();
@@ -6077,7 +6301,8 @@ start_bridge.bat
                     + '<div class="clip-card-inner">'
                     + '<div class="clip-thumb-wrap" onclick="playClip(' + i + ')">'
                     + '<canvas id="clipThumb_' + i + '" width="320" height="180"></canvas>'
-                    + '<div class="clip-thumb-num" style="background:' + color + '">' + (i + 1) + '</div>'
+                    + '<div class="clip-thumb-num" style="background:' + deepFill(color) + '">'
+                    + (i + 1) + '</div>'
                     + '<div class="clip-thumb-time">' + fmtDur(dur) + '</div>'
                     + '<div class="clip-thumb-play">▶</div>'
                     + '</div>'
@@ -6106,13 +6331,13 @@ start_bridge.bat
                     + '</div>'
                     + '</div>'
                     + '<div class="nudge-strip">'
-                    + '<span class="nudge-lbl" style="color:' + color + '">Start</span>'
+                    + '<span class="nudge-lbl" style="color:' + onDark(color) + '">Start</span>'
                     + '<button class="nudge-btn" onclick="nudgeClip(' + i + ',\'start\',-1)">−1s</button>'
                     + '<button class="nudge-btn" onclick="nudgeClip(' + i + ',\'start\',-1/30)" title="Back one frame">◀▮</button>'
                     + '<button class="nudge-btn" onclick="nudgeClip(' + i + ',\'start\',1/30)" title="Forward one frame">▮▶</button>'
                     + '<button class="nudge-btn" onclick="nudgeClip(' + i + ',\'start\',1)">+1s</button>'
                     + '<span class="w-px h-3 bg-[var(--border)] mx-1"></span>'
-                    + '<span class="nudge-lbl" style="color:' + color + '">End</span>'
+                    + '<span class="nudge-lbl" style="color:' + onDark(color) + '">End</span>'
                     + '<button class="nudge-btn" onclick="nudgeClip(' + i + ',\'end\',-1)">−1s</button>'
                     + '<button class="nudge-btn" onclick="nudgeClip(' + i + ',\'end\',-1/30)">◀▮</button>'
                     + '<button class="nudge-btn" onclick="nudgeClip(' + i + ',\'end\',1/30)">▮▶</button>'
@@ -7387,14 +7612,22 @@ start_bridge.bat
         }
 
         /** Coalesce: a fit reads layout, so never run more than one a frame. */
+        /* fitEditor writes the width, but the timeline can only be measured
+           once the browser has laid that width out - drawing in the same frame
+           renders the ruler and the clip bands against the *old* width, which
+           is the smeared strip you see for a beat after switching modes. So
+           the redraw waits for the frame after the write. */
         function scheduleFit() {
             if (fitRaf) return;
             fitRaf = requestAnimationFrame(function () {
-                fitRaf = 0;
                 fitEditor();
-                renderRuler();
-                renderTimeline();
-                scheduleCache();
+                requestAnimationFrame(function () {
+                    fitRaf = 0;
+                    renderRuler();
+                    renderTimeline();
+                    syncFilmstripWidth();
+                    scheduleCache();
+                });
             });
         }
 
@@ -7520,7 +7753,7 @@ start_bridge.bat
                 var color = COLORS[idx % COLORS.length];
                 D.fpClipInfo.textContent = clipName(v, cur, idx) + ' · ' + fmtDur(c.end - c.start);
                 D.fpClipBadge.innerHTML = '<span class="fp-badge" style="background:' + color
-                    + '22;color:' + color + ';border:1px solid ' + color + '55;">Clip ' + (idx + 1)
+                    + '22;color:' + onDark(color) + ';border:1px solid ' + color + '55;">Clip ' + (idx + 1)
                     + ' · ' + (c.sel ? 'included ✓' : 'skipped ✕') + '</span>';
             } else {
                 D.fpClipInfo.textContent = (v && v.clips.length) ? 'Between clips' : 'No clips yet — press M to cut';
@@ -7577,7 +7810,7 @@ start_bridge.bat
             });
             $('engineBadge').textContent = e === 'ytdlp' ? 'yt-dlp · from YouTube' : 'FFmpeg · from local file';
             $('engineBadge').className = 'badge-pill ' + (e === 'ytdlp'
-                ? 'bg-[var(--yt)]/10 text-[var(--yt)]' : 'bg-[var(--accent)]/10 text-[var(--accent-light)]');
+                ? 'bg-[var(--yt)]/10 text-[var(--yt)]' : 'bg-[var(--accent)]/15 text-[var(--accent-light)]');
             $('engineHint').textContent = e === 'ytdlp'
                 ? 'Downloads only the exact seconds of each clip, straight from YouTube.'
                 : 'Cuts clips out of a video file you already have on disk.';
@@ -9205,7 +9438,7 @@ start_bridge.bat
             // A button keeps focus after a click, so Space would re-trigger it
             // instead of playing. Take focus back for the shortcuts we own.
             if (e.target && e.target.tagName === 'BUTTON' &&
-                (k === ' ' || k === 'm' || k === 'i' || k === 'o' || k === 'l' ||
+                (k === ' ' || k === 'm' || k === 'i' || k === 'o' || k === 'l' || k === 'z' ||
                  k === 'arrowleft' || k === 'arrowright' || k === 'arrowup' || k === 'arrowdown')) {
                 e.target.blur();
             }
@@ -9251,8 +9484,11 @@ start_bridge.bat
                     break;
                 case 'l': e.preventDefault(); toggleLoopClip(); break;
                 case 'z':
-                    if (e.ctrlKey || e.metaKey) break;      // handled below as undo
-                    e.preventDefault(); zoomToCurrentClip(); break;
+                    e.preventDefault();
+                    if ((e.ctrlKey || e.metaKey) && e.shiftKey) redoAction();
+                    else if (e.ctrlKey || e.metaKey) undoAction();
+                    else zoomToCurrentClip();
+                    break;
                 case '[': e.preventDefault(); trimToPlayhead('start'); break;
                 case ']': e.preventDefault(); trimToPlayhead('end'); break;
                 case 'a':
@@ -9269,10 +9505,6 @@ start_bridge.bat
                 case 'delete':
                 case 'backspace':
                     if (selClip >= 0) { e.preventDefault(); removeClip(selClip); }
-                    break;
-                case 'z':
-                    if ((e.ctrlKey || e.metaKey) && e.shiftKey) { e.preventDefault(); redoAction(); }
-                    else if (e.ctrlKey || e.metaKey) { e.preventDefault(); undoAction(); }
                     break;
                 case 'y': if (e.ctrlKey || e.metaKey) { e.preventDefault(); redoAction(); } break;
                 case '+': case '=': e.preventDefault(); zoomTimeline(1); break;
@@ -9360,6 +9592,7 @@ start_bridge.bat
             } catch (e) { }
             $('detectMax').value = String(DETECT_MAX);
             renderDetectPanel();
+            syncHistoryUI();
 
             $('urlInput').addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') { e.preventDefault(); addFromInput(); }
