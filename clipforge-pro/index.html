@@ -3414,6 +3414,21 @@
                             onchange="regenerateScript()" checked>
                         Include every video in the queue
                     </label>
+                    <label
+                        class="block text-[10px] text-[var(--text-secondary)] font-semibold uppercase tracking-wider mt-3 mb-1.5">Edge
+                        trim</label>
+                    <select id="edgeTrimSelect" class="fs-select w-full !text-[11px]" onchange="setEdgeTrim(this.value)"
+                        title="How far before its cut each clip stops. Enough margin here means the next scene can never appear at the tail of this clip.">
+                        <option value="0">Exact — no trim</option>
+                        <option value="10">10 ms</option>
+                        <option value="20">20 ms</option>
+                        <option value="25">25 ms</option>
+                        <option value="30" selected>30 ms — recommended</option>
+                        <option value="34">34 ms — as the reference</option>
+                        <option value="40">40 ms</option>
+                        <option value="60">60 ms — safest</option>
+                    </select>
+                    <p class="text-[10px] text-[var(--text-dim)] mt-1 leading-snug" id="edgeTrimNote">—</p>
                 </div>
                 <div>
                     <label
@@ -3867,28 +3882,38 @@ start_bridge.bat
          *  no encoder can round it the wrong way. When the rate is unknown we
          *  fall back to 8ms, which is under one frame for anything up to 120fps.
          * ========================================================== */
-        /* How far to pull an end back. It has to satisfy two things at once:
-             - land BELOW the cut, so a frame sitting exactly on the cut goes to
-               the next clip and not to both;
-             - stay ABOVE the previous frame, so the last frame the user wants
-               is still inside.
-           The previous frame can be arbitrarily close under the cut when the cut
-           was not made on a frame boundary, so the pull-back has to be as small
-           as the timestamps can express - one millisecond at the 3-decimal
-           precision these scripts are written in. Half a frame reads like the
-           tidier answer and is wrong: on a cut placed between two frames it
-           reaches back past the frame before it and drops it. */
-        var FRAME_GUARD = 0.001;
+        /* How far before the cut each clip stops, in milliseconds.
 
-        /* The rate is not needed to place the cut - the pull-back above is a flat
-           millisecond - but knowing it lets the exported script state the frame
-           interval, so the trim can be checked against a real number instead of
-           taken on trust. requestVideoFrameCallback reports the presentation
-           time and frame counter of every frame the decoder shows, which gives
-           the exact rate including 23.976 and 29.97. The proxy is re-encoded
-           without -r, so its rate is the source's rate. */
+           A single millisecond is enough on paper - below any frame interval,
+           above nothing - and it holds on a clean local file. It does not hold
+           on a YouTube download: that section is cut on a network stream and
+           re-encoded through a container timebase of its own, and a margin that
+           thin lands on the wrong side of the rounding often enough that the
+           first frame of the next scene turns up at the tail of this clip.
+
+           So the default is 30ms, the same order the reference uses (it takes a
+           flat 34ms). Milliseconds rather than frames is the right unit here:
+           the margin exists to clear timestamp rounding, and that rounding does
+           not scale with the frame rate. 30ms is also still under one frame at
+           every rate YouTube serves - 23.976 (41.7ms), 25 (40ms), 29.97
+           (33.4ms), 30 (33.3ms) - so on those sources it clears the boundary
+           without costing a real frame at all.
+
+           The next clip is never moved - it still starts exactly on its cut. */
+        var DEFAULT_TRIM_MS = 30;
+        var edgeTrimMs = DEFAULT_TRIM_MS;
+
         var STD_RATES = [23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60, 90, 100, 120];
 
+        /* The rate is not needed to place the cut - the trim above is a flat
+           number of milliseconds - but knowing it lets the panel and the
+           exported script say what the trim costs in frames, so the margin can
+           be checked against a real number instead of taken on trust.
+           requestVideoFrameCallback reports the presentation time of every
+           frame the decoder shows; the median gap between them is the frame
+           interval, and a median is unmoved by the odd dropped frame the way a
+           frames-over-elapsed average is not. The proxy is re-encoded without
+           -r, so its rate is the source's rate. */
         function measureFps(v) {
             if (!v || v.fps || v.source === 'embed' || !v.mediaUrl) return;
             if (typeof HTMLVideoElement === 'undefined'
@@ -3904,29 +3929,24 @@ start_bridge.bat
                 el.removeAttribute('src');
                 try { el.load(); } catch (e) { }
                 if (!fps || fps < 5 || fps > 480) return;
-                // snap to the rate it plainly is - these are the rates that exist,
-                // and it clears the jitter a short sample always carries
                 for (var i = 0; i < STD_RATES.length; i++) {
                     if (Math.abs(fps - STD_RATES[i]) / STD_RATES[i] < 0.02) { fps = STD_RATES[i]; break; }
                 }
                 v.fps = Math.round(fps * 1000) / 1000;
                 regenerateScript();
+                syncEdgeTrimNote();
                 persist();
             };
-            var bail = setTimeout(function () { finish(estimate()); }, 9000);
+            var bail = setTimeout(function () { finish(estimate()); }, 12000);
 
-            /* The median gap between the frames the decoder actually showed.
-               presentedFrames / elapsed would be wrong the moment the compositor
-               drops one; a dropped frame only doubles a single gap, which the
-               median ignores. */
             function estimate() {
-                if (times.length < 6) return null;
+                if (times.length < 5) return null;
                 var gaps = [];
                 for (var i = 1; i < times.length; i++) {
                     var g = times[i] - times[i - 1];
                     if (g > 0.0005) gaps.push(g);
                 }
-                if (gaps.length < 4) return null;
+                if (gaps.length < 3) return null;
                 gaps.sort(function (a, b) { return a - b; });
                 var med = gaps[Math.floor(gaps.length / 2)];
                 return med > 0 ? 1 / med : null;
@@ -3935,11 +3955,7 @@ start_bridge.bat
             var tick = function (now, meta) {
                 if (!v._fpsPending) return;
                 times.push(meta.mediaTime);
-                if (times.length >= 40) {
-                    clearTimeout(bail);
-                    finish(estimate());
-                    return;
-                }
+                if (times.length >= 16) { clearTimeout(bail); finish(estimate()); return; }
                 el.requestVideoFrameCallback(tick);
             };
 
@@ -3955,21 +3971,60 @@ start_bridge.bat
             el.addEventListener('error', function () { clearTimeout(bail); finish(null); }, { once: true });
         }
 
-        function frameGuard(v) {
+        function frameSeconds(v) {
             var f = v && v.fps;
-            // never more than a fraction of a frame, whatever the rate
-            return (f && f >= 5) ? Math.min(FRAME_GUARD, 0.4 / f) : FRAME_GUARD;
+            return (f && f >= 5 && f <= 480) ? (1 / f) : 0.04;
         }
 
-        /** The start/end/duration an exporter should actually use for a clip. */
+        function frameGuard(v) {
+            return Math.max(0, edgeTrimMs) / 1000;
+        }
+
+        function setEdgeTrim(ms) {
+            edgeTrimMs = Math.max(0, Math.min(500, parseFloat(ms) || 0));
+            try { localStorage.setItem('cf_edge_trim_ms', String(edgeTrimMs)); } catch (e) { }
+            regenerateScript();
+            renderClips();
+            syncEdgeTrimNote();
+        }
+
+        function syncEdgeTrimNote() {
+            var el = $('edgeTrimNote'); if (!el) return;
+            if (edgeTrimMs <= 0) {
+                el.textContent = 'Clips end exactly on the cut — the frame on the cut can land in both clips.';
+                return;
+            }
+            var v = V();
+            var fr = frameSeconds(v) * 1000;
+            var frames = edgeTrimMs / fr;
+            var rate = v && v.fps ? v.fps.toFixed(3) + 'fps' : 'rate not measured';
+            el.textContent = edgeTrimMs + 'ms before each cut — '
+                + frames.toFixed(2) + ' of a frame at ' + rate
+                + (frames <= 1 ? ' (no real frame lost).' : ' (drops ' + Math.floor(frames) + ' frame(s)).')
+                + ' The next clip still starts exactly on its cut.';
+        }
+
+        /** Where this video finishes. The loaded duration when we have it, and
+         *  otherwise the furthest clip - a project can be built and exported
+         *  with no preview ever loaded, and the last clip must not be trimmed
+         *  in that case either. */
+        function videoEnd(v) {
+            var d = (v && v.duration) || 0;
+            if (d > 0) return d;
+            var m = 0;
+            if (v && v.clips) v.clips.forEach(function (c) { if (c.end > m) m = c.end; });
+            return m;
+        }
+
         function exportRange(v, c) {
             var start = Math.max(0, c.start);
             var end = c.end;
-            var d = (v && v.duration) || 0;
-            // A clip that runs to the end of the video has no next frame to give
-            // away, and shaving it would drop the real final frame.
-            var atEnd = d > 0 && end >= d - 0.001;
+            // A clip that runs to the end of the video has no next clip to give
+            // a frame to, and shaving it would drop the real final frame.
+            var atEnd = end >= videoEnd(v) - 0.001;
             var guard = atEnd ? 0 : frameGuard(v);
+            // never trim away a meaningful share of a short clip
+            guard = Math.min(guard, Math.max(0, (end - start) * 0.25));
             var out = Math.max(start + 0.001, end - guard);
             return {
                 start: start,
@@ -4491,6 +4546,7 @@ start_bridge.bat
             scheduleCache();
             scheduleFit();
             renderDetectPanel();
+            syncEdgeTrimNote();
             if (canReadFrames()) rebuildFilmstrip();
         }
 
@@ -8020,16 +8076,17 @@ start_bridge.bat
                 if (seen[r.video.uid]) return;
                 seen[r.video.uid] = 1; vids.push(r.video);
             });
+            if (edgeTrimMs <= 0) {
+                return 'Edge trim is off: clips end exactly on their cut, so the frame on the cut '
+                    + 'may appear in both clips.';
+            }
+            var g = 'Each clip stops ' + edgeTrimMs + 'ms before its cut, so the next scene can never'
+                + ' appear at the tail of this clip. The next clip still starts exactly on its cut.';
             var known = vids.filter(function (v) { return v.fps; });
-            var ms = function (x) { return (x * 1000).toFixed(0) + 'ms'; };
-            var g = 'Each clip ends ' + ms(FRAME_GUARD)
-                + ' early so the frame sitting on the cut belongs to the NEXT clip only, never to both.';
             if (known.length === vids.length && vids.length) {
-                var rates = vids.map(function (v) {
+                g += ' Source: ' + vids.map(function (v) {
                     return v.fps.toFixed(3) + 'fps (' + (1000 / v.fps).toFixed(1) + 'ms a frame)';
-                });
-                g += ' Source: ' + rates.join(', ') + ' - the trim is far smaller than a frame,'
-                    + ' so no real frame is lost.';
+                }).join(', ') + ' - the trim is under one frame, so no real frame is lost.';
             }
             return g;
         }
@@ -9539,7 +9596,7 @@ start_bridge.bat
                 v: 1, saved: new Date().toISOString(),
                 settings: {
                     proxyHeight: proxyHeight, engine: engine, quality: quality,
-                    container: container, rippleEdges: rippleEdges
+                    container: container, rippleEdges: rippleEdges, edgeTrimMs: edgeTrimMs
                 },
                 cur: cur,
                 videos: videos.map(function (v) {
@@ -9577,6 +9634,11 @@ start_bridge.bat
             if (st.quality) setQuality(st.quality);
             if (st.container) setFormat(st.container);
             if (typeof st.rippleEdges === 'boolean' && st.rippleEdges !== rippleEdges) toggleRipple();
+            if (typeof st.edgeTrimMs === 'number') {
+                edgeTrimMs = st.edgeTrimMs;
+                if ($('edgeTrimSelect')) $('edgeTrimSelect').value = String(edgeTrimMs);
+                syncEdgeTrimNote();
+            }
             cur = -1;
             renderQueue(); updateStats();
             if (videos.length) selectVideo(clamp(data.cur || 0, 0, videos.length - 1));
@@ -9956,6 +10018,12 @@ start_bridge.bat
             $('detectMax').value = String(DETECT_MAX);
             renderDetectPanel();
             syncHistoryUI();
+            try {
+                var et = localStorage.getItem('cf_edge_trim_ms');
+                if (et !== null) edgeTrimMs = Math.max(0, Math.min(500, parseFloat(et) || 0));
+            } catch (e) { }
+            $('edgeTrimSelect').value = String(edgeTrimMs);
+            syncEdgeTrimNote();
 
             $('urlInput').addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') { e.preventDefault(); addFromInput(); }
