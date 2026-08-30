@@ -1,4 +1,5 @@
 /test/media/
+/test/stills/
 /test/out_*
 /test/shot_*.png
 /test/ui_*.png

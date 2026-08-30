@@ -5,8 +5,14 @@
   const U = FC.util, S = FC.store, O = FC.ops, { clamp, el, $ } = U;
 
   const RULER_H = 22, MIN_PPS = 0.2, MAX_PPS = 900;
-  const view = { pps: 60, scroll: 0, vscroll: 0, tool: 'select', snap: true, ripple: true, insert: true };
-  let cv, cx, W = 0, H = 0, dpr = 1, dirty = true, layout = [], hover = null, drag = null, marquee = null, snapLine = null, dropAt = null;
+  const view = {
+  pps: 60, scroll: 0, vscroll: 0, tool: 'select', snap: true,
+  dragMode: 'insert',   // insert (push others aside) · overwrite (free) · swap (trade places)
+  trimMode: 'ripple',   // ripple (move the rest) · roll (steal from the neighbour) · gap (leave a hole)
+  get ripple() { return this.trimMode === 'ripple'; },
+  get insert() { return this.dragMode === 'insert'; }
+};
+  let cv, cx, W = 0, H = 0, dpr = 1, dirty = true, layout = [], hover = null, drag = null, marquee = null, snapLine = null, dropAt = null, swapHint = null;
 
   function init() {
     cv = $('#tlCanvas'); if (!cv) return;
@@ -86,6 +92,16 @@
     drawClips();
     drawMarkers();
     drawOverlaysHint();
+    if (swapHint) {
+      const L = layout.find(l => l.t.id === swapHint.track);
+      if (L) {
+        const x = t2x(swapHint.start), w = Math.max(3, swapHint.dur * view.pps);
+        cx.save(); cx.strokeStyle = '#31c48d'; cx.lineWidth = 2; cx.setLineDash([5, 4]);
+        cx.strokeRect(x + 1, L.y + 3, w - 2, L.h - 6);
+        cx.fillStyle = 'rgba(49,196,141,.14)'; cx.fillRect(x + 1, L.y + 3, w - 2, L.h - 6);
+        cx.restore();
+      }
+    }
     if (marquee) drawMarquee();
     if (dropAt) drawDropMarker();
     drawPlayhead();
@@ -262,24 +278,28 @@
 
   function drawFilmstrip(c, a, x, y, w, h, vx, vw) {
     if (!a) return;
-    const tw = Math.round(h * 16 / 9);
-    if (tw < 6) return;
-    const n = Math.max(1, Math.ceil(w / tw));
-    const seams = tw > 14 && n > 1;
+    const ideal = Math.round(h * 16 / 9);
+    if (ideal < 6) return;
+    // Divide the clip into whole tiles so a frame is never drawn wider than the
+    // clip that holds it — that is what pushed the picture out of narrow clips.
+    const n = Math.max(1, Math.round(w / ideal));
+    const tw = w / n;
+    const seams = tw > 16 && n > 1;
     const speed = c.speed || 1;
     cx.save();
     cx.globalAlpha = c.enabled ? .96 : .4;
     for (let i = 0; i < n; i++) {
       const px = x + i * tw;
       if (px + tw < vx - tw || px > vx + vw) continue;
-      const frac = (i * tw + tw / 2) / w;
-      const st = c.in + clamp(frac, 0, 1) * c.dur * speed;
+      const st = c.in + clamp((i + 0.5) / n, 0, 1) * c.dur * speed;
       const b = FC.media.thumb(a, st);
       if (b) {
-        const sw = b.width, sh = b.height;
-        const sc = Math.max(tw / sw, h / sh);
-        const dw = sw * sc, dh = sh * sc;
+        const sc = Math.max(tw / b.width, h / b.height);
+        const dw = b.width * sc, dh = b.height * sc;
+        cx.save();
+        cx.beginPath(); cx.rect(px, y, tw, h); cx.clip();
         cx.drawImage(b, px + (tw - dw) / 2, y + (h - dh) / 2, dw, dh);
+        cx.restore();
       } else {
         cx.fillStyle = i % 2 ? '#171b21' : '#141820'; cx.fillRect(px, y, tw, h);
       }
@@ -400,6 +420,14 @@
     const s = $('#tlStatus'); if (!s) return;
     const d = S.duration();
     s.textContent = `${FC.doc.clips.length} clips · ${U.dur(d)} · ${view.pps.toFixed(1)} px/s`;
+    const banner = $('#tlMismatch'); if (!banner) return;
+    const vid = FC.director ? FC.director.mainDuration() : 0;
+    const aud = FC.director ? FC.director.audioLength() : 0;
+    const off = aud > 0.4 && vid > 0.4 ? aud - vid : 0;
+    if (Math.abs(off) > 0.5) {
+      banner.style.display = '';
+      banner.firstChild.textContent = `Picture ${U.dur(vid)} · audio ${U.dur(aud)}`;
+    } else banner.style.display = 'none';
   }
 
   /* ── hit testing ───────────────────────────────────────────────── */
@@ -467,7 +495,7 @@
     cv.focus();
     if (!h) return;
 
-    if (h.kind === 'ruler') { FC.player.seek(Math.max(0, O.q(h.t))); drag = { kind: 'scrub' }; return; }
+    if (h.kind === 'ruler') { FC.player.setScrubbing(true); FC.player.seek(Math.max(0, O.q(h.t))); drag = { kind: 'scrub' }; return; }
     if (view.tool === 'hand') { drag = { kind: 'pan', x: e.clientX, scroll: view.scroll }; return; }
 
     if (h.kind === 'clip' && view.tool === 'razor') {
@@ -486,13 +514,16 @@
       const clips = S.sel.list().filter(c => !c.locked);
       if (h.zone === 'in' || h.zone === 'out') {
         S.begin('Trim');
-        drag = { kind: 'trim', edge: h.zone, clip: h.clip, x: p.x, start0: h.clip.start, dur0: h.clip.dur, in0: h.clip.in, roll: e.altKey };
+        const roll = e.altKey ? view.trimMode !== 'roll' : view.trimMode === 'roll';
+        drag = { kind: 'trim', edge: h.zone, clip: h.clip, x: p.x, start0: h.clip.start, dur0: h.clip.dur, in0: h.clip.in, roll };
       } else {
         S.begin('Move');
+        // Alt inverts whatever drag mode is selected, so the other behaviour is always one key away.
+        const mode = e.altKey ? (view.dragMode === 'insert' ? 'overwrite' : 'insert') : view.dragMode;
         drag = {
           kind: 'move', clips, x: p.x, y: p.y, t0: h.t, moved: false,
           starts: clips.map(c => c.start), track0: h.track.id,
-          insert: view.insert && !e.altKey && clips.length >= 1
+          mode, insert: mode === 'insert' && clips.length >= 1
         };
       }
       invalidate(); return;
@@ -512,7 +543,7 @@
       const h = hit(p.x, p.y);
       const cur = !h ? 'default' : h.kind === 'ruler' ? 'ew-resize'
         : view.tool === 'razor' ? 'crosshair' : view.tool === 'hand' ? 'grab' : view.tool === 'slip' ? 'ew-resize'
-          : h.kind === 'clip' ? (h.zone === 'in' || h.zone === 'out' ? 'ew-resize' : 'grab') : 'default';
+          : h.kind === 'clip' ? (h.zone === 'in' || h.zone === 'out' ? 'ew-resize' : view.dragMode === 'swap' ? 'cell' : 'grab') : 'default';
       cv.style.cursor = cur;
       const nh = h && h.kind === 'clip' ? h.clip.id : null;
       if (nh !== hover) { hover = nh; invalidate(); }
@@ -556,6 +587,11 @@
         const dx = p.x - drag.x;
         if (!drag.moved && Math.abs(dx) < 3 && Math.abs(p.y - drag.y) < 4) return;
         drag.moved = true;
+        if (drag.mode === 'swap') {
+          const h2 = hit(p.x, p.y);
+          drag.swapTarget = (h2 && h2.kind === 'clip' && drag.clips.indexOf(h2.clip) < 0) ? h2.clip : null;
+          swapHint = drag.swapTarget; invalidate(); return;
+        }
         const dt = dx / view.pps;
         const L = trackAtY(p.y);
         const targetTrack = L && L.t.kind === (S.trackById(drag.track0).kind) && !L.t.locked ? L.t.id : drag.track0;
@@ -592,10 +628,14 @@
     else if (k === 'slip') S.commit('Slip');
     else if (k === 'move') {
       if (drag.moved) {
-        if (!drag.insert) { O.resolveOverlaps(drag.pendingTrack || drag.track0); }
-        S.commit('Move'); FC.director.rebuildOverlays();
+        if (drag.mode === 'swap') {
+          if (drag.swapTarget && drag.clips[0]) O.swap(drag.clips[0], drag.swapTarget);
+          swapHint = null;
+        } else if (!drag.insert) O.resolveOverlaps(drag.pendingTrack || drag.track0);
+        S.commit(drag.mode === 'swap' ? 'Swap' : 'Move'); FC.director.rebuildOverlays();
       } else S.abort();
     }
+    if (k === 'scrub') FC.player.setScrubbing(false);
     if (k === 'marquee') marquee = null;
     drag = null; snapLine = null; invalidate();
     U.bus.emit('sel');
@@ -656,9 +696,17 @@
     invalidate();
   }
   function ensureVisible(t) { const x = t2x(t); if (x < 0 || x > W - 4) scrollTo(t, true); }
+  /** Playback follow: turn the page instead of yanking the view to centre —
+      centring on every overrun is what read as the timeline "jumping". */
+  function follow(t) {
+    const x = t2x(t);
+    if (x >= -1 && x <= W - 8) return;
+    view.scroll = Math.max(0, t - (W * 0.15) / view.pps);
+    invalidate();
+  }
 
   FC.timeline = {
-    init, invalidate, view, zoomBy, zoomTo, fit, scrollTo, ensureVisible, t2x, x2t,
+    init, invalidate, view, zoomBy, zoomTo, fit, scrollTo, ensureVisible, follow, t2x, x2t,
     get width() { return W; }, resize, RULER_H,
     setTool(t) { view.tool = t; cv && (cv.className = t === 'razor' ? 'razor' : ''); invalidate(); }
   };

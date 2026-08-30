@@ -8,7 +8,7 @@
 
   const P = {
     time: 0, playing: false, rate: 1, loop: false, quality: 0.5,
-    srcAudio: false, guides: false, dropped: 0, fps: 0
+    srcAudio: false, guides: false, dropped: 0, fps: 0, scrubbing: false
   };
   let cv, cx, cw = 960, ch = 540, wall = 0, tAtWall = 0, lastDraw = 0, frames = 0, fpsT = 0;
   const PREROLL = 1.1;
@@ -50,25 +50,55 @@
     return free;
   }
 
-  /* ── image cache (decoded at monitor size) ─────────────────────── */
-  const imgCache = new Map();  // assetId -> ImageBitmap
+  /* ── still cache ───────────────────────────────────────────────────
+     Byte-budgeted, least-recently-*used* eviction, and a bitmap that is on
+     screen this frame is never closed — closing one mid-draw is what made
+     stills flicker back to thumbnail resolution. */
+  const imgCache = new Map();       // assetId -> {bm, bytes, t}
   const imgPending = new Set();
+  const onScreen = new Set();
+  let imgBytes = 0;
+  const IMG_BUDGET = 180 * 1024 * 1024;
+
   function image(a) {
-    const b = imgCache.get(a.id);
-    if (b) return b;
-    if (imgPending.has(a.id)) return FC.media.poster(a);
+    const e = imgCache.get(a.id);
+    if (e) { e.t = performance.now(); imgCache.delete(a.id); imgCache.set(a.id, e); return e.bm; }
+    decodeImage(a);
+    return FC.media.poster(a);      // thumbnail stands in until the full decode lands
+  }
+  function decodeImage(a) {
+    if (!a || a.kind !== 'image' || imgCache.has(a.id) || imgPending.has(a.id)) return;
+    const url = FC.media.urlFor(a.id); if (!url) return;
     imgPending.add(a.id);
-    const url = FC.media.urlFor(a.id);
-    if (!url) return null;
+    const targetW = Math.round(Math.min(a.w || 1920, Math.max(720, cw * 1.3)));
     fetch(url).then(r => r.blob())
-      .then(bl => createImageBitmap(bl, { resizeWidth: Math.min(a.w || cw, Math.max(640, cw)), resizeQuality: 'medium' }))
-      .then(bm => {
-        imgCache.set(a.id, bm); imgPending.delete(a.id);
-        if (imgCache.size > 14) { const k = imgCache.keys().next().value; const old = imgCache.get(k); imgCache.delete(k); old.close && old.close(); }
-        draw();
-      })
+      .then(bl => createImageBitmap(bl, { resizeWidth: targetW, resizeQuality: 'medium' }))
+      .then(bm => { imgPending.delete(a.id); putImage(a.id, bm); if (!P.playing) draw(); })
       .catch(() => imgPending.delete(a.id));
-    return FC.media.poster(a);
+  }
+  function putImage(id, bm) {
+    const bytes = (bm.width || 1) * (bm.height || 1) * 4;
+    imgCache.set(id, { bm, bytes, t: performance.now() }); imgBytes += bytes;
+    while (imgBytes > IMG_BUDGET && imgCache.size > 3) {
+      let victim = null;
+      for (const k of imgCache.keys()) if (!onScreen.has(k)) { victim = k; break; }
+      if (victim == null) break;
+      const e = imgCache.get(victim); imgCache.delete(victim); imgBytes -= e.bytes;
+      if (e.bm.close) e.bm.close();
+    }
+  }
+  /** Decode the stills the playhead is about to reach, so they never pop in. */
+  function prefetchStills(t) {
+    let budget = 3;
+    for (const tr of S.videoTracks()) {
+      if (!tr.enabled) continue;
+      for (const c of S.clipsOn(tr.id)) {
+        if (c.start + c.dur < t) continue;
+        if (c.start > t + 14) break;
+        const a = S.assetById(c.assetId);
+        if (a && a.kind === 'image' && !imgCache.has(a.id) && !imgPending.has(a.id)) { decodeImage(a); if (--budget <= 0) return; }
+      }
+    }
   }
 
   /* ── init ──────────────────────────────────────────────────────── */
@@ -117,11 +147,27 @@
     U.bus.emit('play', false);
   }
   function toggle() { P.playing ? pause() : play(); }
+  let syncQueued = false;
   function seek(t) {
     P.time = clamp(t, 0, Math.max(0, S.duration()));
     tAtWall = P.time; wall = performance.now();
     U.bus.emit('time', P.time);
-    if (!P.playing) { syncAll(true); draw(); }
+    if (!P.playing) requestSync();
+  }
+  /** Scrubbing fires dozens of seeks a second; collapse the media work into
+      one per animation frame, and draw from thumbnails while the drag is live. */
+  function requestSync() {
+    if (syncQueued) return;
+    syncQueued = true;
+    requestAnimationFrame(() => {
+      syncQueued = false;
+      if (!P.scrubbing) { syncAll(); prefetchStills(P.time); }
+      draw();
+    });
+  }
+  function setScrubbing(on) {
+    P.scrubbing = on;
+    if (!on) requestSync();
   }
   function step(n) { seek(P.time + n / S.fps()); }
   function setRate(r) { P.rate = r; tAtWall = P.time; wall = performance.now(); }
@@ -137,6 +183,7 @@
       P.time = t;
       U.bus.emit('time', t);
       schedule();
+      if ((frames & 15) === 0) prefetchStills(t);
       draw();
     }
     frames++;
@@ -263,6 +310,8 @@
     const pinned = new Set(items.filter(i => i.asset.kind === 'video').map(i => i.asset.id));
     for (const it of items) {
       if (it.asset.kind !== 'video') continue;
+      // during a scrub, only touch decoders that already hold this asset
+      if (P.scrubbing && !vslots.some(x => x.assetId === it.asset.id)) continue;
       const s = acquire(vslots, it.asset.id, pinned);
       if (s) { try { if (s.v.readyState >= 1) s.v.currentTime = clamp(it.src, 0, Math.max(0, s.v.duration - 0.02)); } catch (e) { } }
     }
@@ -300,6 +349,8 @@
     cx.globalCompositeOperation = 'source-over'; cx.globalAlpha = 1;
     cx.fillStyle = '#000'; cx.fillRect(0, 0, cw, ch);
     const items = renderList(P.time);
+    onScreen.clear();
+    for (const it of items) if (it.asset.kind === 'image') onScreen.add(it.asset.id);
     let painted = 0;
     for (const it of items) {
       const c = it.clip, a = it.asset;
@@ -360,14 +411,14 @@
 
   /* ── public ────────────────────────────────────────────────────── */
   Object.assign(P, {
-    init, play, pause, toggle, seek, step, setRate, draw, level, fitMonitor,
+    init, play, pause, toggle, seek, step, setRate, draw, level, fitMonitor, setScrubbing, prefetchStills,
     setQuality(q) { P.quality = q; applyQuality(); },
     currentClip() { const m = S.mainTrack(); return m ? S.clipAt(m.id, P.time) : null; },
-    stats() { return { slots: vslots.filter(s => s.assetId).length, images: imgCache.size, dropped: P.dropped, fps: P.fps }; },
+    stats() { return { slots: vslots.filter(s => s.assetId).length, images: imgCache.size, imageBytes: imgBytes, dropped: P.dropped, fps: P.fps }; },
     releaseAll() {
       vslots.forEach(s => { if (s.assetId) FC.media.pinUrl(s.assetId, false); s.assetId = null; s.v.removeAttribute('src'); s.v.load(); });
       aslots.forEach(s => { s.assetId = null; s.v.removeAttribute('src'); });
-      imgCache.forEach(b => b.close && b.close()); imgCache.clear();
+      imgCache.forEach(e => e.bm && e.bm.close && e.bm.close()); imgCache.clear(); imgBytes = 0;
     }
   });
   FC.player = P;

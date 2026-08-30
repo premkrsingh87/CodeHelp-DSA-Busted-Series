@@ -34,6 +34,37 @@ NLE unnecessary for this particular job.
 
 ---
 
+## Two interfaces onto the same edit
+
+Both are always the same document — change one and the other updates immediately.
+
+**Storyboard** (<kbd>Tab</kbd>) — the coarse pass. Clips are cards: drag one between
+two others and a green caret shows where it lands, type a new length straight into the
+card, lock a card to pin it, drop media from the bin at any position. This is the
+"shuffle things around until the order is right" view.
+
+**Timeline** — the fine pass. Frame-accurate trims, razor, slip, roll, transitions,
+overlays, audio.
+
+### Drag and trim modes
+
+Because "what happens to the *other* clips" should be your choice, not a guess:
+
+| Drag mode | Dropping a clip on another… |
+|---|---|
+| **Insert** | pushes the rest along — nothing is overwritten, no gaps appear |
+| **Free** | leaves it exactly where you dropped it, gaps and all |
+| **Swap** | trades the two clips; both keep their own length and slot |
+
+| Trim mode | Dragging a clip edge… |
+|---|---|
+| **Ripple** | moves everything after it, so the cut never leaves a hole |
+| **Roll** | takes frames from one clip and gives them to its neighbour — total length unchanged |
+| **Leave gap** | changes only this clip |
+
+<kbd>Alt</kbd> while dragging inverts whichever mode is active, so the other behaviour is
+always one key away. <kbd>R</kbd> cycles the trim mode.
+
 ## Building
 
 The bar under the monitor is the Director. It is deterministic: the same seed and the
@@ -112,6 +143,10 @@ Canvas-rendered, so 1,400 clips scroll as smoothly as 20.
 - Tools: <kbd>V</kbd> select · <kbd>C</kbd> razor · <kbd>Y</kbd> slip · <kbd>H</kbd> pan.
 - Snapping catches clip edges, the playhead, markers and detected beats.
 - Locked clips are anchors — rebuilds and shuffles flow around them.
+- <kbd>↑</kbd>/<kbd>↓</kbd> walk the cuts of the whole edit, not just one track.
+- Typing in a field never disarms the shortcuts: <kbd>Enter</kbd> or a click on the
+  picture, timeline or storyboard hands the keyboard straight back, and a number field
+  passes letter shortcuts through untouched.
 
 ### Keyboard
 
@@ -124,7 +159,9 @@ Canvas-rendered, so 1,400 clips scroll as smoothly as 20.
 | <kbd>⌥←</kbd> <kbd>⌥→</kbd> | Rotate the running order |
 | <kbd>⌘K</kbd> · <kbd>⌫</kbd> · <kbd>⇧⌫</kbd> | Split · delete · ripple delete |
 | <kbd>[</kbd> <kbd>]</kbd> · <kbd>⌘D</kbd> · <kbd>M</kbd> | Nudge a frame · duplicate · marker |
-| <kbd>N</kbd> · <kbd>R</kbd> · <kbd>⇧Z</kbd> | Snapping · ripple mode · zoom to fit |
+| <kbd>N</kbd> · <kbd>R</kbd> | Snapping · cycle trim mode |
+| <kbd>A</kbd> <kbd>D</kbd> · <kbd>⇧Z</kbd> | Zoom out · zoom in · zoom to fit |
+| <kbd>Tab</kbd> | Show / hide the storyboard |
 | <kbd>⌘S</kbd> <kbd>⌘O</kbd> <kbd>⌘E</kbd> <kbd>⌘I</kbd> | Save · open · export · import |
 
 Press <kbd>?</kbd> in the app for the full sheet.
@@ -204,7 +241,8 @@ or skipped. The transition wedge on the timeline shows you the real length.
 
 ## Speed and memory
 
-Measured on a 30-minute edit, 1,397 clips, in Chromium:
+Measured on a 30-minute edit, 1,397 clips, in Chromium (and separately on the harder
+case of 21 full-size vertical stills over a 2-minute music bed):
 
 | | |
 |---|---|
@@ -214,6 +252,8 @@ Measured on a 30-minute edit, 1,397 clips, in Chromium:
 | Write the FCP7 XML (4 MB) | 14 ms |
 | Write the ffmpeg script | 11 ms |
 | Timeline paint | 60 fps |
+| Scrubbing the playhead | 17 ms per move |
+| Playback frame pacing | 16.7 ms median, one dropped frame in 12 s |
 | JS heap | 13.6 MB |
 
 How it stays there:
@@ -228,6 +268,12 @@ How it stays there:
   decoders (4). The MB chip in the title bar is live — click it to release frames.
 - **No DOM per clip.** The timeline is one canvas; the bin is virtualised.
 - **Re-dropping the same folder relinks by fingerprint** instead of creating duplicates.
+- **One serialisation per edit.** Undo used to stringify the whole document twice for
+  every change, which is what made a long session feel progressively heavier.
+- **Scrubbing draws from the filmstrip cache** and only re-syncs decoders when you let
+  go, so dragging the playhead stays at frame rate however long the edit is.
+- **Stills are decoded ahead of the playhead** and evicted least-recently-*used*, never
+  while they are on screen.
 
 ---
 
@@ -280,6 +326,7 @@ tools/fluxcut/
     10-bin.js         virtualised media bin
     11-inspector.js   the four inspector tabs
     12-app.js         wiring, shortcuts, modals, export dialog
+    13-storyboard.js  the card strip: drag to reorder, type a length
 ```
 
 Edit anything in `src/`, run `node build.js`, reload. Modules are plain classic scripts

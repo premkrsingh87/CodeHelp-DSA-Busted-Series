@@ -67,7 +67,8 @@
     const n = slotCount(a); if (n <= 1) return 0;
     return clamp(Math.round((t / Math.max(0.001, a.duration)) * (n - 1)), 0, n - 1);
   }
-  const slotKey = (a, i) => a.key + '#' + i + '/' + slotCount(a);
+  const THUMB_REV = 2;   // bump when the thumbnail rendering changes
+  const slotKey = (a, i) => a.key + '#' + i + '/' + slotCount(a) + '~' + THUMB_REV;
   const slotTime = (a, i) => { const n = slotCount(a); return n <= 1 ? 0 : (i / (n - 1)) * Math.max(0, a.duration - 0.05); };
 
   /* ── probing ───────────────────────────────────────────────────── */
@@ -236,11 +237,14 @@
     U.bus.emit('thumbs');
   }
 
+  /** Crop to fill, not letterbox. A vertical source in a wide sequence gets cropped
+      on screen and on export, so a thumbnail with black bars would be a lie — and
+      at filmstrip size those bars were most of the picture. */
   function drawFit(src, sw, sh) {
     const cw = cfg.thumbW, ch = cfg.thumbH;
     cx.fillStyle = '#0a0b0d'; cx.fillRect(0, 0, cw, ch);
     if (!sw || !sh) return;
-    const s = Math.min(cw / sw, ch / sh);
+    const s = Math.max(cw / sw, ch / sh);
     const w = sw * s, h = sh * s;
     cx.drawImage(src, (cw - w) / 2, (ch - h) / 2, w, h);
   }

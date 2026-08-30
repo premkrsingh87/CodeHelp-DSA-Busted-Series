@@ -86,6 +86,20 @@
   function displayTracks() { return videoTracks().slice().reverse().concat(audioTracks()); }
   function mainTrack() { return videoTracks()[0]; }
 
+  /** Every cut across the enabled video tracks — what ↑/↓ navigate between. */
+  function editPoints() {
+    if (cache.eps) return cache.eps;
+    const set = new Set([0]);
+    for (const t of videoTracks()) {
+      if (!t.enabled) continue;
+      for (const c of clipsOn(t.id)) { set.add(Math.round(c.start * 1000) / 1000); set.add(Math.round((c.start + c.dur) * 1000) / 1000); }
+    }
+    if (set.size <= 1) for (const t of audioTracks())
+      for (const c of clipsOn(t.id)) { set.add(Math.round(c.start * 1000) / 1000); set.add(Math.round((c.start + c.dur) * 1000) / 1000); }
+    const list = Array.from(set).sort((a, b) => a - b);
+    cache.eps = list; return list;
+  }
+
   function duration() {
     if (cache.dur != null) return cache.dur;
     let e = 0;
@@ -114,45 +128,55 @@
   function restore(str) {
     const o = JSON.parse(str);
     for (const k of SNAP_KEYS) FC.doc[k] = o[k];
+    baseline = str;
     // drop selections that no longer exist
     const ids = new Set(FC.doc.clips.map(c => c.id));
     sel.clips = new Set(Array.from(sel.clips).filter(id => ids.has(id)));
     bump(); U.bus.emit('doc'); U.bus.emit('sel');
   }
 
-  let pending = null;
+  // The previous committed state, kept serialised so an edit costs ONE stringify
+  // instead of two. Serialising twice per edit is what made long sessions crawl.
+  let baseline = null;
+  let markAtBegin = -1;
+  function ensureBaseline() { if (baseline == null) baseline = snapshot(); }
+
   /** Call *before* mutating. Pairs with commit(). Nested calls collapse into one undo step. */
   function begin(label) {
-    if (hist.group++ === 0) { pending = snapshot(); hist.label = label; }
+    if (hist.group++ === 0) { ensureBaseline(); markAtBegin = ver; hist.label = label; }
     return true;
   }
   function commit(label) {
     if (--hist.group > 0) return;
-    if (pending == null) return;
+    if (baseline == null) return;
+    if (ver === markAtBegin) { hist.group = 0; return; }   // nothing touched the document
     const now = snapshot();
-    if (now !== pending) {
-      hist.past.push({ s: pending, label: label || hist.label || 'edit' });
+    if (now !== baseline) {
+      hist.past.push({ s: baseline, label: label || hist.label || 'edit' });
       if (hist.past.length > HIST_MAX) hist.past.shift();
       hist.future.length = 0;
       FC.doc.dirty = true;
+      baseline = now;
     }
-    pending = null; bump();
+    bump();
     U.bus.emit('doc'); U.bus.emit('hist');
   }
   /** Convenience: wrap a mutating function in one undo step. */
   function edit(label, fn) { begin(label); try { return fn(); } finally { commit(label); } }
-  function abort() { if (--hist.group <= 0) { if (pending != null) restore(pending); pending = null; hist.group = 0; } }
+  function abort() { if (--hist.group <= 0) { if (baseline != null) restore(baseline); hist.group = 0; } }
 
   function undo() {
     if (!hist.past.length) return U.toast('Nothing to undo', 'warn');
-    const cur = snapshot(); const st = hist.past.pop();
-    hist.future.push({ s: cur, label: st.label });
+    ensureBaseline();
+    const st = hist.past.pop();
+    hist.future.push({ s: baseline, label: st.label });
     restore(st.s); U.bus.emit('hist'); U.toast('Undo · ' + st.label, 'info', 1400);
   }
   function redo() {
     if (!hist.future.length) return U.toast('Nothing to redo', 'warn');
-    const cur = snapshot(); const st = hist.future.pop();
-    hist.past.push({ s: cur, label: st.label });
+    ensureBaseline();
+    const st = hist.future.pop();
+    hist.past.push({ s: baseline, label: st.label });
     restore(st.s); U.bus.emit('hist'); U.toast('Redo · ' + st.label, 'info', 1400);
   }
 
@@ -203,7 +227,7 @@
     for (const k of SNAP_KEYS) if (o[k] !== undefined) d[k] = o[k];
     d.id = o.id || uid('proj');
     d.build = Object.assign({}, DEFAULTS.build, d.build || {});
-    FC.doc = d; FC.files.clear(); sel.clips.clear(); hist.past.length = 0; hist.future.length = 0;
+    FC.doc = d; FC.files.clear(); sel.clips.clear(); hist.past.length = 0; hist.future.length = 0; baseline = null;
     bump(); U.bus.emit('doc'); U.bus.emit('assets'); U.bus.emit('sel'); U.bus.emit('hist');
     return d;
   }
@@ -211,7 +235,7 @@
   FC.store = {
     newDoc, mkTrack, sel, bump, get ver() { return ver; },
     trackById, assetById, clipById, clipsOn, clipAt, videoTracks, audioTracks, displayTracks, mainTrack,
-    duration, fps, snap, srcOut, handles,
+    duration, editPoints, fps, snap, srcOut, handles,
     begin, commit, edit, abort, undo, redo, hist,
     addClip, removeClips, addTrack, removeTrack, toJSON, fromJSON, DEFAULTS
   };

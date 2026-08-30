@@ -13,7 +13,8 @@
     FC.player.init();
     FC.bin.init();
     FC.inspector.init();
-    bindTop(); bindTransport(); bindDirector(); bindTimelineTools(); bindResizers(); bindKeys(); bindGlobalDnD();
+    FC.storyboard.init();
+    bindTop(); bindTransport(); bindDirector(); bindTimelineTools(); bindResizers(); bindKeys(); bindGlobalDnD(); bindFocus();
     syncChrome();
     U.bus.on('doc', U.raf(() => { syncChrome(); syncTime(); }));
     U.bus.on('sel', U.raf(syncSelInfo));
@@ -94,7 +95,7 @@
     const tag = $('#monClipTag');
     if (tag) tag.textContent = c ? (c.name || '—') : '—';
     FC.timeline.invalidate();
-    if (FC.player.playing) FC.timeline.ensureVisible(t);
+    if (FC.player.playing) FC.timeline.follow(t);
   }
 
   /* ══════════ director strip ══════════ */
@@ -158,12 +159,22 @@
     });
     const v = FC.timeline.view;
     $('#snapBtn').classList.toggle('on', v.snap);
-    $('#rippleBtn').classList.toggle('on', v.ripple);
     $('#snapBtn').onclick = e => { v.snap = !v.snap; e.currentTarget.classList.toggle('on', v.snap); };
-    $('#rippleBtn').onclick = e => { v.ripple = !v.ripple; e.currentTarget.classList.toggle('on', v.ripple); };
+    $('#dragModeSel').value = v.dragMode;
+    $('#trimModeSel').value = v.trimMode;
+    $('#dragModeSel').onchange = e => { v.dragMode = e.target.value; e.target.blur(); U.toast(DRAG_HELP[v.dragMode], 'info', 3000); };
+    $('#trimModeSel').onchange = e => { v.trimMode = e.target.value; e.target.blur(); U.toast(TRIM_HELP[v.trimMode], 'info', 3000); };
+    $('#sbToggle').onclick = () => toggleStoryboard();
+    $('#fitAudioQuick').onclick = () => inspectorAction('fitToAudio');
     $('#splitBtn').onclick = splitAtPlayhead;
     $('#delBtn').onclick = () => deleteSelection(true);
-    $('#lockClipBtn').onclick = () => S.edit('Lock', () => { const l = S.sel.list(); const on = !l.every(c => c.locked); l.forEach(c => c.locked = on); });
+    $('#lockClipBtn').onclick = () => {
+      const l = S.sel.list();
+      if (!l.length) return U.toast('Select the clips you want to pin in place first', 'warn');
+      const on = !l.every(c => c.locked);
+      S.edit('Lock', () => l.forEach(c => c.locked = on));
+      U.toast(on ? l.length + ' clip' + (l.length > 1 ? 's' : '') + ' locked — builds and shuffles flow around them' : 'Unlocked');
+    };
     $('#markerBtn').onclick = addMarker;
     $('#addVBtn').onclick = () => { S.edit('Add track', () => S.addTrack('video')); FC.inspector.render(); };
     $('#addABtn').onclick = () => { S.edit('Add track', () => S.addTrack('audio')); FC.inspector.render(); };
@@ -180,6 +191,23 @@
     }));
   }
 
+  const DRAG_HELP = {
+    insert: 'Insert — dropping a clip between two others pushes the rest along. Hold Alt to move freely.',
+    overwrite: 'Free — clips go exactly where you drop them and can leave gaps. Hold Alt to insert instead.',
+    swap: 'Swap — drag one clip onto another and the two trade places, keeping every length.'
+  };
+  const TRIM_HELP = {
+    ripple: 'Ripple — dragging an edge moves everything after it, so the cut never leaves a hole.',
+    roll: 'Roll — dragging a cut takes frames from one clip and gives them to its neighbour. Total length never changes.',
+    gap: 'Leave gap — only this clip changes; the hole stays where it is.'
+  };
+
+  function toggleStoryboard(force) {
+    const on = force == null ? !FC.storyboard.visible : force;
+    FC.storyboard.setVisible(on);
+    $('#sbToggle').classList.toggle('on', on);
+  }
+
   function splitAtPlayhead() {
     const t = FC.player.time;
     S.edit('Split', () => {
@@ -191,7 +219,7 @@
     });
   }
   function deleteSelection(ripple) {
-    if (!S.sel.clips.size) return;
+    if (!S.sel.clips.size) return U.toast('Select a clip first — click one on the timeline or a storyboard card', 'warn');
     S.edit('Delete', () => {
       const n = O.deleteClips(new Set(S.sel.clips), ripple);
       S.sel.clear(); FC.director.rebuildOverlays();
@@ -286,12 +314,36 @@
   }
 
   /* ══════════ keyboard ══════════ */
+  /** Typing in a field must not permanently disarm the app's shortcuts. */
+  function bindFocus() {
+    // a select hands the keyboard back the moment you pick something
+    document.addEventListener('change', e => {
+      if (e.target.tagName === 'SELECT' && !e.target.closest('#modal')) e.target.blur();
+    }, true);
+    // clicking the picture, the timeline or the storyboard means "I'm editing again"
+    document.addEventListener('pointerdown', e => {
+      if (!e.target.closest('#tlCanvas, #monitorWrap, #sbScroll, #binScroll, #trackHeads')) return;
+      const a = document.activeElement;
+      if (a && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) a.blur();
+    }, true);
+  }
+
+  const NUM_KEYS = /^([0-9.,\-+eE]|Arrow|Backspace|Delete|Tab|Home|End|Page)/;
+  const SELECT_OWNED = [' ', 'Enter', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
   function bindKeys() {
     window.addEventListener('keydown', e => {
       const tag = (e.target.tagName || '').toUpperCase();
-      if (/INPUT|TEXTAREA|SELECT/.test(tag)) {
-        if (e.key === 'Escape') e.target.blur();
-        return;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') {
+        if (e.key === 'Escape' || e.key === 'Enter') { e.target.blur(); e.preventDefault(); return; }
+        // A number field only needs digits and arrows. Letting Space or B or S sit
+        // there doing nothing is how the whole app appears to stop responding.
+        const numeric = tag === 'INPUT' && e.target.type === 'number';
+        if (!numeric || NUM_KEYS.test(e.key) || e.ctrlKey || e.metaKey || e.altKey) return;
+        e.target.blur();
+      }
+      if (tag === 'SELECT') {
+        // the select keeps the keys it genuinely uses; everything else reaches the app
+        if (SELECT_OWNED.indexOf(e.key) >= 0) { if (e.key === 'Escape') e.target.blur(); return; }
       }
       const mod = e.ctrlKey || e.metaKey;
       const k = e.key;
@@ -324,6 +376,7 @@
         case '-': case '_': FC.timeline.zoomBy(1 / 1.4, FC.player.time); break;
         case '[': nudge(-1); break;
         case ']': nudge(1); break;
+        case 'Tab': e.preventDefault(); toggleStoryboard(); break;
       }
       const low = k.toLowerCase();
       if (low === 'j') { FC.player.setRate(FC.player.rate > 0 ? -1 : Math.max(-4, FC.player.rate * 2)); FC.player.play(); }
@@ -335,14 +388,23 @@
       else if (low === 'c') pickTool('razor');
       else if (low === 'y') pickTool('slip');
       else if (low === 'h') pickTool('hand');
+      else if (low === 'a') FC.timeline.zoomBy(1 / 1.45, FC.player.time);
+      else if (low === 'd') FC.timeline.zoomBy(1.45, FC.player.time);
       else if (low === 'n') $('#snapBtn').click();
-      else if (low === 'r') $('#rippleBtn').click();
+      else if (low === 'r') cycleTrimMode();
       else if (low === 'm') addMarker();
       else if (low === 'f') $('#fsBtn').click();
       else if (low === 'z' && e.shiftKey) FC.timeline.fit();
     });
   }
   function pickTool(t) { const b = $('#toolSeg button[data-tool="' + t + '"]'); if (b) b.click(); }
+  function cycleTrimMode() {
+    const order = ['ripple', 'roll', 'gap'];
+    const v = FC.timeline.view;
+    v.trimMode = order[(order.indexOf(v.trimMode) + 1) % 3];
+    $('#trimModeSel').value = v.trimMode;
+    U.toast(TRIM_HELP[v.trimMode], 'info', 3000);
+  }
   function nudge(dir) {
     if (!S.sel.clips.size) return;
     S.edit('Nudge', () => { O.moveBy(S.sel.list(), dir / S.fps()); const t = S.sel.list()[0]; if (t) O.resolveOverlaps(t.track); });
@@ -351,16 +413,17 @@
     const t = S.trackById(S.sel.targetTrack) || S.mainTrack(); if (!t) return;
     S.edit('Rotate order', () => { O.rotate(t.id, dir); FC.director.rebuildOverlays(); });
   }
+  /** ↑/↓ walk the cuts of the whole edit, never a single track you happened to click. */
   function jumpCut(dir) {
-    const t = S.trackById(S.sel.targetTrack) || S.mainTrack(); if (!t) return;
-    const list = S.clipsOn(t.id), now = FC.player.time;
+    const pts = S.editPoints();
+    if (pts.length < 2) return;
+    const now = FC.player.time;
     let best = null;
-    for (const c of list) {
-      if (dir > 0 && c.start > now + 1e-4) { best = c.start; break; }
-      if (dir < 0 && c.start < now - 1e-4) best = c.start;
-    }
-    if (best == null) best = dir > 0 ? S.duration() : 0;
+    if (dir > 0) { for (const p of pts) if (p > now + 1e-3) { best = p; break; } }
+    else { for (let i = pts.length - 1; i >= 0; i--) if (pts[i] < now - 1e-3) { best = pts[i]; break; } }
+    if (best == null) best = dir > 0 ? pts[pts.length - 1] : 0;
     FC.player.seek(best);
+    FC.timeline.ensureVisible(best);
   }
   function duplicateSelection() {
     const list = S.sel.list(); if (!list.length) return;
@@ -474,10 +537,11 @@
       ${K('⌥ ← →', 'Rotate the running order')}</table></div>
       <div><h4 style="font-size:11px;text-transform:uppercase;color:var(--txt-3);margin-bottom:6px">Editing</h4><table class="grid">
       ${K('V C Y H', 'Select · Razor · Slip · Pan')}${K('⌘K', 'Split at playhead')}${K('⌫', 'Delete')}${K('⇧⌫', 'Ripple delete')}
-      ${K('[ ]', 'Nudge one frame')}${K('⌘D', 'Duplicate')}${K('N', 'Snapping')}${K('R', 'Ripple mode')}${K('M', 'Marker')}${K('⌘A', 'Select all clips')}</table>
+      ${K('[ ]', 'Nudge one frame')}${K('⌘D', 'Duplicate')}${K('N', 'Snapping')}${K('R', 'Cycle trim mode')}${K('M', 'Marker')}${K('⌘A', 'Select all clips')}
+      ${K('Tab', 'Show / hide the storyboard')}</table>
       <h4 style="font-size:11px;text-transform:uppercase;color:var(--txt-3);margin:14px 0 6px">Project</h4><table class="grid">
       ${K('⌘S', 'Save project')}${K('⌘O', 'Open project')}${K('⌘E', 'Export')}${K('⌘I', 'Import media')}${K('⌘Z', 'Undo')}${K('⇧⌘Z', 'Redo')}
-      ${K('+ −', 'Zoom')}${K('⇧Z', 'Zoom to fit')}</table></div></div>
+      ${K('A  D', 'Zoom out · zoom in')}${K('+ −', 'Zoom')}${K('⇧Z', 'Zoom to fit')}</table></div></div>
       <div class="hint" style="margin-top:14px">On the timeline: drag a clip between two others to insert it — everything re-flows. Hold <kbd>Alt</kbd> while dragging to move freely, <kbd>Alt</kbd> on a clip edge to roll the cut, and scroll with <kbd>Ctrl</kbd> to zoom.</div>`,
       ['-', { label: 'Close', cls: 'primary', act: closeModal }], true);
   }
@@ -595,13 +659,17 @@
       xfNone: () => S.edit('Remove transitions', () => S.sel.list().forEach(c => c.xf = null)),
       addVTrack: () => S.edit('Add track', () => S.addTrack('video')),
       addOverlay: () => {
-        const a2 = FC.bin.selectedAssets()[0];
-        if (!a2) return U.toast('Select a file in the bin first', 'warn');
+        const srcSel = $('#inspBody [data-k="newOvSource"]');
+        const id = (srcSel && srcSel.value) || FC.inspector.overlaySource;
+        const a2 = S.assetById(id);
+        if (!a2) return U.toast('Import a video or image to use as an overlay', 'warn');
         const trk = $('#inspBody [data-k="newOvTrack"]');
         let tid = trk && trk.value;
-        if (!tid) { S.edit('Add track', () => { tid = S.addTrack('video').id; }); }
+        if (!tid || !S.trackById(tid)) S.edit('Add track', () => { tid = S.addTrack('video').id; });
         S.edit('Add overlay', () => { FC.director.addOverlayRule(a2.id, tid); FC.director.rebuildOverlays(); });
-        U.toast('Overlay added — it repeats across the whole edit');
+        const made = FC.doc.clips.filter(c => c.gen).length;
+        U.toast(`Overlay added · ${made} instance${made === 1 ? '' : 's'} across the edit`);
+        FC.inspector.render();
       },
       ovReroll: () => { const r = FC.doc.overlays.find(x => x.id === arg); if (r) S.edit('Re-roll', () => { r.seed = Math.floor(Math.random() * 9999); FC.director.rebuildOverlays(); }); },
       ovDel: () => S.edit('Remove overlay', () => { FC.doc.overlays = FC.doc.overlays.filter(x => x.id !== arg); FC.doc.clips = FC.doc.clips.filter(c => c.ruleId !== arg); S.bump(); }),
@@ -665,8 +733,9 @@
     (acts[a] || (() => { }))();
   }
   function placeAudio(at) {
-    const a = FC.bin.selectedAssets().filter(x => x.kind === 'audio')[0];
-    if (!a) return U.toast('Select an audio file in the bin', 'warn');
+    const srcSel = $('#inspBody [data-k="newAudioSource"]');
+    const a = S.assetById((srcSel && srcSel.value) || FC.inspector.audioSourceId);
+    if (!a) return U.toast('Import an audio file first', 'warn');
     const trkSel = $('#inspBody [data-k="newAudioTrack"]');
     const tid = (trkSel && trkSel.value) || (S.audioTracks()[0] || {}).id;
     S.edit('Place audio', () => {
@@ -904,7 +973,7 @@
 
   Object.assign(app, {
     init, importFiles, appendAsset, dropAssets, setFps, doBuild, doReshuffle,
-    clipMenu, trackMenu, assetMenu, inspectorAction, addMarker, showTab: t => FC.inspector.show(t),
+    clipMenu, trackMenu, assetMenu, inspectorAction, addMarker, showTab: t => FC.inspector.show(t), toggleStoryboard,
     openModal, closeModal, confirmDialog, exportDialog, helpDialog, saveProject, loadJson
   });
   FC.app = app;

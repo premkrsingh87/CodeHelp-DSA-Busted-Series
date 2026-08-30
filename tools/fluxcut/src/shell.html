@@ -189,8 +189,17 @@
         <button data-tool="slip" title="Slip — drag the source inside a clip (Y)">↔</button>
         <button data-tool="hand" title="Pan (H)">✋</button>
       </div>
+      <select id="dragModeSel" style="width:auto;height:24px" title="What happens when you drag a clip onto another">
+        <option value="insert">Drag: Insert</option>
+        <option value="overwrite">Drag: Free</option>
+        <option value="swap">Drag: Swap</option>
+      </select>
+      <select id="trimModeSel" style="width:auto;height:24px" title="What happens to the neighbours when you trim an edge">
+        <option value="ripple">Trim: Ripple</option>
+        <option value="roll">Trim: Roll</option>
+        <option value="gap">Trim: Leave gap</option>
+      </select>
       <button class="btn sm" id="snapBtn" title="Snapping (N)">⌗ Snap</button>
-      <button class="btn sm" id="rippleBtn" title="Ripple edits — closing gaps automatically (R)">⇥ Ripple</button>
       <div style="width:1px;height:16px;background:var(--line)"></div>
       <button class="btn sm" id="splitBtn" title="Split at playhead (Ctrl+K)">Split</button>
       <button class="btn sm" id="delBtn" title="Ripple delete (Shift+Del)">Delete</button>
@@ -199,13 +208,30 @@
       <div style="width:1px;height:16px;background:var(--line)"></div>
       <button class="btn sm" id="addVBtn" title="Add video track">+V</button>
       <button class="btn sm" id="addABtn" title="Add audio track">+A</button>
+      <button class="btn sm" id="sbToggle" title="Storyboard — drag clips between each other (Tab)">⧉ Storyboard</button>
       <div class="spacer"></div>
+      <div id="tlMismatch" style="display:none"><span></span><button class="btn sm" id="fitAudioQuick" title="Stretch the picture so it ends with the track">Fit to audio</button></div>
       <span class="pill" id="selInfo">0 selected</span>
       <button class="btn icon sm" id="zoomOutBtn" title="Zoom out (−)">−</button>
       <input type="range" id="zoomRange" min="0" max="1000" value="380" style="width:104px" title="Zoom">
       <button class="btn icon sm" id="zoomInBtn" title="Zoom in (+)">+</button>
       <button class="btn sm" id="fitBtn" title="Zoom to fit (Shift+Z)">Fit</button>
     </div>
+    <section id="storyboard" style="display:none">
+      <div id="sbHead">
+        <b>Storyboard</b>
+        <select id="sbTrack" style="width:auto;height:22px" title="Which track to lay out"></select>
+        <span class="pill" id="sbCount">0 clips</span>
+        <span class="hint">drag a card between two others to move it · type a new length · drop media from the bin straight in</span>
+        <div class="spacer"></div>
+        <button class="btn sm" id="sbShuffle" title="Reshuffle the running order (S)">⤮ Shuffle</button>
+        <button class="btn sm" id="sbReverse">⇄ Reverse</button>
+        <button class="btn sm" id="sbEven" title="Give every clip the same length">≡ Even</button>
+        <button class="btn icon sm ghost" id="sbClose" title="Hide the storyboard">✕</button>
+      </div>
+      <div id="sbScroll"><div id="sbInner"></div></div>
+    </section>
+
     <div id="tlMain">
       <div id="trackHeads"><div id="trackHeadsInner"></div></div>
       <div id="tlScrollWrap">

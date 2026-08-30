@@ -61,7 +61,7 @@ input,select,textarea{user-select:text}
 #app{
   display:grid;height:100vh;
   grid-template-columns:var(--col-bin,296px) 1fr var(--col-insp,300px);
-  grid-template-rows:var(--h-top) minmax(0,1fr) var(--row-tl,318px);
+  grid-template-rows:var(--h-top) minmax(0,1fr) calc(var(--row-tl,318px) + var(--row-sb,0px));
   grid-template-areas:"top top top" "bin stage insp" "tl tl tl";
 }
 #topbar{grid-area:top}
@@ -361,6 +361,52 @@ table.grid td.n{font-family:var(--mono);text-align:right}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .pill{padding:1px 6px;border-radius:20px;background:var(--panel-3);font-size:10px;color:var(--txt-2);font-family:var(--mono)}
 
+
+/* ─────────── storyboard strip ─────────── */
+#storyboard{flex:none;height:142px;display:flex;flex-direction:column;border-bottom:1px solid var(--line);background:var(--panel-2)}
+#sbHead{height:26px;flex:none;display:flex;align-items:center;gap:7px;padding:0 8px;border-bottom:1px solid var(--line)}
+#sbHead b{font-size:10.5px;font-weight:650;letter-spacing:.5px;text-transform:uppercase;color:var(--txt-2)}
+#sbHead .hint{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sbScroll{flex:1;overflow-x:auto;overflow-y:hidden;position:relative}
+#sbInner{position:relative;height:100%;min-width:100%}
+.sbc{
+  position:absolute;top:6px;width:124px;height:98px;border-radius:var(--r);
+  background:var(--panel-3);border:1px solid var(--line-2);overflow:hidden;
+  cursor:grab;contain:layout paint style;transition:border-color .1s,box-shadow .1s;
+  display:flex;flex-direction:column;
+}
+.sbc:hover{border-color:#46505f}
+.sbc.sel{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.sbc.live{box-shadow:inset 0 2px 0 var(--err)}
+.sbc.dragging{opacity:.45;cursor:grabbing}
+.sbc.locked{border-color:var(--warn)}
+.sbc-thumb{position:relative;height:54px;flex:none;background:#07080a}
+.sbc-thumb canvas{width:100%;height:100%;object-fit:cover;display:block}
+.sbc-idx{
+  position:absolute;top:3px;left:3px;min-width:15px;height:14px;padding:0 3px;border-radius:3px;
+  background:rgba(6,8,11,.82);color:#cfd6de;font:600 9.5px var(--mono);display:grid;place-items:center;
+}
+.sbc-lock{position:absolute;top:3px;right:3px;font-size:9px;opacity:.25;cursor:pointer}
+.sbc.locked .sbc-lock{opacity:1}
+.sbc-lock:hover{opacity:.9}
+.sbc-name{
+  flex:1;padding:3px 5px 0;font-size:10px;line-height:1.3;color:var(--txt-2);
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+}
+.sbc-foot{display:flex;gap:3px;align-items:center;padding:0 4px 4px}
+.sbc-dur{height:18px;font-size:10px;padding:0 4px;text-align:center;flex:1}
+.sbc-x{
+  width:18px;height:18px;flex:none;border-radius:3px;color:var(--txt-3);font-size:10px;
+  border:1px solid transparent;
+}
+.sbc-x:hover{background:rgba(245,87,108,.15);color:var(--err);border-color:rgba(245,87,108,.35)}
+#sbCaret{
+  position:absolute;top:4px;bottom:4px;width:3px;border-radius:2px;background:var(--ok);
+  box-shadow:0 0 10px var(--ok);display:none;pointer-events:none;
+}
+#tlMismatch{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--warn)}
+#tlMismatch span{white-space:nowrap}
+
 </style>
 </head>
 <body>
@@ -555,8 +601,17 @@ table.grid td.n{font-family:var(--mono);text-align:right}
         <button data-tool="slip" title="Slip — drag the source inside a clip (Y)">↔</button>
         <button data-tool="hand" title="Pan (H)">✋</button>
       </div>
+      <select id="dragModeSel" style="width:auto;height:24px" title="What happens when you drag a clip onto another">
+        <option value="insert">Drag: Insert</option>
+        <option value="overwrite">Drag: Free</option>
+        <option value="swap">Drag: Swap</option>
+      </select>
+      <select id="trimModeSel" style="width:auto;height:24px" title="What happens to the neighbours when you trim an edge">
+        <option value="ripple">Trim: Ripple</option>
+        <option value="roll">Trim: Roll</option>
+        <option value="gap">Trim: Leave gap</option>
+      </select>
       <button class="btn sm" id="snapBtn" title="Snapping (N)">⌗ Snap</button>
-      <button class="btn sm" id="rippleBtn" title="Ripple edits — closing gaps automatically (R)">⇥ Ripple</button>
       <div style="width:1px;height:16px;background:var(--line)"></div>
       <button class="btn sm" id="splitBtn" title="Split at playhead (Ctrl+K)">Split</button>
       <button class="btn sm" id="delBtn" title="Ripple delete (Shift+Del)">Delete</button>
@@ -565,13 +620,30 @@ table.grid td.n{font-family:var(--mono);text-align:right}
       <div style="width:1px;height:16px;background:var(--line)"></div>
       <button class="btn sm" id="addVBtn" title="Add video track">+V</button>
       <button class="btn sm" id="addABtn" title="Add audio track">+A</button>
+      <button class="btn sm" id="sbToggle" title="Storyboard — drag clips between each other (Tab)">⧉ Storyboard</button>
       <div class="spacer"></div>
+      <div id="tlMismatch" style="display:none"><span></span><button class="btn sm" id="fitAudioQuick" title="Stretch the picture so it ends with the track">Fit to audio</button></div>
       <span class="pill" id="selInfo">0 selected</span>
       <button class="btn icon sm" id="zoomOutBtn" title="Zoom out (−)">−</button>
       <input type="range" id="zoomRange" min="0" max="1000" value="380" style="width:104px" title="Zoom">
       <button class="btn icon sm" id="zoomInBtn" title="Zoom in (+)">+</button>
       <button class="btn sm" id="fitBtn" title="Zoom to fit (Shift+Z)">Fit</button>
     </div>
+    <section id="storyboard" style="display:none">
+      <div id="sbHead">
+        <b>Storyboard</b>
+        <select id="sbTrack" style="width:auto;height:22px" title="Which track to lay out"></select>
+        <span class="pill" id="sbCount">0 clips</span>
+        <span class="hint">drag a card between two others to move it · type a new length · drop media from the bin straight in</span>
+        <div class="spacer"></div>
+        <button class="btn sm" id="sbShuffle" title="Reshuffle the running order (S)">⤮ Shuffle</button>
+        <button class="btn sm" id="sbReverse">⇄ Reverse</button>
+        <button class="btn sm" id="sbEven" title="Give every clip the same length">≡ Even</button>
+        <button class="btn icon sm ghost" id="sbClose" title="Hide the storyboard">✕</button>
+      </div>
+      <div id="sbScroll"><div id="sbInner"></div></div>
+    </section>
+
     <div id="tlMain">
       <div id="trackHeads"><div id="trackHeadsInner"></div></div>
       <div id="tlScrollWrap">
@@ -895,6 +967,20 @@ window.FC = window.FC || {};
   function displayTracks() { return videoTracks().slice().reverse().concat(audioTracks()); }
   function mainTrack() { return videoTracks()[0]; }
 
+  /** Every cut across the enabled video tracks — what ↑/↓ navigate between. */
+  function editPoints() {
+    if (cache.eps) return cache.eps;
+    const set = new Set([0]);
+    for (const t of videoTracks()) {
+      if (!t.enabled) continue;
+      for (const c of clipsOn(t.id)) { set.add(Math.round(c.start * 1000) / 1000); set.add(Math.round((c.start + c.dur) * 1000) / 1000); }
+    }
+    if (set.size <= 1) for (const t of audioTracks())
+      for (const c of clipsOn(t.id)) { set.add(Math.round(c.start * 1000) / 1000); set.add(Math.round((c.start + c.dur) * 1000) / 1000); }
+    const list = Array.from(set).sort((a, b) => a - b);
+    cache.eps = list; return list;
+  }
+
   function duration() {
     if (cache.dur != null) return cache.dur;
     let e = 0;
@@ -923,45 +1009,55 @@ window.FC = window.FC || {};
   function restore(str) {
     const o = JSON.parse(str);
     for (const k of SNAP_KEYS) FC.doc[k] = o[k];
+    baseline = str;
     // drop selections that no longer exist
     const ids = new Set(FC.doc.clips.map(c => c.id));
     sel.clips = new Set(Array.from(sel.clips).filter(id => ids.has(id)));
     bump(); U.bus.emit('doc'); U.bus.emit('sel');
   }
 
-  let pending = null;
+  // The previous committed state, kept serialised so an edit costs ONE stringify
+  // instead of two. Serialising twice per edit is what made long sessions crawl.
+  let baseline = null;
+  let markAtBegin = -1;
+  function ensureBaseline() { if (baseline == null) baseline = snapshot(); }
+
   /** Call *before* mutating. Pairs with commit(). Nested calls collapse into one undo step. */
   function begin(label) {
-    if (hist.group++ === 0) { pending = snapshot(); hist.label = label; }
+    if (hist.group++ === 0) { ensureBaseline(); markAtBegin = ver; hist.label = label; }
     return true;
   }
   function commit(label) {
     if (--hist.group > 0) return;
-    if (pending == null) return;
+    if (baseline == null) return;
+    if (ver === markAtBegin) { hist.group = 0; return; }   // nothing touched the document
     const now = snapshot();
-    if (now !== pending) {
-      hist.past.push({ s: pending, label: label || hist.label || 'edit' });
+    if (now !== baseline) {
+      hist.past.push({ s: baseline, label: label || hist.label || 'edit' });
       if (hist.past.length > HIST_MAX) hist.past.shift();
       hist.future.length = 0;
       FC.doc.dirty = true;
+      baseline = now;
     }
-    pending = null; bump();
+    bump();
     U.bus.emit('doc'); U.bus.emit('hist');
   }
   /** Convenience: wrap a mutating function in one undo step. */
   function edit(label, fn) { begin(label); try { return fn(); } finally { commit(label); } }
-  function abort() { if (--hist.group <= 0) { if (pending != null) restore(pending); pending = null; hist.group = 0; } }
+  function abort() { if (--hist.group <= 0) { if (baseline != null) restore(baseline); hist.group = 0; } }
 
   function undo() {
     if (!hist.past.length) return U.toast('Nothing to undo', 'warn');
-    const cur = snapshot(); const st = hist.past.pop();
-    hist.future.push({ s: cur, label: st.label });
+    ensureBaseline();
+    const st = hist.past.pop();
+    hist.future.push({ s: baseline, label: st.label });
     restore(st.s); U.bus.emit('hist'); U.toast('Undo · ' + st.label, 'info', 1400);
   }
   function redo() {
     if (!hist.future.length) return U.toast('Nothing to redo', 'warn');
-    const cur = snapshot(); const st = hist.future.pop();
-    hist.past.push({ s: cur, label: st.label });
+    ensureBaseline();
+    const st = hist.future.pop();
+    hist.past.push({ s: baseline, label: st.label });
     restore(st.s); U.bus.emit('hist'); U.toast('Redo · ' + st.label, 'info', 1400);
   }
 
@@ -1012,7 +1108,7 @@ window.FC = window.FC || {};
     for (const k of SNAP_KEYS) if (o[k] !== undefined) d[k] = o[k];
     d.id = o.id || uid('proj');
     d.build = Object.assign({}, DEFAULTS.build, d.build || {});
-    FC.doc = d; FC.files.clear(); sel.clips.clear(); hist.past.length = 0; hist.future.length = 0;
+    FC.doc = d; FC.files.clear(); sel.clips.clear(); hist.past.length = 0; hist.future.length = 0; baseline = null;
     bump(); U.bus.emit('doc'); U.bus.emit('assets'); U.bus.emit('sel'); U.bus.emit('hist');
     return d;
   }
@@ -1020,7 +1116,7 @@ window.FC = window.FC || {};
   FC.store = {
     newDoc, mkTrack, sel, bump, get ver() { return ver; },
     trackById, assetById, clipById, clipsOn, clipAt, videoTracks, audioTracks, displayTracks, mainTrack,
-    duration, fps, snap, srcOut, handles,
+    duration, editPoints, fps, snap, srcOut, handles,
     begin, commit, edit, abort, undo, redo, hist,
     addClip, removeClips, addTrack, removeTrack, toJSON, fromJSON, DEFAULTS
   };
@@ -1157,7 +1253,8 @@ window.FC = window.FC || {};
     const n = slotCount(a); if (n <= 1) return 0;
     return clamp(Math.round((t / Math.max(0.001, a.duration)) * (n - 1)), 0, n - 1);
   }
-  const slotKey = (a, i) => a.key + '#' + i + '/' + slotCount(a);
+  const THUMB_REV = 2;   // bump when the thumbnail rendering changes
+  const slotKey = (a, i) => a.key + '#' + i + '/' + slotCount(a) + '~' + THUMB_REV;
   const slotTime = (a, i) => { const n = slotCount(a); return n <= 1 ? 0 : (i / (n - 1)) * Math.max(0, a.duration - 0.05); };
 
   /* ── probing ───────────────────────────────────────────────────── */
@@ -1326,11 +1423,14 @@ window.FC = window.FC || {};
     U.bus.emit('thumbs');
   }
 
+  /** Crop to fill, not letterbox. A vertical source in a wide sequence gets cropped
+      on screen and on export, so a thumbnail with black bars would be a lie — and
+      at filmstrip size those bars were most of the picture. */
   function drawFit(src, sw, sh) {
     const cw = cfg.thumbW, ch = cfg.thumbH;
     cx.fillStyle = '#0a0b0d'; cx.fillRect(0, 0, cw, ch);
     if (!sw || !sh) return;
-    const s = Math.min(cw / sw, ch / sh);
+    const s = Math.max(cw / sw, ch / sh);
     const w = sw * s, h = sh * s;
     cx.drawImage(src, (cw - w) / 2, (ch - h) / 2, w, h);
   }
@@ -2129,8 +2229,14 @@ window.FC = window.FC || {};
   const U = FC.util, S = FC.store, O = FC.ops, { clamp, el, $ } = U;
 
   const RULER_H = 22, MIN_PPS = 0.2, MAX_PPS = 900;
-  const view = { pps: 60, scroll: 0, vscroll: 0, tool: 'select', snap: true, ripple: true, insert: true };
-  let cv, cx, W = 0, H = 0, dpr = 1, dirty = true, layout = [], hover = null, drag = null, marquee = null, snapLine = null, dropAt = null;
+  const view = {
+  pps: 60, scroll: 0, vscroll: 0, tool: 'select', snap: true,
+  dragMode: 'insert',   // insert (push others aside) · overwrite (free) · swap (trade places)
+  trimMode: 'ripple',   // ripple (move the rest) · roll (steal from the neighbour) · gap (leave a hole)
+  get ripple() { return this.trimMode === 'ripple'; },
+  get insert() { return this.dragMode === 'insert'; }
+};
+  let cv, cx, W = 0, H = 0, dpr = 1, dirty = true, layout = [], hover = null, drag = null, marquee = null, snapLine = null, dropAt = null, swapHint = null;
 
   function init() {
     cv = $('#tlCanvas'); if (!cv) return;
@@ -2210,6 +2316,16 @@ window.FC = window.FC || {};
     drawClips();
     drawMarkers();
     drawOverlaysHint();
+    if (swapHint) {
+      const L = layout.find(l => l.t.id === swapHint.track);
+      if (L) {
+        const x = t2x(swapHint.start), w = Math.max(3, swapHint.dur * view.pps);
+        cx.save(); cx.strokeStyle = '#31c48d'; cx.lineWidth = 2; cx.setLineDash([5, 4]);
+        cx.strokeRect(x + 1, L.y + 3, w - 2, L.h - 6);
+        cx.fillStyle = 'rgba(49,196,141,.14)'; cx.fillRect(x + 1, L.y + 3, w - 2, L.h - 6);
+        cx.restore();
+      }
+    }
     if (marquee) drawMarquee();
     if (dropAt) drawDropMarker();
     drawPlayhead();
@@ -2386,24 +2502,28 @@ window.FC = window.FC || {};
 
   function drawFilmstrip(c, a, x, y, w, h, vx, vw) {
     if (!a) return;
-    const tw = Math.round(h * 16 / 9);
-    if (tw < 6) return;
-    const n = Math.max(1, Math.ceil(w / tw));
-    const seams = tw > 14 && n > 1;
+    const ideal = Math.round(h * 16 / 9);
+    if (ideal < 6) return;
+    // Divide the clip into whole tiles so a frame is never drawn wider than the
+    // clip that holds it — that is what pushed the picture out of narrow clips.
+    const n = Math.max(1, Math.round(w / ideal));
+    const tw = w / n;
+    const seams = tw > 16 && n > 1;
     const speed = c.speed || 1;
     cx.save();
     cx.globalAlpha = c.enabled ? .96 : .4;
     for (let i = 0; i < n; i++) {
       const px = x + i * tw;
       if (px + tw < vx - tw || px > vx + vw) continue;
-      const frac = (i * tw + tw / 2) / w;
-      const st = c.in + clamp(frac, 0, 1) * c.dur * speed;
+      const st = c.in + clamp((i + 0.5) / n, 0, 1) * c.dur * speed;
       const b = FC.media.thumb(a, st);
       if (b) {
-        const sw = b.width, sh = b.height;
-        const sc = Math.max(tw / sw, h / sh);
-        const dw = sw * sc, dh = sh * sc;
+        const sc = Math.max(tw / b.width, h / b.height);
+        const dw = b.width * sc, dh = b.height * sc;
+        cx.save();
+        cx.beginPath(); cx.rect(px, y, tw, h); cx.clip();
         cx.drawImage(b, px + (tw - dw) / 2, y + (h - dh) / 2, dw, dh);
+        cx.restore();
       } else {
         cx.fillStyle = i % 2 ? '#171b21' : '#141820'; cx.fillRect(px, y, tw, h);
       }
@@ -2524,6 +2644,14 @@ window.FC = window.FC || {};
     const s = $('#tlStatus'); if (!s) return;
     const d = S.duration();
     s.textContent = `${FC.doc.clips.length} clips · ${U.dur(d)} · ${view.pps.toFixed(1)} px/s`;
+    const banner = $('#tlMismatch'); if (!banner) return;
+    const vid = FC.director ? FC.director.mainDuration() : 0;
+    const aud = FC.director ? FC.director.audioLength() : 0;
+    const off = aud > 0.4 && vid > 0.4 ? aud - vid : 0;
+    if (Math.abs(off) > 0.5) {
+      banner.style.display = '';
+      banner.firstChild.textContent = `Picture ${U.dur(vid)} · audio ${U.dur(aud)}`;
+    } else banner.style.display = 'none';
   }
 
   /* ── hit testing ───────────────────────────────────────────────── */
@@ -2591,7 +2719,7 @@ window.FC = window.FC || {};
     cv.focus();
     if (!h) return;
 
-    if (h.kind === 'ruler') { FC.player.seek(Math.max(0, O.q(h.t))); drag = { kind: 'scrub' }; return; }
+    if (h.kind === 'ruler') { FC.player.setScrubbing(true); FC.player.seek(Math.max(0, O.q(h.t))); drag = { kind: 'scrub' }; return; }
     if (view.tool === 'hand') { drag = { kind: 'pan', x: e.clientX, scroll: view.scroll }; return; }
 
     if (h.kind === 'clip' && view.tool === 'razor') {
@@ -2610,13 +2738,16 @@ window.FC = window.FC || {};
       const clips = S.sel.list().filter(c => !c.locked);
       if (h.zone === 'in' || h.zone === 'out') {
         S.begin('Trim');
-        drag = { kind: 'trim', edge: h.zone, clip: h.clip, x: p.x, start0: h.clip.start, dur0: h.clip.dur, in0: h.clip.in, roll: e.altKey };
+        const roll = e.altKey ? view.trimMode !== 'roll' : view.trimMode === 'roll';
+        drag = { kind: 'trim', edge: h.zone, clip: h.clip, x: p.x, start0: h.clip.start, dur0: h.clip.dur, in0: h.clip.in, roll };
       } else {
         S.begin('Move');
+        // Alt inverts whatever drag mode is selected, so the other behaviour is always one key away.
+        const mode = e.altKey ? (view.dragMode === 'insert' ? 'overwrite' : 'insert') : view.dragMode;
         drag = {
           kind: 'move', clips, x: p.x, y: p.y, t0: h.t, moved: false,
           starts: clips.map(c => c.start), track0: h.track.id,
-          insert: view.insert && !e.altKey && clips.length >= 1
+          mode, insert: mode === 'insert' && clips.length >= 1
         };
       }
       invalidate(); return;
@@ -2636,7 +2767,7 @@ window.FC = window.FC || {};
       const h = hit(p.x, p.y);
       const cur = !h ? 'default' : h.kind === 'ruler' ? 'ew-resize'
         : view.tool === 'razor' ? 'crosshair' : view.tool === 'hand' ? 'grab' : view.tool === 'slip' ? 'ew-resize'
-          : h.kind === 'clip' ? (h.zone === 'in' || h.zone === 'out' ? 'ew-resize' : 'grab') : 'default';
+          : h.kind === 'clip' ? (h.zone === 'in' || h.zone === 'out' ? 'ew-resize' : view.dragMode === 'swap' ? 'cell' : 'grab') : 'default';
       cv.style.cursor = cur;
       const nh = h && h.kind === 'clip' ? h.clip.id : null;
       if (nh !== hover) { hover = nh; invalidate(); }
@@ -2680,6 +2811,11 @@ window.FC = window.FC || {};
         const dx = p.x - drag.x;
         if (!drag.moved && Math.abs(dx) < 3 && Math.abs(p.y - drag.y) < 4) return;
         drag.moved = true;
+        if (drag.mode === 'swap') {
+          const h2 = hit(p.x, p.y);
+          drag.swapTarget = (h2 && h2.kind === 'clip' && drag.clips.indexOf(h2.clip) < 0) ? h2.clip : null;
+          swapHint = drag.swapTarget; invalidate(); return;
+        }
         const dt = dx / view.pps;
         const L = trackAtY(p.y);
         const targetTrack = L && L.t.kind === (S.trackById(drag.track0).kind) && !L.t.locked ? L.t.id : drag.track0;
@@ -2716,10 +2852,14 @@ window.FC = window.FC || {};
     else if (k === 'slip') S.commit('Slip');
     else if (k === 'move') {
       if (drag.moved) {
-        if (!drag.insert) { O.resolveOverlaps(drag.pendingTrack || drag.track0); }
-        S.commit('Move'); FC.director.rebuildOverlays();
+        if (drag.mode === 'swap') {
+          if (drag.swapTarget && drag.clips[0]) O.swap(drag.clips[0], drag.swapTarget);
+          swapHint = null;
+        } else if (!drag.insert) O.resolveOverlaps(drag.pendingTrack || drag.track0);
+        S.commit(drag.mode === 'swap' ? 'Swap' : 'Move'); FC.director.rebuildOverlays();
       } else S.abort();
     }
+    if (k === 'scrub') FC.player.setScrubbing(false);
     if (k === 'marquee') marquee = null;
     drag = null; snapLine = null; invalidate();
     U.bus.emit('sel');
@@ -2780,9 +2920,17 @@ window.FC = window.FC || {};
     invalidate();
   }
   function ensureVisible(t) { const x = t2x(t); if (x < 0 || x > W - 4) scrollTo(t, true); }
+  /** Playback follow: turn the page instead of yanking the view to centre —
+      centring on every overrun is what read as the timeline "jumping". */
+  function follow(t) {
+    const x = t2x(t);
+    if (x >= -1 && x <= W - 8) return;
+    view.scroll = Math.max(0, t - (W * 0.15) / view.pps);
+    invalidate();
+  }
 
   FC.timeline = {
-    init, invalidate, view, zoomBy, zoomTo, fit, scrollTo, ensureVisible, t2x, x2t,
+    init, invalidate, view, zoomBy, zoomTo, fit, scrollTo, ensureVisible, follow, t2x, x2t,
     get width() { return W; }, resize, RULER_H,
     setTool(t) { view.tool = t; cv && (cv.className = t === 'razor' ? 'razor' : ''); invalidate(); }
   };
@@ -2799,7 +2947,7 @@ window.FC = window.FC || {};
 
   const P = {
     time: 0, playing: false, rate: 1, loop: false, quality: 0.5,
-    srcAudio: false, guides: false, dropped: 0, fps: 0
+    srcAudio: false, guides: false, dropped: 0, fps: 0, scrubbing: false
   };
   let cv, cx, cw = 960, ch = 540, wall = 0, tAtWall = 0, lastDraw = 0, frames = 0, fpsT = 0;
   const PREROLL = 1.1;
@@ -2841,25 +2989,55 @@ window.FC = window.FC || {};
     return free;
   }
 
-  /* ── image cache (decoded at monitor size) ─────────────────────── */
-  const imgCache = new Map();  // assetId -> ImageBitmap
+  /* ── still cache ───────────────────────────────────────────────────
+     Byte-budgeted, least-recently-*used* eviction, and a bitmap that is on
+     screen this frame is never closed — closing one mid-draw is what made
+     stills flicker back to thumbnail resolution. */
+  const imgCache = new Map();       // assetId -> {bm, bytes, t}
   const imgPending = new Set();
+  const onScreen = new Set();
+  let imgBytes = 0;
+  const IMG_BUDGET = 180 * 1024 * 1024;
+
   function image(a) {
-    const b = imgCache.get(a.id);
-    if (b) return b;
-    if (imgPending.has(a.id)) return FC.media.poster(a);
+    const e = imgCache.get(a.id);
+    if (e) { e.t = performance.now(); imgCache.delete(a.id); imgCache.set(a.id, e); return e.bm; }
+    decodeImage(a);
+    return FC.media.poster(a);      // thumbnail stands in until the full decode lands
+  }
+  function decodeImage(a) {
+    if (!a || a.kind !== 'image' || imgCache.has(a.id) || imgPending.has(a.id)) return;
+    const url = FC.media.urlFor(a.id); if (!url) return;
     imgPending.add(a.id);
-    const url = FC.media.urlFor(a.id);
-    if (!url) return null;
+    const targetW = Math.round(Math.min(a.w || 1920, Math.max(720, cw * 1.3)));
     fetch(url).then(r => r.blob())
-      .then(bl => createImageBitmap(bl, { resizeWidth: Math.min(a.w || cw, Math.max(640, cw)), resizeQuality: 'medium' }))
-      .then(bm => {
-        imgCache.set(a.id, bm); imgPending.delete(a.id);
-        if (imgCache.size > 14) { const k = imgCache.keys().next().value; const old = imgCache.get(k); imgCache.delete(k); old.close && old.close(); }
-        draw();
-      })
+      .then(bl => createImageBitmap(bl, { resizeWidth: targetW, resizeQuality: 'medium' }))
+      .then(bm => { imgPending.delete(a.id); putImage(a.id, bm); if (!P.playing) draw(); })
       .catch(() => imgPending.delete(a.id));
-    return FC.media.poster(a);
+  }
+  function putImage(id, bm) {
+    const bytes = (bm.width || 1) * (bm.height || 1) * 4;
+    imgCache.set(id, { bm, bytes, t: performance.now() }); imgBytes += bytes;
+    while (imgBytes > IMG_BUDGET && imgCache.size > 3) {
+      let victim = null;
+      for (const k of imgCache.keys()) if (!onScreen.has(k)) { victim = k; break; }
+      if (victim == null) break;
+      const e = imgCache.get(victim); imgCache.delete(victim); imgBytes -= e.bytes;
+      if (e.bm.close) e.bm.close();
+    }
+  }
+  /** Decode the stills the playhead is about to reach, so they never pop in. */
+  function prefetchStills(t) {
+    let budget = 3;
+    for (const tr of S.videoTracks()) {
+      if (!tr.enabled) continue;
+      for (const c of S.clipsOn(tr.id)) {
+        if (c.start + c.dur < t) continue;
+        if (c.start > t + 14) break;
+        const a = S.assetById(c.assetId);
+        if (a && a.kind === 'image' && !imgCache.has(a.id) && !imgPending.has(a.id)) { decodeImage(a); if (--budget <= 0) return; }
+      }
+    }
   }
 
   /* ── init ──────────────────────────────────────────────────────── */
@@ -2908,11 +3086,27 @@ window.FC = window.FC || {};
     U.bus.emit('play', false);
   }
   function toggle() { P.playing ? pause() : play(); }
+  let syncQueued = false;
   function seek(t) {
     P.time = clamp(t, 0, Math.max(0, S.duration()));
     tAtWall = P.time; wall = performance.now();
     U.bus.emit('time', P.time);
-    if (!P.playing) { syncAll(true); draw(); }
+    if (!P.playing) requestSync();
+  }
+  /** Scrubbing fires dozens of seeks a second; collapse the media work into
+      one per animation frame, and draw from thumbnails while the drag is live. */
+  function requestSync() {
+    if (syncQueued) return;
+    syncQueued = true;
+    requestAnimationFrame(() => {
+      syncQueued = false;
+      if (!P.scrubbing) { syncAll(); prefetchStills(P.time); }
+      draw();
+    });
+  }
+  function setScrubbing(on) {
+    P.scrubbing = on;
+    if (!on) requestSync();
   }
   function step(n) { seek(P.time + n / S.fps()); }
   function setRate(r) { P.rate = r; tAtWall = P.time; wall = performance.now(); }
@@ -2928,6 +3122,7 @@ window.FC = window.FC || {};
       P.time = t;
       U.bus.emit('time', t);
       schedule();
+      if ((frames & 15) === 0) prefetchStills(t);
       draw();
     }
     frames++;
@@ -3054,6 +3249,8 @@ window.FC = window.FC || {};
     const pinned = new Set(items.filter(i => i.asset.kind === 'video').map(i => i.asset.id));
     for (const it of items) {
       if (it.asset.kind !== 'video') continue;
+      // during a scrub, only touch decoders that already hold this asset
+      if (P.scrubbing && !vslots.some(x => x.assetId === it.asset.id)) continue;
       const s = acquire(vslots, it.asset.id, pinned);
       if (s) { try { if (s.v.readyState >= 1) s.v.currentTime = clamp(it.src, 0, Math.max(0, s.v.duration - 0.02)); } catch (e) { } }
     }
@@ -3091,6 +3288,8 @@ window.FC = window.FC || {};
     cx.globalCompositeOperation = 'source-over'; cx.globalAlpha = 1;
     cx.fillStyle = '#000'; cx.fillRect(0, 0, cw, ch);
     const items = renderList(P.time);
+    onScreen.clear();
+    for (const it of items) if (it.asset.kind === 'image') onScreen.add(it.asset.id);
     let painted = 0;
     for (const it of items) {
       const c = it.clip, a = it.asset;
@@ -3151,14 +3350,14 @@ window.FC = window.FC || {};
 
   /* ── public ────────────────────────────────────────────────────── */
   Object.assign(P, {
-    init, play, pause, toggle, seek, step, setRate, draw, level, fitMonitor,
+    init, play, pause, toggle, seek, step, setRate, draw, level, fitMonitor, setScrubbing, prefetchStills,
     setQuality(q) { P.quality = q; applyQuality(); },
     currentClip() { const m = S.mainTrack(); return m ? S.clipAt(m.id, P.time) : null; },
-    stats() { return { slots: vslots.filter(s => s.assetId).length, images: imgCache.size, dropped: P.dropped, fps: P.fps }; },
+    stats() { return { slots: vslots.filter(s => s.assetId).length, images: imgCache.size, imageBytes: imgBytes, dropped: P.dropped, fps: P.fps }; },
     releaseAll() {
       vslots.forEach(s => { if (s.assetId) FC.media.pinUrl(s.assetId, false); s.assetId = null; s.v.removeAttribute('src'); s.v.load(); });
       aslots.forEach(s => { s.assetId = null; s.v.removeAttribute('src'); });
-      imgCache.forEach(b => b.close && b.close()); imgCache.clear();
+      imgCache.forEach(e => e.bm && e.bm.close && e.bm.close()); imgCache.clear(); imgBytes = 0;
     }
   });
   FC.player = P;
@@ -4172,13 +4371,16 @@ Write-Host "Done -> ${outName}"
   'use strict';
   const U = FC.util, S = FC.store, O = FC.ops, { $, $$, el, esc, clamp } = U;
   let tab = 'clip', body;
+  let ovSource = null, audioSource = null;   // remembered across re-renders
 
   const BLENDS = ['normal', 'screen', 'multiply', 'overlay', 'lighten', 'darken', 'soft-light', 'hard-light', 'color-dodge', 'difference', 'exclusion', 'add'];
 
   function init() {
     body = $('#inspBody');
     $$('#inspTabs button').forEach(b => b.onclick = () => show(b.dataset.tab));
-    U.bus.on('sel', render); U.bus.on('doc', softRender); U.bus.on('assets', softRender); U.bus.on('selassets', softRender);
+    // coalesced: a burst of edits repaints the panel once, not once per edit
+    const soft = U.raf(softRender);
+    U.bus.on('sel', U.raf(render)); U.bus.on('doc', soft); U.bus.on('assets', soft); U.bus.on('selassets', soft);
     body.addEventListener('input', onInput);
     body.addEventListener('change', onInput);
     body.addEventListener('click', onClick);
@@ -4285,11 +4487,18 @@ Write-Host "Done -> ${outName}"
   function overlayTab() {
     const rules = FC.doc.overlays;
     const vtracks = S.videoTracks().slice(1);
-    const selAsset = FC.bin ? FC.bin.selectedAssets()[0] : null;
+    // Pick straight from the bin's contents — depending on what happens to be
+    // selected elsewhere made this look broken when nothing was.
+    const usable = FC.doc.assets.filter(a => a.kind === 'image' || a.kind === 'video');
+    const preferred = FC.bin ? (FC.bin.selectedAssets().filter(a => a.kind !== 'audio')[0] || null) : null;
+    if (preferred && !ovSource) ovSource = preferred.id;
+    if (!usable.some(a => a.id === ovSource)) ovSource = usable.length ? usable[0].id : null;
     let out = sect('Add an overlay', `
-      <div class="hint" style="margin-bottom:6px">Pick a file in the bin (a light leak, grain, dust, logo, LUT-style texture…), then add it as a rule. It repeats itself across the whole edit and re-flows whenever the cut changes.</div>
-      ${row('Source', selAsset ? `<b style="font-size:11px">${esc(selAsset.name)}</b>` : '<span class="hint">nothing selected in the bin</span>')}
-      ${row('Track', vtracks.length ? sel('newOvTrack', vtracks[0].id, vtracks.map(t => [t.id, t.name])) : '<span class="hint">add a V2 track first</span>')}
+      <div class="hint" style="margin-bottom:6px">A light leak, grain, dust, a logo, a texture. Added as a <b>rule</b>: it repeats itself across the whole edit and re-flows whenever the cut changes.</div>
+      ${row('Source', usable.length
+        ? sel('newOvSource', ovSource, usable.map(a => [a.id, (a.kind === 'video' ? '▶ ' : '▣ ') + a.name]))
+        : '<span class="hint">import a video or image first</span>')}
+      ${row('Track', vtracks.length ? sel('newOvTrack', vtracks[0].id, vtracks.map(t => [t.id, t.name])) : '<span class="hint">no overlay track yet — one is created for you</span>')}
       <div class="row">${btn('addOverlay', '+ Add overlay rule', 'sm')}${btn('addVTrack', '+ Track')}</div>
     `);
     if (!rules.length) return out + `<div class="insp-empty">No overlay rules yet.</div>`;
@@ -4318,7 +4527,10 @@ Write-Host "Done -> ${outName}"
   /* ── AUDIO ─────────────────────────────────────────────────────── */
   function audioTab() {
     const aTracks = S.audioTracks();
-    const selAsset = (FC.bin ? FC.bin.selectedAssets() : []).filter(a => a.kind === 'audio')[0];
+    const audioAssets = FC.doc.assets.filter(a => a.kind === 'audio');
+    const pref = (FC.bin ? FC.bin.selectedAssets() : []).filter(a => a.kind === 'audio')[0];
+    if (pref && !audioSource) audioSource = pref.id;
+    if (!audioAssets.some(a => a.id === audioSource)) audioSource = audioAssets.length ? audioAssets[0].id : null;
     const clips = [].concat(...aTracks.map(t => S.clipsOn(t.id)));
     let beatInfo = '';
     for (const c of clips) {
@@ -4327,7 +4539,9 @@ Write-Host "Done -> ${outName}"
     }
     let out = sect('Add audio', `
       <div class="hint" style="margin-bottom:6px">Drop a music bed or a voiceover in the bin, select it here, then place it. Set “Fill to → Audio length” in the Build bar and every cut lands inside the track.</div>
-      ${row('Source', selAsset ? `<b style="font-size:11px">${esc(selAsset.name)}</b>` : '<span class="hint">select an audio file in the bin</span>')}
+      ${row('Source', audioAssets.length
+        ? sel('newAudioSource', audioSource, audioAssets.map(a => [a.id, a.name + '  ·  ' + U.dur(a.duration)]))
+        : '<span class="hint">import an audio file first</span>')}
       ${row('Track', sel('newAudioTrack', aTracks[0] ? aTracks[0].id : '', aTracks.map(t => [t.id, t.name])))}
       <div class="row">${btn('addAudio', '+ Place at start', 'sm')}${btn('addAudioHere', '+ Place at playhead')}</div>
     `);
@@ -4440,6 +4654,9 @@ Write-Host "Done -> ${outName}"
       case 'seqDf': d.df = v; U.bus.emit('doc'); break;
       case 'pathMode': S.edit('Paths', () => d.pathMode = v); rerender(); break;
       case 'mediaRoot': d.mediaRoot = v; FC.doc.dirty = true; updateSample(); break;
+      case 'newOvSource': ovSource = v; return;
+      case 'newAudioSource': audioSource = v; return;
+      case 'newOvTrack': case 'newAudioTrack': return;
       case 'winPaths': S.edit('Paths', () => d.winPaths = v === '1'); rerender(); break;
     }
     U.bus.emit('doc');
@@ -4481,7 +4698,10 @@ Write-Host "Done -> ${outName}"
     });
   }
 
-  FC.inspector = { init, show, render, get tab() { return tab; } };
+  FC.inspector = {
+    init, show, render, get tab() { return tab; },
+    get overlaySource() { return ovSource; }, get audioSourceId() { return audioSource; }
+  };
 })(window.FC);
 
 /* ═══════════ 12-app.js ═══════════ */
@@ -4500,7 +4720,8 @@ Write-Host "Done -> ${outName}"
     FC.player.init();
     FC.bin.init();
     FC.inspector.init();
-    bindTop(); bindTransport(); bindDirector(); bindTimelineTools(); bindResizers(); bindKeys(); bindGlobalDnD();
+    FC.storyboard.init();
+    bindTop(); bindTransport(); bindDirector(); bindTimelineTools(); bindResizers(); bindKeys(); bindGlobalDnD(); bindFocus();
     syncChrome();
     U.bus.on('doc', U.raf(() => { syncChrome(); syncTime(); }));
     U.bus.on('sel', U.raf(syncSelInfo));
@@ -4581,7 +4802,7 @@ Write-Host "Done -> ${outName}"
     const tag = $('#monClipTag');
     if (tag) tag.textContent = c ? (c.name || '—') : '—';
     FC.timeline.invalidate();
-    if (FC.player.playing) FC.timeline.ensureVisible(t);
+    if (FC.player.playing) FC.timeline.follow(t);
   }
 
   /* ══════════ director strip ══════════ */
@@ -4645,12 +4866,22 @@ Write-Host "Done -> ${outName}"
     });
     const v = FC.timeline.view;
     $('#snapBtn').classList.toggle('on', v.snap);
-    $('#rippleBtn').classList.toggle('on', v.ripple);
     $('#snapBtn').onclick = e => { v.snap = !v.snap; e.currentTarget.classList.toggle('on', v.snap); };
-    $('#rippleBtn').onclick = e => { v.ripple = !v.ripple; e.currentTarget.classList.toggle('on', v.ripple); };
+    $('#dragModeSel').value = v.dragMode;
+    $('#trimModeSel').value = v.trimMode;
+    $('#dragModeSel').onchange = e => { v.dragMode = e.target.value; e.target.blur(); U.toast(DRAG_HELP[v.dragMode], 'info', 3000); };
+    $('#trimModeSel').onchange = e => { v.trimMode = e.target.value; e.target.blur(); U.toast(TRIM_HELP[v.trimMode], 'info', 3000); };
+    $('#sbToggle').onclick = () => toggleStoryboard();
+    $('#fitAudioQuick').onclick = () => inspectorAction('fitToAudio');
     $('#splitBtn').onclick = splitAtPlayhead;
     $('#delBtn').onclick = () => deleteSelection(true);
-    $('#lockClipBtn').onclick = () => S.edit('Lock', () => { const l = S.sel.list(); const on = !l.every(c => c.locked); l.forEach(c => c.locked = on); });
+    $('#lockClipBtn').onclick = () => {
+      const l = S.sel.list();
+      if (!l.length) return U.toast('Select the clips you want to pin in place first', 'warn');
+      const on = !l.every(c => c.locked);
+      S.edit('Lock', () => l.forEach(c => c.locked = on));
+      U.toast(on ? l.length + ' clip' + (l.length > 1 ? 's' : '') + ' locked — builds and shuffles flow around them' : 'Unlocked');
+    };
     $('#markerBtn').onclick = addMarker;
     $('#addVBtn').onclick = () => { S.edit('Add track', () => S.addTrack('video')); FC.inspector.render(); };
     $('#addABtn').onclick = () => { S.edit('Add track', () => S.addTrack('audio')); FC.inspector.render(); };
@@ -4667,6 +4898,23 @@ Write-Host "Done -> ${outName}"
     }));
   }
 
+  const DRAG_HELP = {
+    insert: 'Insert — dropping a clip between two others pushes the rest along. Hold Alt to move freely.',
+    overwrite: 'Free — clips go exactly where you drop them and can leave gaps. Hold Alt to insert instead.',
+    swap: 'Swap — drag one clip onto another and the two trade places, keeping every length.'
+  };
+  const TRIM_HELP = {
+    ripple: 'Ripple — dragging an edge moves everything after it, so the cut never leaves a hole.',
+    roll: 'Roll — dragging a cut takes frames from one clip and gives them to its neighbour. Total length never changes.',
+    gap: 'Leave gap — only this clip changes; the hole stays where it is.'
+  };
+
+  function toggleStoryboard(force) {
+    const on = force == null ? !FC.storyboard.visible : force;
+    FC.storyboard.setVisible(on);
+    $('#sbToggle').classList.toggle('on', on);
+  }
+
   function splitAtPlayhead() {
     const t = FC.player.time;
     S.edit('Split', () => {
@@ -4678,7 +4926,7 @@ Write-Host "Done -> ${outName}"
     });
   }
   function deleteSelection(ripple) {
-    if (!S.sel.clips.size) return;
+    if (!S.sel.clips.size) return U.toast('Select a clip first — click one on the timeline or a storyboard card', 'warn');
     S.edit('Delete', () => {
       const n = O.deleteClips(new Set(S.sel.clips), ripple);
       S.sel.clear(); FC.director.rebuildOverlays();
@@ -4773,12 +5021,36 @@ Write-Host "Done -> ${outName}"
   }
 
   /* ══════════ keyboard ══════════ */
+  /** Typing in a field must not permanently disarm the app's shortcuts. */
+  function bindFocus() {
+    // a select hands the keyboard back the moment you pick something
+    document.addEventListener('change', e => {
+      if (e.target.tagName === 'SELECT' && !e.target.closest('#modal')) e.target.blur();
+    }, true);
+    // clicking the picture, the timeline or the storyboard means "I'm editing again"
+    document.addEventListener('pointerdown', e => {
+      if (!e.target.closest('#tlCanvas, #monitorWrap, #sbScroll, #binScroll, #trackHeads')) return;
+      const a = document.activeElement;
+      if (a && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) a.blur();
+    }, true);
+  }
+
+  const NUM_KEYS = /^([0-9.,\-+eE]|Arrow|Backspace|Delete|Tab|Home|End|Page)/;
+  const SELECT_OWNED = [' ', 'Enter', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
   function bindKeys() {
     window.addEventListener('keydown', e => {
       const tag = (e.target.tagName || '').toUpperCase();
-      if (/INPUT|TEXTAREA|SELECT/.test(tag)) {
-        if (e.key === 'Escape') e.target.blur();
-        return;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') {
+        if (e.key === 'Escape' || e.key === 'Enter') { e.target.blur(); e.preventDefault(); return; }
+        // A number field only needs digits and arrows. Letting Space or B or S sit
+        // there doing nothing is how the whole app appears to stop responding.
+        const numeric = tag === 'INPUT' && e.target.type === 'number';
+        if (!numeric || NUM_KEYS.test(e.key) || e.ctrlKey || e.metaKey || e.altKey) return;
+        e.target.blur();
+      }
+      if (tag === 'SELECT') {
+        // the select keeps the keys it genuinely uses; everything else reaches the app
+        if (SELECT_OWNED.indexOf(e.key) >= 0) { if (e.key === 'Escape') e.target.blur(); return; }
       }
       const mod = e.ctrlKey || e.metaKey;
       const k = e.key;
@@ -4811,6 +5083,7 @@ Write-Host "Done -> ${outName}"
         case '-': case '_': FC.timeline.zoomBy(1 / 1.4, FC.player.time); break;
         case '[': nudge(-1); break;
         case ']': nudge(1); break;
+        case 'Tab': e.preventDefault(); toggleStoryboard(); break;
       }
       const low = k.toLowerCase();
       if (low === 'j') { FC.player.setRate(FC.player.rate > 0 ? -1 : Math.max(-4, FC.player.rate * 2)); FC.player.play(); }
@@ -4822,14 +5095,23 @@ Write-Host "Done -> ${outName}"
       else if (low === 'c') pickTool('razor');
       else if (low === 'y') pickTool('slip');
       else if (low === 'h') pickTool('hand');
+      else if (low === 'a') FC.timeline.zoomBy(1 / 1.45, FC.player.time);
+      else if (low === 'd') FC.timeline.zoomBy(1.45, FC.player.time);
       else if (low === 'n') $('#snapBtn').click();
-      else if (low === 'r') $('#rippleBtn').click();
+      else if (low === 'r') cycleTrimMode();
       else if (low === 'm') addMarker();
       else if (low === 'f') $('#fsBtn').click();
       else if (low === 'z' && e.shiftKey) FC.timeline.fit();
     });
   }
   function pickTool(t) { const b = $('#toolSeg button[data-tool="' + t + '"]'); if (b) b.click(); }
+  function cycleTrimMode() {
+    const order = ['ripple', 'roll', 'gap'];
+    const v = FC.timeline.view;
+    v.trimMode = order[(order.indexOf(v.trimMode) + 1) % 3];
+    $('#trimModeSel').value = v.trimMode;
+    U.toast(TRIM_HELP[v.trimMode], 'info', 3000);
+  }
   function nudge(dir) {
     if (!S.sel.clips.size) return;
     S.edit('Nudge', () => { O.moveBy(S.sel.list(), dir / S.fps()); const t = S.sel.list()[0]; if (t) O.resolveOverlaps(t.track); });
@@ -4838,16 +5120,17 @@ Write-Host "Done -> ${outName}"
     const t = S.trackById(S.sel.targetTrack) || S.mainTrack(); if (!t) return;
     S.edit('Rotate order', () => { O.rotate(t.id, dir); FC.director.rebuildOverlays(); });
   }
+  /** ↑/↓ walk the cuts of the whole edit, never a single track you happened to click. */
   function jumpCut(dir) {
-    const t = S.trackById(S.sel.targetTrack) || S.mainTrack(); if (!t) return;
-    const list = S.clipsOn(t.id), now = FC.player.time;
+    const pts = S.editPoints();
+    if (pts.length < 2) return;
+    const now = FC.player.time;
     let best = null;
-    for (const c of list) {
-      if (dir > 0 && c.start > now + 1e-4) { best = c.start; break; }
-      if (dir < 0 && c.start < now - 1e-4) best = c.start;
-    }
-    if (best == null) best = dir > 0 ? S.duration() : 0;
+    if (dir > 0) { for (const p of pts) if (p > now + 1e-3) { best = p; break; } }
+    else { for (let i = pts.length - 1; i >= 0; i--) if (pts[i] < now - 1e-3) { best = pts[i]; break; } }
+    if (best == null) best = dir > 0 ? pts[pts.length - 1] : 0;
     FC.player.seek(best);
+    FC.timeline.ensureVisible(best);
   }
   function duplicateSelection() {
     const list = S.sel.list(); if (!list.length) return;
@@ -4961,10 +5244,11 @@ Write-Host "Done -> ${outName}"
       ${K('⌥ ← →', 'Rotate the running order')}</table></div>
       <div><h4 style="font-size:11px;text-transform:uppercase;color:var(--txt-3);margin-bottom:6px">Editing</h4><table class="grid">
       ${K('V C Y H', 'Select · Razor · Slip · Pan')}${K('⌘K', 'Split at playhead')}${K('⌫', 'Delete')}${K('⇧⌫', 'Ripple delete')}
-      ${K('[ ]', 'Nudge one frame')}${K('⌘D', 'Duplicate')}${K('N', 'Snapping')}${K('R', 'Ripple mode')}${K('M', 'Marker')}${K('⌘A', 'Select all clips')}</table>
+      ${K('[ ]', 'Nudge one frame')}${K('⌘D', 'Duplicate')}${K('N', 'Snapping')}${K('R', 'Cycle trim mode')}${K('M', 'Marker')}${K('⌘A', 'Select all clips')}
+      ${K('Tab', 'Show / hide the storyboard')}</table>
       <h4 style="font-size:11px;text-transform:uppercase;color:var(--txt-3);margin:14px 0 6px">Project</h4><table class="grid">
       ${K('⌘S', 'Save project')}${K('⌘O', 'Open project')}${K('⌘E', 'Export')}${K('⌘I', 'Import media')}${K('⌘Z', 'Undo')}${K('⇧⌘Z', 'Redo')}
-      ${K('+ −', 'Zoom')}${K('⇧Z', 'Zoom to fit')}</table></div></div>
+      ${K('A  D', 'Zoom out · zoom in')}${K('+ −', 'Zoom')}${K('⇧Z', 'Zoom to fit')}</table></div></div>
       <div class="hint" style="margin-top:14px">On the timeline: drag a clip between two others to insert it — everything re-flows. Hold <kbd>Alt</kbd> while dragging to move freely, <kbd>Alt</kbd> on a clip edge to roll the cut, and scroll with <kbd>Ctrl</kbd> to zoom.</div>`,
       ['-', { label: 'Close', cls: 'primary', act: closeModal }], true);
   }
@@ -5082,13 +5366,17 @@ Write-Host "Done -> ${outName}"
       xfNone: () => S.edit('Remove transitions', () => S.sel.list().forEach(c => c.xf = null)),
       addVTrack: () => S.edit('Add track', () => S.addTrack('video')),
       addOverlay: () => {
-        const a2 = FC.bin.selectedAssets()[0];
-        if (!a2) return U.toast('Select a file in the bin first', 'warn');
+        const srcSel = $('#inspBody [data-k="newOvSource"]');
+        const id = (srcSel && srcSel.value) || FC.inspector.overlaySource;
+        const a2 = S.assetById(id);
+        if (!a2) return U.toast('Import a video or image to use as an overlay', 'warn');
         const trk = $('#inspBody [data-k="newOvTrack"]');
         let tid = trk && trk.value;
-        if (!tid) { S.edit('Add track', () => { tid = S.addTrack('video').id; }); }
+        if (!tid || !S.trackById(tid)) S.edit('Add track', () => { tid = S.addTrack('video').id; });
         S.edit('Add overlay', () => { FC.director.addOverlayRule(a2.id, tid); FC.director.rebuildOverlays(); });
-        U.toast('Overlay added — it repeats across the whole edit');
+        const made = FC.doc.clips.filter(c => c.gen).length;
+        U.toast(`Overlay added · ${made} instance${made === 1 ? '' : 's'} across the edit`);
+        FC.inspector.render();
       },
       ovReroll: () => { const r = FC.doc.overlays.find(x => x.id === arg); if (r) S.edit('Re-roll', () => { r.seed = Math.floor(Math.random() * 9999); FC.director.rebuildOverlays(); }); },
       ovDel: () => S.edit('Remove overlay', () => { FC.doc.overlays = FC.doc.overlays.filter(x => x.id !== arg); FC.doc.clips = FC.doc.clips.filter(c => c.ruleId !== arg); S.bump(); }),
@@ -5152,8 +5440,9 @@ Write-Host "Done -> ${outName}"
     (acts[a] || (() => { }))();
   }
   function placeAudio(at) {
-    const a = FC.bin.selectedAssets().filter(x => x.kind === 'audio')[0];
-    if (!a) return U.toast('Select an audio file in the bin', 'warn');
+    const srcSel = $('#inspBody [data-k="newAudioSource"]');
+    const a = S.assetById((srcSel && srcSel.value) || FC.inspector.audioSourceId);
+    if (!a) return U.toast('Import an audio file first', 'warn');
     const trkSel = $('#inspBody [data-k="newAudioTrack"]');
     const tid = (trkSel && trkSel.value) || (S.audioTracks()[0] || {}).id;
     S.edit('Place audio', () => {
@@ -5391,13 +5680,254 @@ Write-Host "Done -> ${outName}"
 
   Object.assign(app, {
     init, importFiles, appendAsset, dropAssets, setFps, doBuild, doReshuffle,
-    clipMenu, trackMenu, assetMenu, inspectorAction, addMarker, showTab: t => FC.inspector.show(t),
+    clipMenu, trackMenu, assetMenu, inspectorAction, addMarker, showTab: t => FC.inspector.show(t), toggleStoryboard,
     openModal, closeModal, confirmDialog, exportDialog, helpDialog, saveProject, loadJson
   });
   FC.app = app;
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
+})(window.FC);
+
+/* ═══════════ 13-storyboard.js ═══════════ */
+/* FluxCut Studio — storyboard strip.
+   The coarse interface: clips as cards you drag between each other, with the
+   duration editable in place. Every change lands on the same document the
+   timeline edits, so the two views are always the same edit. */
+(function (FC) {
+  'use strict';
+  const U = FC.util, S = FC.store, O = FC.ops, { $, el, esc, clamp } = U;
+
+  const CARD = 124, GAP = 7, PAD = 8;
+  const SB_H = 142;
+  let host, inner, strip, visible = false, trackId = null;
+  let cards = new Map(), list = [], drag = null, caret = null;
+
+  function init() {
+    host = $('#storyboard'); if (!host) return;
+    strip = $('#sbScroll'); inner = $('#sbInner');
+    strip.addEventListener('scroll', U.raf(render));
+    strip.addEventListener('wheel', e => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); strip.scrollLeft += e.deltaY; }
+    }, { passive: false });
+    new ResizeObserver(U.raf(render)).observe(strip);
+    $('#sbTrack').addEventListener('change', e => { trackId = e.target.value; layout(); });
+    $('#sbClose').addEventListener('click', () => FC.app.toggleStoryboard(false));
+    $('#sbShuffle').addEventListener('click', () => FC.app.doReshuffle('order'));
+    $('#sbReverse').addEventListener('click', () => {
+      S.edit('Reverse', () => { O.reverse(track().id); FC.director.rebuildOverlays(); });
+    });
+    $('#sbEven').addEventListener('click', evenOut);
+    strip.addEventListener('dragover', e => { e.preventDefault(); caret = indexAt(e.clientX); paintCaret(); });
+    strip.addEventListener('dragleave', () => { caret = null; paintCaret(); });
+    strip.addEventListener('drop', e => {
+      e.preventDefault();
+      let ids = [];
+      try { ids = JSON.parse(e.dataTransfer.getData('text/fluxcut-assets') || '[]'); } catch (x) { }
+      const at = caret; caret = null; paintCaret();
+      if (ids.length) insertAssets(ids, at);
+    });
+    U.bus.on('doc', U.raf(layout));
+    U.bus.on('sel', U.raf(paintSel));
+    U.bus.on('thumbs', U.raf(paintThumbs));
+    U.bus.on('time', U.raf(paintPlayhead));
+  }
+
+  function track() { return S.trackById(trackId) || S.mainTrack(); }
+
+  function setVisible(on) {
+    visible = on;
+    host.style.display = on ? 'flex' : 'none';
+    document.documentElement.style.setProperty('--row-sb', on ? SB_H + 'px' : '0px');
+    if (on) { layout(); FC.timeline.resize(); }
+    else FC.timeline.resize();
+  }
+
+  function layout() {
+    if (!visible) return;
+    const t = track(); if (!t) return;
+    trackId = t.id;
+    const sel = $('#sbTrack');
+    const opts = S.displayTracks().filter(x => x.kind === 'video');
+    const sig = opts.map(x => x.id + x.name).join();
+    if (sel._sig !== sig) {
+      sel._sig = sig;
+      sel.innerHTML = opts.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+    }
+    sel.value = t.id;
+    list = S.clipsOn(t.id);
+    inner.style.width = (PAD * 2 + list.length * (CARD + GAP)) + 'px';
+    $('#sbCount').textContent = list.length + (list.length === 1 ? ' clip' : ' clips') + ' · ' + U.dur(O.trackEnd(t.id));
+    render();
+  }
+
+  function render() {
+    if (!visible) return;
+    const left = strip.scrollLeft, w = strip.clientWidth;
+    const first = Math.max(0, Math.floor((left - PAD) / (CARD + GAP)) - 2);
+    const last = Math.min(list.length, Math.ceil((left + w - PAD) / (CARD + GAP)) + 2);
+    const need = new Set();
+    for (let i = first; i < last; i++) {
+      const c = list[i]; if (!c) continue;
+      need.add(c.id);
+      let n = cards.get(c.id);
+      if (!n) { n = build(c); cards.set(c.id, n); inner.appendChild(n); }
+      n.style.transform = `translateX(${PAD + i * (CARD + GAP)}px)`;
+      fill(n, c, i);
+    }
+    for (const [id, n] of cards) if (!need.has(id)) { n.remove(); cards.delete(id); }
+    // keep DOM order matching slot order so "the first card" really is clip 1
+    let prev = null;
+    for (let i = first; i < last; i++) {
+      const c = list[i]; if (!c) continue;
+      const n = cards.get(c.id); if (!n) continue;
+      if (prev ? prev.nextSibling !== n : inner.firstChild !== n) inner.insertBefore(n, prev ? prev.nextSibling : inner.firstChild);
+      prev = n;
+    }
+    paintSel(); paintPlayhead();
+  }
+
+  function build(clip) {
+    // Every handler re-reads the clip by id: an undo replaces the document
+    // wholesale, so a captured clip object would quietly edit a ghost.
+    const id = clip.id;
+    const live = () => S.clipById(id);
+    const n = el('div', { class: 'sbc', 'data-id': id });
+    n.innerHTML = `<div class="sbc-thumb"><canvas width="160" height="90"></canvas><span class="sbc-idx"></span><span class="sbc-lock">🔒</span></div>
+      <div class="sbc-name"></div>
+      <div class="sbc-foot"><input type="text" class="sbc-dur num" title="Length — type a new one and press Enter">
+      <button class="sbc-x" title="Ripple delete">✕</button></div>`;
+    n.addEventListener('pointerdown', e => { const c = live(); if (c) onDown(e, c, n); });
+    n.addEventListener('dblclick', () => { const c = live(); if (c) { FC.player.seek(c.start); FC.timeline.scrollTo(c.start, true); } });
+    const dur = n.querySelector('.sbc-dur');
+    dur.addEventListener('pointerdown', e => e.stopPropagation());
+    dur.addEventListener('change', () => {
+      const c = live(); if (!c) return layout();
+      const v = U.parseTc(dur.value, FC.doc.timebase, FC.doc.ntsc);
+      if (!(v > 0)) return layout();
+      S.edit('Set length', () => {
+        c.dur = Math.max(O.frame(), O.q(v)); O.refit(c); O.closeGaps(c.track); FC.director.rebuildOverlays();
+      });
+    });
+    dur.addEventListener('keydown', e => { if (e.key === 'Enter') dur.blur(); });
+    n.querySelector('.sbc-x').addEventListener('pointerdown', e => e.stopPropagation());
+    n.querySelector('.sbc-x').addEventListener('click', e => {
+      e.stopPropagation();
+      S.edit('Delete', () => { O.deleteClips([id], true); FC.director.rebuildOverlays(); });
+    });
+    n.querySelector('.sbc-lock').addEventListener('pointerdown', e => e.stopPropagation());
+    n.querySelector('.sbc-lock').addEventListener('click', e => {
+      e.stopPropagation(); const c = live(); if (c) S.edit('Lock', () => { c.locked = !c.locked; });
+    });
+    return n;
+  }
+
+  function fill(n, c, i) {
+    const a = S.assetById(c.assetId);
+    n.querySelector('.sbc-idx').textContent = i + 1;
+    n.classList.toggle('locked', !!c.locked);
+    const nm = n.querySelector('.sbc-name');
+    const label = c.name || (a ? a.name : '—');
+    if (nm.textContent !== label) { nm.textContent = label; nm.title = label; }
+    const d = n.querySelector('.sbc-dur');
+    if (document.activeElement !== d) d.value = U.dur(c.dur);
+    const cnv = n.querySelector('canvas');
+    const key = c.assetId + '@' + Math.round(c.in * 4);
+    if (cnv._k !== key) {
+      const b = a ? FC.media.thumb(a, c.in + c.dur / 2) : null;
+      const g = cnv.getContext('2d');
+      g.fillStyle = '#0a0b0d'; g.fillRect(0, 0, 160, 90);
+      if (b) {
+        const sc = Math.max(160 / b.width, 90 / b.height);
+        g.drawImage(b, (160 - b.width * sc) / 2, (90 - b.height * sc) / 2, b.width * sc, b.height * sc);
+        cnv._k = key;
+      } else if (a) {
+        g.fillStyle = a.color || '#1b1f26'; g.globalAlpha = .25; g.fillRect(0, 0, 160, 90); g.globalAlpha = 1;
+      }
+    }
+  }
+  function paintThumbs() { for (const [id, n] of cards) { const c = S.clipById(id); if (c) { n.querySelector('canvas')._k = null; fill(n, c, list.indexOf(c)); } } }
+  function paintSel() { for (const [id, n] of cards) n.classList.toggle('sel', S.sel.has(id)); }
+  function paintPlayhead() {
+    if (!visible) return;
+    const t = FC.player.time;
+    for (const [id, n] of cards) {
+      const c = S.clipById(id);
+      n.classList.toggle('live', !!c && t >= c.start && t < c.start + c.dur);
+    }
+  }
+
+  /* ── reorder by dragging a card ────────────────────────────────── */
+  function onDown(e, c, n) {
+    if (e.button !== 0) return;
+    if (S.trackById(c.track) && S.trackById(c.track).locked) return U.toast('Track is locked', 'warn');
+    if (e.shiftKey) S.sel.add(c.id); else if (!S.sel.has(c.id)) S.sel.set([c.id]);
+    const startX = e.clientX;
+    let moved = false;
+    n.setPointerCapture(e.pointerId);
+    const move = ev => {
+      if (!moved && Math.abs(ev.clientX - startX) < 5) return;
+      if (!moved) { moved = true; n.classList.add('dragging'); }
+      caret = indexAt(ev.clientX);
+      const edge = strip.getBoundingClientRect();
+      if (ev.clientX > edge.right - 40) strip.scrollLeft += 14;
+      else if (ev.clientX < edge.left + 40) strip.scrollLeft -= 14;
+      paintCaret();
+    };
+    const up = () => {
+      n.releasePointerCapture(e.pointerId);
+      n.removeEventListener('pointermove', move); n.removeEventListener('pointerup', up); n.removeEventListener('pointercancel', up);
+      n.classList.remove('dragging');
+      const to = caret; caret = null; paintCaret();
+      if (moved && to != null) {
+        const from = list.indexOf(c);
+        let target = to > from ? to - 1 : to;
+        if (target !== from && target >= 0) {
+          S.edit('Reorder', () => { O.reorder(c.track, from, target); FC.director.rebuildOverlays(); });
+        }
+      } else if (!moved) {
+        FC.player.seek(c.start); FC.timeline.scrollTo(c.start, true);
+      }
+    };
+    n.addEventListener('pointermove', move); n.addEventListener('pointerup', up); n.addEventListener('pointercancel', up);
+  }
+
+  /** Slot index the cursor sits between (0 .. list.length). */
+  function indexAt(clientX) {
+    const r = strip.getBoundingClientRect();
+    const x = clientX - r.left + strip.scrollLeft - PAD;
+    return clamp(Math.round(x / (CARD + GAP)), 0, list.length);
+  }
+  function paintCaret() {
+    let c = $('#sbCaret');
+    if (caret == null) { if (c) c.style.display = 'none'; return; }
+    if (!c) { c = el('div', { id: 'sbCaret' }); inner.appendChild(c); }
+    c.style.display = 'block';
+    c.style.transform = `translateX(${PAD + caret * (CARD + GAP) - GAP / 2 - 1}px)`;
+  }
+
+  function insertAssets(ids, at) {
+    const t = track(); if (!t) return;
+    const assets = ids.map(id => S.assetById(id)).filter(a => a && a.kind !== 'audio');
+    if (!assets.length) return U.toast('Video or images only on this track', 'warn');
+    S.edit('Place clips', () => {
+      const clips = assets.map(a => O.clipFromAsset(a, { track: t.id }));
+      O.insertAt(t.id, clips, at == null ? list.length : at);
+      S.sel.set(clips.map(c => c.id));
+      FC.director.rebuildOverlays();
+    });
+    U.toast(assets.length + ' inserted at position ' + ((at == null ? list.length : at) + 1));
+  }
+
+  function evenOut() {
+    const t = track(); const l = S.clipsOn(t.id);
+    if (!l.length) return;
+    const avg = l.reduce((s, c) => s + c.dur, 0) / l.length;
+    S.edit('Even out', () => { O.evenOut(t.id, avg); FC.director.rebuildOverlays(); });
+    U.toast('Every clip set to ' + U.dur(avg));
+  }
+
+  FC.storyboard = { init, setVisible, layout, render, get visible() { return visible; } };
 })(window.FC);
 
 </script>

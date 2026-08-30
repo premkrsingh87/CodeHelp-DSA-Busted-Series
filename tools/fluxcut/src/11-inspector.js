@@ -4,13 +4,16 @@
   'use strict';
   const U = FC.util, S = FC.store, O = FC.ops, { $, $$, el, esc, clamp } = U;
   let tab = 'clip', body;
+  let ovSource = null, audioSource = null;   // remembered across re-renders
 
   const BLENDS = ['normal', 'screen', 'multiply', 'overlay', 'lighten', 'darken', 'soft-light', 'hard-light', 'color-dodge', 'difference', 'exclusion', 'add'];
 
   function init() {
     body = $('#inspBody');
     $$('#inspTabs button').forEach(b => b.onclick = () => show(b.dataset.tab));
-    U.bus.on('sel', render); U.bus.on('doc', softRender); U.bus.on('assets', softRender); U.bus.on('selassets', softRender);
+    // coalesced: a burst of edits repaints the panel once, not once per edit
+    const soft = U.raf(softRender);
+    U.bus.on('sel', U.raf(render)); U.bus.on('doc', soft); U.bus.on('assets', soft); U.bus.on('selassets', soft);
     body.addEventListener('input', onInput);
     body.addEventListener('change', onInput);
     body.addEventListener('click', onClick);
@@ -117,11 +120,18 @@
   function overlayTab() {
     const rules = FC.doc.overlays;
     const vtracks = S.videoTracks().slice(1);
-    const selAsset = FC.bin ? FC.bin.selectedAssets()[0] : null;
+    // Pick straight from the bin's contents — depending on what happens to be
+    // selected elsewhere made this look broken when nothing was.
+    const usable = FC.doc.assets.filter(a => a.kind === 'image' || a.kind === 'video');
+    const preferred = FC.bin ? (FC.bin.selectedAssets().filter(a => a.kind !== 'audio')[0] || null) : null;
+    if (preferred && !ovSource) ovSource = preferred.id;
+    if (!usable.some(a => a.id === ovSource)) ovSource = usable.length ? usable[0].id : null;
     let out = sect('Add an overlay', `
-      <div class="hint" style="margin-bottom:6px">Pick a file in the bin (a light leak, grain, dust, logo, LUT-style texture…), then add it as a rule. It repeats itself across the whole edit and re-flows whenever the cut changes.</div>
-      ${row('Source', selAsset ? `<b style="font-size:11px">${esc(selAsset.name)}</b>` : '<span class="hint">nothing selected in the bin</span>')}
-      ${row('Track', vtracks.length ? sel('newOvTrack', vtracks[0].id, vtracks.map(t => [t.id, t.name])) : '<span class="hint">add a V2 track first</span>')}
+      <div class="hint" style="margin-bottom:6px">A light leak, grain, dust, a logo, a texture. Added as a <b>rule</b>: it repeats itself across the whole edit and re-flows whenever the cut changes.</div>
+      ${row('Source', usable.length
+        ? sel('newOvSource', ovSource, usable.map(a => [a.id, (a.kind === 'video' ? '▶ ' : '▣ ') + a.name]))
+        : '<span class="hint">import a video or image first</span>')}
+      ${row('Track', vtracks.length ? sel('newOvTrack', vtracks[0].id, vtracks.map(t => [t.id, t.name])) : '<span class="hint">no overlay track yet — one is created for you</span>')}
       <div class="row">${btn('addOverlay', '+ Add overlay rule', 'sm')}${btn('addVTrack', '+ Track')}</div>
     `);
     if (!rules.length) return out + `<div class="insp-empty">No overlay rules yet.</div>`;
@@ -150,7 +160,10 @@
   /* ── AUDIO ─────────────────────────────────────────────────────── */
   function audioTab() {
     const aTracks = S.audioTracks();
-    const selAsset = (FC.bin ? FC.bin.selectedAssets() : []).filter(a => a.kind === 'audio')[0];
+    const audioAssets = FC.doc.assets.filter(a => a.kind === 'audio');
+    const pref = (FC.bin ? FC.bin.selectedAssets() : []).filter(a => a.kind === 'audio')[0];
+    if (pref && !audioSource) audioSource = pref.id;
+    if (!audioAssets.some(a => a.id === audioSource)) audioSource = audioAssets.length ? audioAssets[0].id : null;
     const clips = [].concat(...aTracks.map(t => S.clipsOn(t.id)));
     let beatInfo = '';
     for (const c of clips) {
@@ -159,7 +172,9 @@
     }
     let out = sect('Add audio', `
       <div class="hint" style="margin-bottom:6px">Drop a music bed or a voiceover in the bin, select it here, then place it. Set “Fill to → Audio length” in the Build bar and every cut lands inside the track.</div>
-      ${row('Source', selAsset ? `<b style="font-size:11px">${esc(selAsset.name)}</b>` : '<span class="hint">select an audio file in the bin</span>')}
+      ${row('Source', audioAssets.length
+        ? sel('newAudioSource', audioSource, audioAssets.map(a => [a.id, a.name + '  ·  ' + U.dur(a.duration)]))
+        : '<span class="hint">import an audio file first</span>')}
       ${row('Track', sel('newAudioTrack', aTracks[0] ? aTracks[0].id : '', aTracks.map(t => [t.id, t.name])))}
       <div class="row">${btn('addAudio', '+ Place at start', 'sm')}${btn('addAudioHere', '+ Place at playhead')}</div>
     `);
@@ -272,6 +287,9 @@
       case 'seqDf': d.df = v; U.bus.emit('doc'); break;
       case 'pathMode': S.edit('Paths', () => d.pathMode = v); rerender(); break;
       case 'mediaRoot': d.mediaRoot = v; FC.doc.dirty = true; updateSample(); break;
+      case 'newOvSource': ovSource = v; return;
+      case 'newAudioSource': audioSource = v; return;
+      case 'newOvTrack': case 'newAudioTrack': return;
       case 'winPaths': S.edit('Paths', () => d.winPaths = v === '1'); rerender(); break;
     }
     U.bus.emit('doc');
@@ -313,5 +331,8 @@
     });
   }
 
-  FC.inspector = { init, show, render, get tab() { return tab; } };
+  FC.inspector = {
+    init, show, render, get tab() { return tab; },
+    get overlaySource() { return ovSource; }, get audioSourceId() { return audioSource; }
+  };
 })(window.FC);
