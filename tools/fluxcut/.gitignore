@@ -1,0 +1,5 @@
+/test/media/
+/test/out_*
+/test/shot_*.png
+/test/ui_*.png
+/test/*.zip

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FluxCut Studio · dev</title><link rel="stylesheet" href="src/app.css"></head>
+<body>
+<div id="busy"></div>
+
+<div id="app">
+
+  <!-- ══════════════ TOP BAR ══════════════ -->
+  <header id="topbar">
+    <div class="brand"><div class="mark">F</div><div><b>FluxCut</b> <span>studio</span></div></div>
+
+    <input id="projName" type="text" value="Untitled Sequence" style="width:168px;height:24px" title="Project name">
+
+    <div class="seg" id="fpsSeg" title="Sequence frame rate">
+      <button data-fps="23.976">23.976</button><button data-fps="24">24</button><button data-fps="25">25</button>
+      <button data-fps="29.97" class="on">29.97</button><button data-fps="30">30</button>
+      <button data-fps="50">50</button><button data-fps="59.94">59.94</button><button data-fps="60">60</button>
+    </div>
+
+    <select id="resSel" style="width:132px;height:26px" title="Sequence resolution">
+      <option value="1920x1080">1920×1080 · HD</option>
+      <option value="3840x2160">3840×2160 · UHD</option>
+      <option value="2560x1440">2560×1440 · QHD</option>
+      <option value="1080x1920">1080×1920 · Vertical</option>
+      <option value="1080x1350">1080×1350 · 4:5</option>
+      <option value="1080x1080">1080×1080 · Square</option>
+      <option value="1280x720">1280×720 · 720p</option>
+      <option value="custom">Custom…</option>
+    </select>
+
+    <button class="btn icon" id="undoBtn" title="Undo (Ctrl+Z)">↶</button>
+    <button class="btn icon" id="redoBtn" title="Redo (Ctrl+Shift+Z)">↷</button>
+
+    <div class="spacer"></div>
+
+    <div class="chip" id="chipMem" title="Estimated cache memory in use — click to trim caches"><span class="dot"></span><b>0</b> MB</div>
+    <div class="chip" id="chipClips"><b>0</b> clips</div>
+    <div class="chip" id="chipDur"><b>00:00:00:00</b></div>
+
+    <button class="btn" id="openBtn" title="Open .fluxcut project">Open</button>
+    <button class="btn" id="saveBtn" title="Save project (Ctrl+S)">Save</button>
+    <button class="btn" id="settingsBtn" title="Settings">⚙</button>
+    <button class="btn" id="helpBtn" title="Keyboard shortcuts (?)">?</button>
+    <button class="btn primary" id="exportBtn" title="Export (Ctrl+E)">Export ▾</button>
+  </header>
+
+  <!-- ══════════════ MEDIA BIN ══════════════ -->
+  <section class="panel" id="binPanel">
+    <div class="phead">
+      <h2>Media Bin</h2><span class="count" id="binCount">0</span>
+      <div class="spacer"></div>
+      <button class="btn sm" id="addFilesBtn" title="Import files">+ Files</button>
+      <button class="btn sm" id="addFolderBtn" title="Import a folder (keeps relative paths)">+ Folder</button>
+    </div>
+    <div id="binTools">
+      <input type="text" id="binSearch" placeholder="Filter…  (name, tag, :video :image :audio)" class="grow">
+      <select id="binSort" style="width:auto" title="Sort">
+        <option value="added">Added</option><option value="name">Name</option>
+        <option value="dur">Duration</option><option value="type">Type</option><option value="random">Random</option>
+      </select>
+      <button class="btn icon sm" id="binSizeBtn" title="Thumbnail size">▦</button>
+    </div>
+    <div class="pbody" id="binScroll"><div id="binGrid"></div>
+      <div id="binEmpty">
+        <div class="big">⬓</div>
+        <div style="font-size:11.5px;color:var(--txt-2);margin-bottom:4px">Drop videos, images &amp; audio here</div>
+        <div class="hint">Folders keep their structure so Premiere relinks cleanly.<br>Nothing is uploaded — everything stays on this machine.</div>
+      </div>
+    </div>
+    <div class="phead" style="border-top:1px solid var(--line);border-bottom:none">
+      <button class="btn sm" id="selAllBtn">All</button>
+      <button class="btn sm" id="selNoneBtn">None</button>
+      <button class="btn sm" id="binShuffleBtn" title="Shuffle bin order">⤮</button>
+      <div class="spacer"></div>
+      <button class="btn sm" id="binRemoveBtn" title="Remove selected from bin">Remove</button>
+    </div>
+  </section>
+
+  <!-- ══════════════ STAGE ══════════════ -->
+  <section id="stage">
+    <div id="monitorWrap">
+      <canvas id="monitor" width="960" height="540"></canvas>
+      <div id="monOverlay">
+        <div class="monRow">
+          <div class="monTag" id="monClipTag">—</div>
+          <div class="monTag" id="monQualTag">Proxy ½</div>
+        </div>
+        <div class="monRow">
+          <div class="monTag" id="monFpsTag">— fps</div>
+          <div class="monTag" id="monResTag">1920×1080</div>
+        </div>
+      </div>
+      <div id="monHint"><div><div class="k">▶</div>
+        <div style="font-size:12px;color:var(--txt-2)">Import media, then hit <kbd>B</kbd> to auto-build a sequence</div>
+        <div class="hint" style="margin-top:6px">Space plays · J K L shuttles · <kbd>S</kbd> reshuffles the cut order</div></div></div>
+    </div>
+
+    <div id="transport">
+      <button class="btn icon" id="goStartBtn" title="Go to start (Home)">⏮</button>
+      <button class="btn icon" id="frameBackBtn" title="Previous frame (←)">◂</button>
+      <button class="btn primary" id="playBtn" title="Play / Pause (Space)">▶</button>
+      <button class="btn icon" id="frameFwdBtn" title="Next frame (→)">▸</button>
+      <button class="btn icon" id="goEndBtn" title="Go to end (End)">⏭</button>
+      <span id="tc" class="num">00:00:00:00</span>
+      <span id="tcTotal" class="num">/ 00:00:00:00</span>
+      <button class="btn sm" id="loopBtn" title="Loop playback">↻ Loop</button>
+      <div class="spacer"></div>
+      <label class="cbx" title="Hear the audio of the clips themselves"><input type="checkbox" id="srcAudioChk"> Source audio</label>
+      <div class="vu" title="Program level"><i id="vuBar"></i></div>
+      <select id="qualitySel" style="width:auto;height:24px" title="Preview quality — export always uses the originals">
+        <option value="0.25">Proxy ¼</option><option value="0.5" selected>Proxy ½</option><option value="1">Full</option>
+      </select>
+      <button class="btn sm" id="safeBtn" title="Title / action safe guides">Guides</button>
+      <button class="btn sm" id="fsBtn" title="Fullscreen monitor (F)">⛶</button>
+    </div>
+
+    <div id="director">
+      <div class="grp">
+        <label>Build</label>
+        <select id="dirPattern" title="Rhythm of the cut" style="width:118px">
+          <option value="full">Full clips</option>
+          <option value="fixed" selected>Fixed length</option>
+          <option value="range">Random range</option>
+          <option value="pattern">Rhythm pattern</option>
+          <option value="beat">Beat-synced</option>
+          <option value="accel">Accelerating</option>
+          <option value="decel">Decelerating</option>
+        </select>
+        <span id="dirPatternArgs" style="display:flex;gap:5px;align-items:center"></span>
+      </div>
+      <div class="grp">
+        <label>Order</label>
+        <select id="dirOrder" style="width:100px">
+          <option value="bin">Bin order</option>
+          <option value="random" selected>Shuffle</option>
+          <option value="name">Filename</option>
+          <option value="dur-desc">Longest first</option>
+          <option value="dur-asc">Shortest first</option>
+          <option value="alternate">Alternate folders</option>
+        </select>
+        <label class="cbx" title="Never place two clips from the same source back-to-back"><input type="checkbox" id="dirNoRepeat" checked> No dupes</label>
+      </div>
+      <div class="grp">
+        <label>Take</label>
+        <select id="dirTake" style="width:92px" title="Which part of each source clip to use">
+          <option value="start">Head</option><option value="center" selected>Middle</option>
+          <option value="random">Random</option><option value="end">Tail</option><option value="spread">Spread</option>
+        </select>
+      </div>
+      <div class="grp">
+        <label>Fill</label>
+        <select id="dirTarget" style="width:98px">
+          <option value="media" selected>All media</option>
+          <option value="audio">Audio length</option>
+          <option value="time">Fixed time</option>
+        </select>
+        <input type="text" id="dirTargetTime" value="00:01:00:00" class="num" style="width:88px;height:22px;display:none">
+        <label class="cbx" title="Loop the pool until the target is filled"><input type="checkbox" id="dirLoopPool" checked> Loop</label>
+      </div>
+      <div class="grp">
+        <label>Seed</label>
+        <input type="number" id="dirSeed" value="1" style="width:58px" title="Same seed = same shuffle. Change it to re-roll.">
+        <button class="btn sm icon" id="dirReseed" title="New random seed">⚄</button>
+      </div>
+      <div class="spacer"></div>
+      <div class="grp" style="border:none;padding-right:0">
+      <button class="btn sm" id="dirMoreBtn" title="All build options">Options…</button>
+      <button class="btn sm" id="reshuffleBtn" title="Reshuffle order, keep the slot durations (S)">⤮ Reshuffle</button>
+      <button class="btn primary" id="buildBtn" title="Auto-build the sequence (B)">⚡ Build</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ INSPECTOR ══════════════ -->
+  <section class="panel" id="inspPanel">
+    <div class="tabs" id="inspTabs">
+      <button data-tab="clip" class="on">Clip</button>
+      <button data-tab="overlay">Overlays</button>
+      <button data-tab="audio">Audio</button>
+      <button data-tab="seq">Sequence</button>
+    </div>
+    <div class="pbody" id="inspBody"></div>
+  </section>
+
+  <!-- ══════════════ TIMELINE ══════════════ -->
+  <section id="timelinePanel">
+    <div class="resizer h" id="tlResizer" style="top:-2px"></div>
+    <div id="tlTools">
+      <div class="seg" id="toolSeg">
+        <button data-tool="select" class="on" title="Select / move (V)">➤</button>
+        <button data-tool="razor" title="Razor — click a clip to cut (C)">⁄</button>
+        <button data-tool="slip" title="Slip — drag the source inside a clip (Y)">↔</button>
+        <button data-tool="hand" title="Pan (H)">✋</button>
+      </div>
+      <button class="btn sm" id="snapBtn" title="Snapping (N)">⌗ Snap</button>
+      <button class="btn sm" id="rippleBtn" title="Ripple edits — closing gaps automatically (R)">⇥ Ripple</button>
+      <div style="width:1px;height:16px;background:var(--line)"></div>
+      <button class="btn sm" id="splitBtn" title="Split at playhead (Ctrl+K)">Split</button>
+      <button class="btn sm" id="delBtn" title="Ripple delete (Shift+Del)">Delete</button>
+      <button class="btn sm" id="lockClipBtn" title="Lock / unlock selected clips">🔒</button>
+      <button class="btn sm" id="markerBtn" title="Add marker at playhead (M)">◆ Marker</button>
+      <div style="width:1px;height:16px;background:var(--line)"></div>
+      <button class="btn sm" id="addVBtn" title="Add video track">+V</button>
+      <button class="btn sm" id="addABtn" title="Add audio track">+A</button>
+      <div class="spacer"></div>
+      <span class="pill" id="selInfo">0 selected</span>
+      <button class="btn icon sm" id="zoomOutBtn" title="Zoom out (−)">−</button>
+      <input type="range" id="zoomRange" min="0" max="1000" value="380" style="width:104px" title="Zoom">
+      <button class="btn icon sm" id="zoomInBtn" title="Zoom in (+)">+</button>
+      <button class="btn sm" id="fitBtn" title="Zoom to fit (Shift+Z)">Fit</button>
+    </div>
+    <div id="tlMain">
+      <div id="trackHeads"><div id="trackHeadsInner"></div></div>
+      <div id="tlScrollWrap">
+        <canvas id="tlCanvas"></canvas>
+        <div id="tlStatus"></div>
+        <div id="dropHint"><div style="font-size:13px;color:var(--acc)">Drop to place on the timeline</div></div>
+      </div>
+    </div>
+    <div id="tlHScroll"><div id="tlHThumb"></div></div>
+  </section>
+
+  <div class="resizer v" id="binResizer"></div>
+  <div class="resizer v" id="inspResizer"></div>
+</div>
+
+<!-- ══════════════ MODALS ══════════════ -->
+<div class="scrim" id="modalScrim"><div class="modal" id="modal">
+  <header><h3 id="modalTitle">Title</h3><div class="spacer"></div><button class="btn icon ghost" id="modalX">✕</button></header>
+  <div class="body" id="modalBody"></div>
+  <footer id="modalFoot"></footer>
+</div></div>
+
+<div id="ctxMenu"></div>
+<div id="toasts"></div>
+<input type="file" id="filePicker" multiple accept="video/*,image/*,audio/*" class="sr">
+<input type="file" id="folderPicker" webkitdirectory directory multiple class="sr">
+<input type="file" id="projPicker" accept=".fluxcut,.json" class="sr">
+
+<script src="src/00-util.js"></script>
+<script src="src/01-store.js"></script>
+<script src="src/02-idb.js"></script>
+<script src="src/03-media.js"></script>
+<script src="src/04-ops.js"></script>
+<script src="src/05-director.js"></script>
+<script src="src/06-timeline.js"></script>
+<script src="src/07-player.js"></script>
+<script src="src/08-export-xml.js"></script>
+<script src="src/09-export-render.js"></script>
+<script src="src/10-bin.js"></script>
+<script src="src/11-inspector.js"></script>
+<script src="src/12-app.js"></script>
+</body></html>
