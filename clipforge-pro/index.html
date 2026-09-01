@@ -2903,6 +2903,8 @@
                 </div>
 
                 <div class="mt-3 pt-3 border-t border-[var(--border)]">
+                    <input type="file" id="relinkInput" class="hidden" accept="video/*"
+                        onchange="handleRelinkInput(event)">
                     <div class="drop-zone !py-4" id="fileDrop" onclick="document.getElementById('fileInput').click()">
                         <input type="file" id="fileInput" class="hidden" accept="video/*" multiple
                             onchange="handleFileInput(event)">
@@ -3254,14 +3256,16 @@
                     <div id="customSettings" class="hidden mt-3 space-y-2">
                         <label class="text-[11px] text-[var(--text-secondary)]">One per line — <code
                                 class="text-[10px]">00:00-00:41</code> or <code class="text-[10px]">1:30:00-1:35:20</code>.
-                            Bare times become cut points.</label>
+                            Bare times become cut points. <code class="text-[10px]">#</code> comments are ignored.</label>
                         <textarea id="customTimestamps" class="input-field !h-28 resize-none text-xs mono"
                             placeholder="00:00-00:41&#10;01:11-01:18&#10;02:32-03:05"></textarea>
                         <div class="flex gap-1.5">
                             <button onclick="parsePastedTimestamps()"
                                 class="btn-primary flex-1 text-xs !py-2">Apply</button>
                             <button onclick="syncTimestampsBox()" class="ctrl-btn !px-3"
-                                title="Fill the box from the current clips">🔄</button>
+                                title="Fill the box from the current clips, to the millisecond">🔄</button>
+                            <button onclick="copyExactCutPoints()" class="ctrl-btn !px-3"
+                                title="Copy every cut at full precision — milliseconds, exact seconds and frame index">📋</button>
                         </div>
                     </div>
 
@@ -3330,6 +3334,8 @@
                             <option value="2">2</option>
                             <option value="3">3</option>
                             <option value="4">4 · fastest</option>
+                            <option value="6">6</option>
+                            <option value="0">All at once · heaviest</option>
                         </select>
                     </div>
                     <div class="flex gap-2">
@@ -4559,6 +4565,7 @@ start_bridge.bat
             else D.filmstripContainer.style.display = 'none';
             zoomTimeline(0);
             wakePlayheadLoop();
+            checkRelink(v);
         }
 
         /* ==========================================================
@@ -4784,6 +4791,10 @@ start_bridge.bat
                         ? '<a href="' + esc(ytUrl) + '" target="_blank" rel="noopener noreferrer"'
                         + ' onclick="event.stopPropagation()" class="queue-act" title="Open on YouTube in a new tab">↗</a>'
                         : '')
+                    + '<button onclick="relinkMedia(' + i + ',event)" class="queue-act" title="'
+                    + (v.clips.length
+                        ? 'Point this timeline at another file — every cut stays exactly where it is'
+                        : 'Attach a video file to this entry') + '">🔗</button>'
                     + '<button onclick="renameVideo(' + i + ',event)" class="queue-act" title="Rename this video">✎</button>'
                     + '<button onclick="removeVideo(' + i + ',event)" class="queue-act danger" title="Remove">✕</button>'
                     + '</div>'
@@ -4839,7 +4850,7 @@ start_bridge.bat
                     + '<div class="flex gap-2 mt-2 flex-wrap justify-center">'
                     + '<button class="btn-success !py-2 !text-xs" onclick="fetchProxyForCurrent()">⚡ Get proxy copy</button>'
                     + '<button class="ctrl-btn" onclick="useEmbedForCurrent()">▶ YouTube embed</button>'
-                    + '<button class="ctrl-btn" onclick="document.getElementById(\'fileInput\').click()">📁 Pick a file</button>'
+                    + '<button class="ctrl-btn" onclick="relinkMedia()">📁 Pick a file</button>'
                     + '</div>'
                     + (v.duration ? '' :
                         '<div class="flex items-center gap-2 mt-3 text-[11px]">'
@@ -5114,6 +5125,75 @@ start_bridge.bat
             var m = f.name.match(/_(\d{3,4})p\./);
             v.proxyHeight = m ? parseInt(m[1], 10) : 0;
             if (videos[cur] === v) mountHtml5(v);
+        }
+
+        /* ---- relink: give an existing timeline a new source ----------------
+           A refresh loses the blob URL behind a local file, and a proxy the
+           bridge has since cleaned up goes the same way, so the video comes
+           back as NO PREVIEW while every one of its cuts is still sitting
+           there. Dropping the file in again used to create a SECOND queue
+           entry with no clips in it, which is no help at all — the timeline
+           you wanted was still stranded on the entry with no media.
+
+           Relinking attaches the file to the entry that already exists. Clips,
+           names, selection, in/out points: none of it is touched. Only the
+           media behind them changes. */
+        var relinkUid = null;
+
+        function relinkMedia(i, ev) {
+            if (ev) ev.stopPropagation();
+            var v = (typeof i === 'number') ? videos[i] : V();
+            if (!v) { notify('Add a video first', 'warning'); return; }
+            relinkUid = v.uid;
+            var input = $('relinkInput');
+            if (input) input.click();
+        }
+
+        function handleRelinkInput(ev) {
+            var f = ev.target.files && ev.target.files[0];
+            ev.target.value = '';
+            var v = relinkUid ? videoByUid(relinkUid) : null;
+            relinkUid = null;
+            if (!f) return;
+            if (!v) { notify('That video is no longer in the queue', 'warning'); return; }
+            if (!/^video\//.test(f.type) && !/\.(mp4|mkv|webm|mov|avi|m4v|ts)$/i.test(f.name)) {
+                notify('That is not a video file', 'error');
+                return;
+            }
+            applyRelink(v, f);
+        }
+
+        function applyRelink(v, f) {
+            var idx = videos.indexOf(v);
+            if (idx < 0) return;
+            /* Remember what the clips were measured against so the new media can
+               be checked against it once its metadata arrives. */
+            v._relinkFrom = { dur: v.duration || 0, clips: v.clips.length };
+            if (idx !== cur) selectVideo(idx);
+            attachFile(v, f);                 // clips are deliberately left alone
+            renderQueue(); persist();
+            notify('Relinked to ' + f.name
+                + (v.clips.length ? ' · ' + v.clips.length + ' clips kept' : ''), 'success');
+        }
+
+        /** Called once the relinked media reports a real duration. */
+        function checkRelink(v) {
+            var from = v && v._relinkFrom;
+            if (!from) return;
+            v._relinkFrom = null;
+            if (!from.clips) return;
+            var now = v.duration || 0;
+            if (!now || !from.dur) return;
+            if (Math.abs(now - from.dur) < 0.5) return;      // same video, nothing to say
+            var past = v.clips.filter(function (c) { return c.end > now + 0.01; }).length;
+            if (past) {
+                notify(fmtDur(from.dur) + ' → ' + fmtDur(now) + ' · ' + past + ' of ' + from.clips
+                    + ' clips now run past the end of this file. The cuts are untouched — '
+                    + 'trim or re-detect them if this is a different edit.', 'warning');
+            } else {
+                notify('New file is ' + fmtDur(now) + ' (was ' + fmtDur(from.dur)
+                    + ') · every clip still fits', 'info');
+            }
         }
 
         function createLocalVideo(f) {
@@ -7374,6 +7454,10 @@ start_bridge.bat
 
             var ranges = [], points = [], bad = 0;
             lines.forEach(function (line) {
+                // a whole-line comment, or the annotations the exact copy adds
+                if (line.charAt(0) === '#') return;
+                line = line.split(/\s+#/)[0].trim();
+                if (!line) return;
                 var clean = line.replace(/^[\s\d]*[).\-]\s*(?=\d)/, '');
                 var m = clean.match(/^([\d:.,]+)\s*(?:-|–|—|to|→)\s*([\d:.,]+)\s*(.*)$/i);
                 if (m) {
@@ -7398,11 +7482,52 @@ start_bridge.bat
             }
         }
 
+        /* Filling this box used to write whole seconds, so reading it back in
+           moved every marker to the nearest second — you could not edit one
+           line without shifting all the others. It writes milliseconds now, so
+           a round trip through the box is exact. */
         function syncTimestampsBox() {
             var v = V(); if (!v) return;
             $('customTimestamps').value = v.clips.map(function (c) {
-                return fmt(c.start) + '-' + fmt(c.end);
+                return fmtMs(c.start) + '-' + fmtMs(c.end);
             }).join('\n');
+        }
+
+        /** The precise position of every cut, in all three forms at once.
+         *
+         *  Seconds are what the exporters actually use; the frame index is what
+         *  a cut really is once the video is decoded; and the h:mm:ss.mmm pair
+         *  at the front is the same syntax this box reads back, so the whole
+         *  block pastes in again without moving anything by a millisecond. */
+        function exactCutPointText(v) {
+            v = v || V();
+            if (!v || !v.clips.length) return '';
+            var fps = (v.fps && v.fps >= 5 && v.fps <= 480) ? v.fps : 0;
+            var fsec = frameSeconds(v);
+            var head = [
+                '# ClipForge Pro · exact cut points',
+                '# ' + (v.title || v.fileName || 'untitled'),
+                '# ' + (v.duration ? v.duration.toFixed(6) + 's' : 'duration unknown')
+                    + ' · ' + (fps ? fps.toFixed(3) + ' fps' : 'frame rate unmeasured, assuming 25')
+                    + ' · one frame = ' + (fsec * 1000).toFixed(3) + 'ms',
+                '# paste this back in as-is — it round-trips exactly; # comments are ignored',
+                '# start-end            |  seconds              |  frame'
+            ];
+            var rows = v.clips.map(function (c, i) {
+                var stamp = fmtMs(c.start) + '-' + fmtMs(c.end);
+                var secs = c.start.toFixed(6) + '-' + c.end.toFixed(6);
+                var f0 = Math.round(c.start / fsec), f1 = Math.round(c.end / fsec);
+                return stamp + '  # ' + (i + 1) + ' | ' + secs + ' | f' + f0 + '-f' + f1
+                    + (c.name ? ' | ' + c.name.replace(/[\r\n|]+/g, ' ') : '');
+            });
+            return head.concat(rows).join('\n');
+        }
+
+        function copyExactCutPoints() {
+            var v = V();
+            if (!v || !v.clips.length) { notify('No clips to copy yet', 'warning'); return; }
+            var text = exactCutPointText(v);
+            copyText(text, v.clips.length + ' cut points copied at full precision');
         }
 
         /* ==========================================================
@@ -7625,7 +7750,7 @@ start_bridge.bat
             eligible.forEach(function (v) { makeDetectJob(v, opts, v.clips.length > 0); });
             pumpDetects();
             renderDetectPanel(); renderQueue();
-            notify('Detecting ' + eligible.length + ' video(s) · ' + DETECT_MAX + ' at a time', 'success');
+            notify('Detecting ' + eligible.length + ' video(s) · ' + detectBudgetLabel(), 'success');
         }
 
         function cancelDetect() {
@@ -7650,16 +7775,32 @@ start_bridge.bat
             renderDetectPanel(); renderQueue();
         }
 
+        /* 0 means "no cap": start every queued video at the same instant.
+           Each running job holds its own decoder and analysis canvas, so this
+           genuinely is the heaviest setting — it is offered because waiting on
+           a queue of twenty videos four at a time is worse, not because it is
+           free. Everything else about detection is unchanged. */
         function setDetectConcurrency(n) {
-            DETECT_MAX = clamp(parseInt(n, 10) || 2, 1, 6);
+            var raw = parseInt(n, 10);
+            DETECT_MAX = (raw === 0) ? 0 : clamp(isNaN(raw) ? 2 : raw, 1, 6);
             try { localStorage.setItem('cf_detect_max', DETECT_MAX); } catch (e) { }
+            if (DETECT_MAX === 0) {
+                var n2 = videos.filter(canDetect).length;
+                notify(n2 > 6
+                    ? 'All at once · ' + n2 + ' videos will open a decoder each — fastest, but heaviest'
+                    : 'All at once · every queued video starts together', 'info');
+            }
             pumpDetects();
             renderDetectPanel();
         }
 
+        function detectBudgetLabel() {
+            return DETECT_MAX === 0 ? 'all at once' : DETECT_MAX + ' at a time';
+        }
+
         /** Start as many queued jobs as the concurrency budget allows. */
         function pumpDetects() {
-            var free = DETECT_MAX - detectRunning();
+            var free = DETECT_MAX === 0 ? Infinity : DETECT_MAX - detectRunning();
             for (var i = 0; i < detectOrder.length && free > 0; i++) {
                 var job = Detects[detectOrder[i]];
                 if (!job || job.state !== 'queued' || job.cancelled) continue;
@@ -7710,7 +7851,12 @@ start_bridge.bat
                 await new Promise(function (res, rej) {
                     video.onloadedmetadata = res;
                     video.onerror = function () { rej(new Error('cannot read that media')); };
-                    setTimeout(function () { rej(new Error('timed out loading media')); }, 25000);
+                    /* Twenty decoders opening at once share one disk, so the
+                       last one to be served can legitimately take far longer
+                       than the first. Scale the patience with the crowd rather
+                       than failing a job that was only ever waiting its turn. */
+                    var wait = Math.min(120000, 25000 + Math.max(0, detectRunning() - 1) * 6000);
+                    setTimeout(function () { rej(new Error('timed out loading media')); }, wait);
                 });
             } catch (err) {
                 job.state = 'error'; job.status = 'Failed'; job.detail = err.message;
@@ -10648,7 +10794,7 @@ start_bridge.bat
             DETECT_MAX = detectMaxDefault();
             try {
                 var sm = parseInt(localStorage.getItem('cf_detect_max'), 10);
-                if (sm >= 1 && sm <= 6) DETECT_MAX = sm;
+                if (sm === 0 || (sm >= 1 && sm <= 6)) DETECT_MAX = sm;   // 0 = all at once
             } catch (e) { }
             $('detectMax').value = String(DETECT_MAX);
             renderDetectPanel();
