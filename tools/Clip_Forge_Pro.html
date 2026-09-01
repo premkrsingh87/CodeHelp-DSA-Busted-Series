@@ -3460,12 +3460,13 @@
                         class="block text-[10px] text-[var(--text-secondary)] font-semibold uppercase tracking-wider mt-3 mb-1.5">Edge
                         trim</label>
                     <select id="edgeTrimSelect" class="fs-select w-full !text-[11px]" onchange="setEdgeTrim(this.value)"
-                        title="How far before its cut each clip stops. Enough margin here means the next scene can never appear at the tail of this clip.">
+                        title="How far before its cut each clip stops. Half a frame is computed from each video's own frame rate and lands dead centre between the last frame the clip keeps and the first frame of the next one — the furthest possible from both, so no real frame is lost and the next scene can never appear at the tail. A flat millisecond value cannot be right at every frame rate: 30ms is under a frame at 29.97fps but longer than one at 59.94fps, where it throws a real frame away.">
+                        <option value="half" selected>½ frame — exact at any rate (recommended)</option>
                         <option value="0">Exact — no trim</option>
                         <option value="10">10 ms</option>
                         <option value="20">20 ms</option>
                         <option value="25">25 ms</option>
-                        <option value="30" selected>30 ms — recommended</option>
+                        <option value="30">30 ms</option>
                         <option value="34">34 ms — as the reference</option>
                         <option value="40">40 ms</option>
                         <option value="60">60 ms — safest</option>
@@ -3942,8 +3943,28 @@ start_bridge.bat
            without costing a real frame at all.
 
            The next clip is never moved - it still starts exactly on its cut. */
+        /* The trim can be a flat number of milliseconds, or - better at every
+           rate - half a frame of whatever the source actually runs at.
+
+           A flat value cannot be right for every source, and 30ms is the proof:
+           at 29.97fps it is 0.9 of a frame and clears the boundary for free,
+           but at 59.94fps a frame is only 16.68ms, so the same 30ms reaches
+           back past the last frame the clip is supposed to keep and throws it
+           away. Nothing in the list solved that - anything small enough to
+           spare the frame at 60fps was too thin to survive the rounding a
+           re-encoded YouTube section goes through.
+
+           Half a frame has no such trade. It lands dead centre between the
+           last frame this clip keeps and the first frame of the next one, so
+           it is simultaneously the furthest possible from both: no timebase
+           can round it into the next scene, and none can round it back over a
+           real frame. It is 8.34ms at 59.94fps, 16.68ms at 29.97, 20.83ms at
+           24 - each computed from that video's own measured rate, so a queue
+           of mixed sources is right everywhere at once. The flat values stay
+           for anyone who wants them. */
         var DEFAULT_TRIM_MS = 30;
         var edgeTrimMs = DEFAULT_TRIM_MS;
+        var edgeTrimMode = 'half';        // 'half' | 'ms'
 
         var STD_RATES = [23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60, 90, 100, 120];
 
@@ -4020,31 +4041,75 @@ start_bridge.bat
             return (f && f >= 5 && f <= 480) ? (1 / f) : 0.04;
         }
 
-        function frameGuard(v) {
-            return Math.max(0, edgeTrimMs) / 1000;
+        /** How far before `end` this clip should stop, in seconds.
+         *
+         *  In half-frame mode the answer depends on where the cut actually
+         *  sits. A cut on a frame boundary is the case that duplicates a frame,
+         *  and it gets the full half-frame shave. A cut already sitting between
+         *  two frames is safe where it is, and is either left alone or pulled
+         *  to the centre of the gap it is in - never pushed later than the
+         *  marker the user set. */
+        function frameGuard(v, end) {
+            if (edgeTrimMode !== 'half') return Math.max(0, edgeTrimMs) / 1000;
+            var fs = frameSeconds(v);                     // 1/fps, 0.04 if unmeasured
+            if (!(end > 0)) return fs * 0.5;
+            var lastKept = Math.ceil(end / fs - 1e-6) - 1;  // last frame before the cut
+            var mid = (lastKept + 0.5) * fs;                // centre of the gap after it
+            var g = end - mid;
+            return g > 0 ? g : 0;
         }
 
-        function setEdgeTrim(ms) {
-            edgeTrimMs = Math.max(0, Math.min(500, parseFloat(ms) || 0));
-            try { localStorage.setItem('cf_edge_trim_ms', String(edgeTrimMs)); } catch (e) { }
+        /** What the current setting costs, in seconds, for this source. */
+        function trimSeconds(v) {
+            return edgeTrimMode === 'half' ? frameSeconds(v) * 0.5 : Math.max(0, edgeTrimMs) / 1000;
+        }
+
+        function edgeTrimValue() { return edgeTrimMode === 'half' ? 'half' : String(edgeTrimMs); }
+
+        function setEdgeTrim(val) {
+            if (String(val) === 'half') {
+                edgeTrimMode = 'half';
+            } else {
+                edgeTrimMode = 'ms';
+                edgeTrimMs = Math.max(0, Math.min(500, parseFloat(val) || 0));
+            }
+            try { localStorage.setItem('cf_edge_trim_ms', edgeTrimValue()); } catch (e) { }
+            if ($('edgeTrimSelect')) $('edgeTrimSelect').value = edgeTrimValue();
             regenerateScript();
             renderClips();
             syncEdgeTrimNote();
+            persist();
         }
 
         function syncEdgeTrimNote() {
             var el = $('edgeTrimNote'); if (!el) return;
+            var v = V();
+            var fr = frameSeconds(v) * 1000;                  // ms per frame
+            var measured = !!(v && v.fps);
+            var rate = measured ? v.fps.toFixed(3) + 'fps' : 'rate not measured, 25fps assumed';
+
+            if (edgeTrimMode === 'half') {
+                el.innerHTML = esc((fr / 2).toFixed(2)) + 'ms before each cut — half a frame at '
+                    + esc(rate) + '. Dead centre between the last frame this clip keeps and the first '
+                    + 'frame of the next, so nothing can round either way and no real frame is lost. '
+                    + 'Every video uses its own rate.'
+                    + (measured ? '' : ' <span style="color:var(--warning)">Load the preview to measure the '
+                        + 'real rate.</span>');
+                return;
+            }
             if (edgeTrimMs <= 0) {
                 el.textContent = 'Clips end exactly on the cut — the frame on the cut can land in both clips.';
                 return;
             }
-            var v = V();
-            var fr = frameSeconds(v) * 1000;
             var frames = edgeTrimMs / fr;
-            var rate = v && v.fps ? v.fps.toFixed(3) + 'fps' : 'rate not measured';
-            el.textContent = edgeTrimMs + 'ms before each cut — '
-                + frames.toFixed(2) + ' of a frame at ' + rate
-                + (frames <= 1 ? ' (no real frame lost).' : ' (drops ' + Math.floor(frames) + ' frame(s)).')
+            el.innerHTML = edgeTrimMs + 'ms before each cut — ' + frames.toFixed(2) + ' of a frame at '
+                + esc(rate)
+                + (frames <= 1
+                    ? ' (no real frame lost).'
+                    : ' <span style="color:var(--danger)">(drops ' + Math.floor(frames) + ' real frame(s))</span>'
+                    + ' <a href="#" onclick="setEdgeTrim(\'half\');return false;"'
+                    + ' style="color:var(--success);font-weight:600;text-decoration:underline">'
+                    + 'use half a frame instead →</a>')
                 + ' The next clip still starts exactly on its cut.';
         }
 
@@ -4066,7 +4131,7 @@ start_bridge.bat
             // A clip that runs to the end of the video has no next clip to give
             // a frame to, and shaving it would drop the real final frame.
             var atEnd = end >= videoEnd(v) - 0.001;
-            var guard = atEnd ? 0 : frameGuard(v);
+            var guard = atEnd ? 0 : frameGuard(v, end);
             // never trim away a meaningful share of a short clip
             guard = Math.min(guard, Math.max(0, (end - start) * 0.25));
             var out = Math.max(start + 0.001, end - guard);
@@ -6038,12 +6103,14 @@ start_bridge.bat
          * ========================================================== */
         var Cache = {
             uid: null, from: 0, to: 0, times: [], bmps: [],
-            token: 0, building: false, video: null, pending: null
+            token: 0, building: false, video: null, pending: null,
+            complete: false        // a run that stood down leaves holes to fill
         };
 
         function cacheClear() {
             Cache.bmps.forEach(function (b) { if (b && b.close) try { b.close(); } catch (e) { } });
             Cache.times = []; Cache.bmps = []; Cache.uid = null;
+            Cache.complete = false;
             Cache.token++;
             if (Cache.video) {
                 Cache.video.removeAttribute('src');
@@ -6062,6 +6129,50 @@ start_bridge.bat
             return { from: from, to: to, px: sc.offsetWidth };
         }
 
+        /* ==========================================================
+         *  WHO OWNS THE DECODER
+         *
+         *  Three things read frames in the background: the scrub cache, the
+         *  clip thumbnails and the filmstrip. Each seeks a decoder across the
+         *  same file, and on a 240p proxy that is close to free.
+         *
+         *  On a full-resolution local source - which is the whole FFmpeg
+         *  workflow - it is not. One seek there decodes a full GOP and costs
+         *  more than an entire frame of playback, and there can be two of
+         *  those running while the player is trying to be a third decoder on
+         *  the same file. That is what made a big uploaded file play in
+         *  lurches: the picture was not slow, it was queued behind background
+         *  seeks it was never competing with on a proxy.
+         *
+         *  Worse, playback fed it. Above zoom 1 followPlayhead() scrolls the
+         *  timeline to keep the head on screen, the scroll handler re-arms the
+         *  scrub cache, and the cache then rebuilt up to forty frames on a
+         *  second decoder - every few seconds, for the whole length of the
+         *  video, to serve a scrub that cannot happen while it plays.
+         *
+         *  So a running picture owns the machine, exactly as a drag already
+         *  does. None of the three is serving anything visible while the video
+         *  plays. They stand down while it runs and pick up the moment it
+         *  stops - deferred, never abandoned.
+         * ========================================================== */
+        function playingNow() {
+            return P.mode === 'html5' && !!D.localVideo && !D.localVideo.paused && !D.localVideo.ended;
+        }
+
+        /** True while something the user can feel owns the decoder. */
+        function harvestBlocked() { return playingNow() || interacting(); }
+
+        /** Park a background harvest until the picture stops. `alive` lets the
+         *  caller give up instead: a token that moved on means the work is
+         *  stale and must not resume at all. */
+        async function harvestStandDown(alive) {
+            while (harvestBlocked()) {
+                await sleep(120);
+                if (alive && !alive()) return false;
+            }
+            return !alive || alive();
+        }
+
         function scheduleCache() {
             clearTimeout(Cache.pending);
             Cache.pending = setTimeout(buildScrubCache, 220);
@@ -6075,13 +6186,25 @@ start_bridge.bat
             // one frame per ~26px of timeline, so the cache is as fine as the
             // picture the user can actually point at, and never bigger
             var n = clamp(Math.round(span.px / 26), 10, 40);
-            var covered = Cache.uid === v.uid && Cache.times.length === n
+            var covered = Cache.complete && Cache.uid === v.uid && Cache.times.length === n
                 && Math.abs(Cache.from - span.from) < (span.to - span.from) / (n * 4)
                 && Math.abs(Cache.to - span.to) < (span.to - span.from) / (n * 4);
             if (covered || Cache.building) return;
 
+            /* Nothing here serves a playing picture, and building it then puts
+               a second full-resolution decoder on the file the player is using.
+               The pause event re-arms this, so the wait costs nothing.
+
+               Only playback bails out at the top. A gesture is over in a second
+               or two and has nothing to re-arm this afterwards, so those keep
+               the in-loop stand-down they always had: the build starts, waits
+               for the hand to come off, and carries on. */
+            if (playingNow()) return;
+
             var token = ++Cache.token;
             Cache.building = true;
+            Cache.complete = false;
+            var old = null;
             try {
                 if (!Cache.video || Cache.uid !== v.uid) {
                     if (Cache.video) { Cache.video.removeAttribute('src'); try { Cache.video.load(); } catch (e) { } }
@@ -6094,17 +6217,20 @@ start_bridge.bat
                 }
                 if (token !== Cache.token) return;
 
-                var old = Cache.bmps;
+                old = Cache.bmps;
                 var times = [], bmps = [];
                 var step = (span.to - span.from) / (n - 1);
                 for (var i = 0; i < n; i++) times.push(span.from + i * step);
                 Cache.uid = v.uid; Cache.from = span.from; Cache.to = span.to;
                 Cache.times = times; Cache.bmps = bmps;
 
+                var alive = function () { return token === Cache.token; };
                 for (var j = 0; j < n; j++) {
-                    if (token !== Cache.token) break;
-                    // never compete with the gesture the cache exists to serve
-                    while (draggingPlayhead) { await sleep(40); if (token !== Cache.token) return; }
+                    if (!alive()) break;
+                    // never compete with the gesture the cache exists to serve,
+                    // nor with the picture it cannot be serving
+                    if (harvestBlocked() && !(await harvestStandDown(alive))) break;
+                    if (!alive()) break;
                     try {
                         await seekVideoAsync(Cache.video, times[j], 2500);
                         bmps[j] = await createImageBitmap(Cache.video, {
@@ -6113,11 +6239,13 @@ start_bridge.bat
                     } catch (e) { bmps[j] = null; }
                     await yieldToUI();
                 }
-                old.forEach(function (b) { if (b && b.close) try { b.close(); } catch (e) { } });
+                if (alive() && j >= n) Cache.complete = true;
             } catch (e) {
                 /* no cache is a slower scrub, never a broken one */
             } finally {
                 Cache.building = false;
+                // the previous generation is unreachable however this ended
+                if (old) old.forEach(function (b) { if (b && b.close) try { b.close(); } catch (e) { } });
             }
         }
 
@@ -6710,6 +6838,13 @@ start_bridge.bat
                 .forEach(function (ev) {
                     el.addEventListener(ev, wakePlayheadLoop, { passive: true });
                 });
+            /* The thumbnail and filmstrip loops park themselves mid-run and
+               resume on their own. The scrub cache bails out at the top
+               instead - it would otherwise hold a decoder open doing nothing -
+               so it is the one that has to be asked back. */
+            ['pause', 'ended'].forEach(function (ev) {
+                el.addEventListener(ev, scheduleCache, { passive: true });
+            });
         }
 
         function maybeStopAtClipEnd(t) {
@@ -7480,10 +7615,15 @@ start_bridge.bat
             canvas.width = 320; canvas.height = 180;
             var ctx = canvas.getContext('2d', { alpha: false });
 
+            var alive = function () { return token === thumbToken && V() === v; };
             entry.ready.then(async function () {
                 var d = duration();
                 for (var n = 0; n < todo.length; n++) {
-                    if (token !== thumbToken || V() !== v) return;
+                    if (!alive()) return;
+                    // a thumbnail nobody is waiting for must not cost a frame
+                    // of the picture that is actually on screen
+                    if (harvestBlocked() && !(await harvestStandDown(alive))) return;
+                    if (!alive()) return;
                     var i = todo[n];
                     var c = v.clips[i];
                     if (!c || v._thumbs[c.id]) continue;
@@ -8820,9 +8960,16 @@ start_bridge.bat
             canvas.width = 160; canvas.height = 90;
             var ctx = canvas.getContext('2d', { alpha: false });
 
+            var alive = function () { return token === fsToken && V() === v; };
             entry.ready.then(async function () {
                 for (var i = 0; i < total; i++) {
-                    if (token !== fsToken || V() !== v) return;      // abandoned
+                    if (!alive()) return;                            // abandoned
+                    if (harvestBlocked()) {
+                        var pe0 = $('filmstripPct');
+                        if (pe0) pe0.textContent = 'paused';         // say so rather than look stuck
+                        if (!(await harvestStandDown(alive))) return;
+                        if (!alive()) return;
+                    }
                     var t = i * interval;
                     try {
                         await mediaSeek(entry, Math.min(t, d - 0.05));
@@ -9319,6 +9466,16 @@ start_bridge.bat
                 if (seen[r.video.uid]) return;
                 seen[r.video.uid] = 1; vids.push(r.video);
             });
+            if (edgeTrimMode === 'half') {
+                var per = vids.slice(0, 4).map(function (v) {
+                    return (v.fps ? v.fps.toFixed(3) + 'fps' : 'rate unknown, 25fps assumed')
+                        + ' = ' + (frameSeconds(v) * 500).toFixed(2) + 'ms';
+                }).join(', ') + (vids.length > 4 ? ', ...' : '');
+                return 'Each clip stops half a frame before its cut (' + per + ') - dead centre between '
+                    + 'the last frame it keeps and the first frame of the next clip, so no real frame is '
+                    + 'lost and the next scene can never appear at the tail of this one. Each video uses '
+                    + 'its own rate. The next clip still starts exactly on its cut.';
+            }
             if (edgeTrimMs <= 0) {
                 return 'Edge trim is off: clips end exactly on their cut, so the frame on the cut '
                     + 'may appear in both clips.';
@@ -9327,9 +9484,13 @@ start_bridge.bat
                 + ' appear at the tail of this clip. The next clip still starts exactly on its cut.';
             var known = vids.filter(function (v) { return v.fps; });
             if (known.length === vids.length && vids.length) {
+                var over = known.filter(function (v) { return edgeTrimMs > 1000 / v.fps; });
                 g += ' Source: ' + vids.map(function (v) {
                     return v.fps.toFixed(3) + 'fps (' + (1000 / v.fps).toFixed(1) + 'ms a frame)';
-                }).join(', ') + ' - the trim is under one frame, so no real frame is lost.';
+                }).join(', ') + (over.length
+                    ? ' - WARNING: the trim is longer than a frame on ' + over.length
+                    + ' of them, so a real frame is dropped. Half a frame would not be.'
+                    : ' - the trim is under one frame, so no real frame is lost.');
             }
             return g;
         }
@@ -10867,7 +11028,8 @@ start_bridge.bat
                 v: 1, saved: new Date().toISOString(),
                 settings: {
                     proxyHeight: proxyHeight, engine: engine, quality: quality,
-                    container: container, rippleEdges: rippleEdges, edgeTrimMs: edgeTrimMs
+                    container: container, rippleEdges: rippleEdges,
+                    edgeTrim: edgeTrimValue(), edgeTrimMs: edgeTrimMs
                 },
                 cur: cur,
                 videos: videos.map(function (v) {
@@ -10919,10 +11081,10 @@ start_bridge.bat
             if (st.quality) setQuality(st.quality);
             if (st.container) setFormat(st.container);
             if (typeof st.rippleEdges === 'boolean' && st.rippleEdges !== rippleEdges) toggleRipple();
-            if (typeof st.edgeTrimMs === 'number') {
-                edgeTrimMs = st.edgeTrimMs;
-                if ($('edgeTrimSelect')) $('edgeTrimSelect').value = String(edgeTrimMs);
-                syncEdgeTrimNote();
+            if (st.edgeTrim !== undefined) {
+                setEdgeTrim(st.edgeTrim);
+            } else if (typeof st.edgeTrimMs === 'number') {
+                setEdgeTrim(st.edgeTrimMs);        // a project saved before half-frame existed
             }
             cur = -1;
             renderQueue(); updateStats();
@@ -11345,11 +11507,17 @@ start_bridge.bat
             syncDetectMaxSelect();
             renderDetectPanel();
             syncHistoryUI();
+            /* A stored flat value is a choice someone made and is kept as
+               one; only a fresh install gets the frame-relative default. */
             try {
                 var et = localStorage.getItem('cf_edge_trim_ms');
-                if (et !== null) edgeTrimMs = Math.max(0, Math.min(500, parseFloat(et) || 0));
+                if (et === 'half') edgeTrimMode = 'half';
+                else if (et !== null) {
+                    edgeTrimMode = 'ms';
+                    edgeTrimMs = Math.max(0, Math.min(500, parseFloat(et) || 0));
+                }
             } catch (e) { }
-            $('edgeTrimSelect').value = String(edgeTrimMs);
+            $('edgeTrimSelect').value = edgeTrimValue();
             syncEdgeTrimNote();
 
             $('urlInput').addEventListener('keydown', function (e) {
