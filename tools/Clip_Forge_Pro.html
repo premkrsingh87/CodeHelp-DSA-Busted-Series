@@ -4791,6 +4791,7 @@ start_bridge.bat
             loopClipId = null; previewStopAt = null;
             if (thumbObserver) { thumbObserver.disconnect(); thumbObserver = null; }
             thumbToken++; fsToken++;
+            cvPoolClear();
             if (prev && prev !== videos[i]) trimMediaPool();
             var v = videos[i];
             timelineZoom = 1;
@@ -5966,21 +5967,90 @@ start_bridge.bat
            thin ticks; above it they get the full grab knob. */
         var CUT_HIDE_PX = 3, CUT_TIGHT_PX = 34, CUT_MIN_PX = 5;
 
+        /* The pool used to hand nodes back last-in-first-out, so a re-render
+           of the same stretch of timeline gave every clip somebody else's
+           element - reversed, in fact. Nothing could then be reused: each node
+           had its class, its style, its markup and its tooltip rewritten from
+           scratch, every render, for elements that had not moved a pixel.
+           Handing them back in the order they were released means clip i gets
+           the element clip i had, and the guards below turn a re-render of an
+           unmoved timeline into no DOM writes at all.
+
+           removeAttribute('style') is gone with it: the pools are per kind and
+           every caller assigns the whole style it wants, so clearing first only
+           bought an extra style invalidation per node. */
+        var _tlCursor = { clip: 0, cut: 0, io: 0, range: 0 };
+
         function poolTake(kind, cls) {
-            var el = _tlPool[kind].pop();
-            if (!el) { el = document.createElement('div'); }
-            el.className = cls;
-            el.removeAttribute('style');
+            var arr = _tlPool[kind], k = _tlCursor[kind], el;
+            if (k < arr.length) { el = arr[k]; _tlCursor[kind] = k + 1; }
+            else { el = document.createElement('div'); }
+            if (el.className !== cls) el.className = cls;
             return el;
         }
 
-        function releaseTimelineNodes() {
-            for (var i = 0; i < _tlLive.length; i++) {
-                var rec = _tlLive[i];
-                if (rec.el.parentNode) rec.el.parentNode.removeChild(rec.el);
-                if (_tlPool[rec.kind].length < 400) _tlPool[rec.kind].push(rec.el);
-            }
+        /** Write only what is actually different. */
+        function tlSet(el, prop, value) {
+            if (el[prop] === value) return false;
+            el[prop] = value;
+            return true;
+        }
+
+        var _tlAttached = [];
+
+        /** Start a render. Nothing leaves the document yet - the previous
+         *  render's nodes stay exactly where they are and are offered back for
+         *  reuse in the order they were laid down. */
+        function beginTimelineNodes() {
             _tlLive.length = 0;
+            _tlCursor.clip = 0; _tlCursor.cut = 0; _tlCursor.io = 0; _tlCursor.range = 0;
+        }
+
+        /** Take everything down - the empty-timeline path, and nothing else. */
+        function releaseTimelineNodes() {
+            for (var i = 0; i < _tlAttached.length; i++) {
+                var el = _tlAttached[i];
+                if (el.parentNode) el.parentNode.removeChild(el);
+            }
+            _tlAttached.length = 0;
+            _tlLive.length = 0;
+            _tlPool.clip.length = 0; _tlPool.cut.length = 0;
+            _tlPool.io.length = 0; _tlPool.range.length = 0;
+            _tlCursor.clip = 0; _tlCursor.cut = 0; _tlCursor.io = 0; _tlCursor.range = 0;
+        }
+
+        /* Detaching and re-appending every node was, once the writes themselves
+           were guarded, almost the entire remaining cost of a render: eight
+           hundred absolutely positioned children leaving the document and
+           coming back is eight hundred insertions for the engine to lay out
+           again, and on a timeline where nothing moved not one of them needed
+           to happen. So the nodes stay put unless the set or the order really
+           changed, which makes a re-render of an unmoved timeline free. */
+        function syncTimelineNodes(tl) {
+            var n = _tlLive.length, i, same = (_tlAttached.length === n);
+            if (same) {
+                for (i = 0; i < n; i++) {
+                    if (_tlAttached[i] !== _tlLive[i].el) { same = false; break; }
+                }
+            }
+            if (!same) {
+                for (i = 0; i < _tlAttached.length; i++) {
+                    var old = _tlAttached[i];
+                    if (old.parentNode) old.parentNode.removeChild(old);
+                }
+                var frag = document.createDocumentFragment();
+                for (i = 0; i < n; i++) frag.appendChild(_tlLive[i].el);
+                tl.appendChild(frag);
+                _tlAttached.length = n;
+                for (i = 0; i < n; i++) _tlAttached[i] = _tlLive[i].el;
+            }
+            // what the next render may hand back, by kind, in this order
+            _tlPool.clip.length = 0; _tlPool.cut.length = 0;
+            _tlPool.io.length = 0; _tlPool.range.length = 0;
+            for (i = 0; i < n; i++) {
+                var arr = _tlPool[_tlLive[i].kind];
+                if (arr.length < 400) arr.push(_tlLive[i].el);
+            }
         }
 
         /** The slice of the video the scroller is showing, padded either side.
@@ -6012,27 +6082,27 @@ start_bridge.bat
         function renderTimeline() {
             var tl = D.timeline;
             if (!tl) return;
-            releaseTimelineNodes();
+            beginTimelineNodes();
             hideSnapLine();
 
             var d = duration();
             var v = V();
-            if (!d || !v) { updateQuickSelectBtn(); return; }
+            if (!d || !v) { releaseTimelineNodes(); updateQuickSelectBtn(); return; }
 
             var tlWidth = geo().tlW;
             var view = timelineViewSpan(d, tlWidth);
             _tlWindow = { from: view.from, to: view.to, zoom: timelineZoom };
             var pxPerSec = tlWidth / d;
-            var frag = document.createDocumentFragment();
             var list = v.clips;
             var ribbon = false;
 
             // in/out staging range
             if (inPoint !== null && outPoint !== null && outPoint > inPoint) {
                 var rng = poolTake('range', 'io-range');
-                rng.style.cssText = 'left:' + (inPoint / d * 100) + '%;width:'
+                var rngCss = 'left:' + (inPoint / d * 100) + '%;width:'
                     + ((outPoint - inPoint) / d * 100) + '%;';
-                frag.appendChild(rng); _tlLive.push({ el: rng, kind: 'range' });
+                if (tlSet(rng, '_cfCss', rngCss)) rng.style.cssText = rngCss;
+                _tlLive.push({ el: rng, kind: 'range' });
             }
 
             // clips - only the ones the window touches, found by search rather
@@ -6042,7 +6112,7 @@ start_bridge.bat
                 if (c.start > view.to) break;
                 var el = poolTake('clip', 'tl-clip' + (i === selClip ? ' selected' : '')
                     + (c.sel ? '' : ' deselected') + (loopClipId === c.id ? ' looping' : ''));
-                el.dataset.idx = i;
+                if (tlSet(el, '_cfIdx', i)) el.dataset.idx = i;
                 var wpct = Math.max(0.05, (c.end - c.start) / d * 100);
                 var wpx = wpct / 100 * tlWidth;
                 /* Eight rotating hues read as confetti once a clip is a couple of
@@ -6054,8 +6124,9 @@ start_bridge.bat
                 var color = thin ? (i % 2 ? RIBBON[0] : RIBBON[1]) : COLORS[i % COLORS.length];
                 // a 150deg gradient inside a two-pixel column is just a
                 // horizontal smear across the whole strip - flat reads cleaner
-                el.style.cssText = 'left:' + (c.start / d * 100) + '%;width:' + wpct + '%;background:'
+                var css = 'left:' + (c.start / d * 100) + '%;width:' + wpct + '%;background:'
                     + (thin ? color : 'linear-gradient(150deg,' + color + ',' + color + 'cc)') + ';';
+                if (tlSet(el, '_cfCss', css)) el.style.cssText = css;
                 var inner = '';
                 if (wpx >= 54) {
                     inner = '<div class="tl-clip-inner">'
@@ -6065,11 +6136,13 @@ start_bridge.bat
                 } else if (wpx >= 18) {
                     inner = '<div class="tl-clip-inner"><span class="tl-clip-name">' + (i + 1) + '</span></div>';
                 }
-                el.innerHTML = '<div class="tl-handle left" data-handle="left"></div>' + inner
+                var markup = '<div class="tl-handle left" data-handle="left"></div>' + inner
                     + '<div class="tl-handle right" data-handle="right"></div>';
-                el.title = clipName(v, cur, i) + '   ' + fmtMs(c.start) + ' → ' + fmtMs(c.end)
+                if (tlSet(el, '_cfHtml', markup)) el.innerHTML = markup;
+                var tip = clipName(v, cur, i) + '   ' + fmtMs(c.start) + ' → ' + fmtMs(c.end)
                     + '   (' + fmtDur(c.end - c.start) + ')';
-                frag.appendChild(el); _tlLive.push({ el: el, kind: 'clip' });
+                if (tlSet(el, '_cfTip', tip)) el.title = tip;
+                _tlLive.push({ el: el, kind: 'clip' });
             }
 
             /* Cut markers where two clips touch: drag to move the boundary, click
@@ -6109,11 +6182,14 @@ start_bridge.bat
                 if (px - lastCutPx < spacing) continue;
                 lastCutPx = px;
                 var cut = poolTake('cut', 'tl-cut');
-                cut.style.left = (t / d * 100) + '%';
-                cut.setAttribute('data-t', fmtMs(t));
-                cut.setAttribute('data-cut', k);
-                cut.title = 'Drag to move this cut · click to merge clip ' + (k + 1) + ' and ' + (k + 2);
-                frag.appendChild(cut); _tlLive.push({ el: cut, kind: 'cut' });
+                var cutLeft = (t / d * 100) + '%';
+                if (tlSet(cut, '_cfLeft', cutLeft)) cut.style.left = cutLeft;
+                var cutT = fmtMs(t);
+                if (tlSet(cut, '_cfT', cutT)) cut.setAttribute('data-t', cutT);
+                if (tlSet(cut, '_cfCut', k)) cut.setAttribute('data-cut', k);
+                var cutTip = 'Drag to move this cut · click to merge clip ' + (k + 1) + ' and ' + (k + 2);
+                if (tlSet(cut, '_cfTip', cutTip)) cut.title = cutTip;
+                _tlLive.push({ el: cut, kind: 'cut' });
             }
 
             if (_tlFlags.ribbon !== ribbon) {
@@ -6126,10 +6202,10 @@ start_bridge.bat
                 if (pair[1] === null) return;
                 var m = poolTake('io', 'io-marker ' + pair[0]);
                 m.style.left = (pair[1] / d * 100) + '%';
-                frag.appendChild(m); _tlLive.push({ el: m, kind: 'io' });
+                _tlLive.push({ el: m, kind: 'io' });
             });
 
-            tl.appendChild(frag);
+            syncTimelineNodes(tl);
             updateIOBadge();
             updateQuickSelectBtn();
         }
@@ -6147,12 +6223,16 @@ start_bridge.bat
 
         function updateIOBadge() {
             var b = $('tlInOut');
-            if (inPoint === null && outPoint === null) { b.style.display = 'none'; return; }
-            b.style.display = '';
-            b.textContent = 'IN ' + (inPoint !== null ? fmtMs(inPoint) : '—')
+            if (inPoint === null && outPoint === null) {
+                if (b.style.display !== 'none') b.style.display = 'none';
+                return;
+            }
+            if (b.style.display !== '') b.style.display = '';
+            var txt = 'IN ' + (inPoint !== null ? fmtMs(inPoint) : '—')
                 + '  →  OUT ' + (outPoint !== null ? fmtMs(outPoint) : '—')
                 + (inPoint !== null && outPoint !== null && outPoint > inPoint
                     ? '   (' + fmtDur(outPoint - inPoint) + ')' : '');
+            if (b.textContent !== txt) b.textContent = txt;
         }
 
         function syncPlayhead(t) {
@@ -6563,8 +6643,11 @@ start_bridge.bat
             el.style.left = (t / d * 100) + '%';
         }
         function hideSnapLine() {
+            // called at the top of every render, and a blind style write there
+            // invalidates layout for a timeline of hundreds of positioned
+            // children even though the line was already hidden
             var el = $('snapLine');
-            if (el) el.style.display = 'none';
+            if (el && el.style.display !== 'none') el.style.display = 'none';
         }
 
         /* ---- drag across empty timeline to carve out a clip ---- */
@@ -7433,12 +7516,18 @@ start_bridge.bat
             if (!btn) return;
             var i = clipAtPlayhead();
             var v = V();
-            if (i < 0 || !v) { btn.style.display = 'none'; return; }
-            btn.style.display = '';
+            if (i < 0 || !v) {
+                if (btn.style.display !== 'none') btn.style.display = 'none';
+                return;
+            }
+            if (btn.style.display !== '') btn.style.display = '';
             var on = v.clips[i].sel;
-            btn.textContent = (on ? '● ' : '○ ') + 'Clip ' + (i + 1) + (on ? ' ✓' : ' ✕');
-            btn.style.color = on ? 'var(--success)' : 'var(--danger)';
-            btn.style.borderColor = on ? 'rgba(0,212,170,0.3)' : 'rgba(248,113,113,0.3)';
+            var label = (on ? '● ' : '○ ') + 'Clip ' + (i + 1) + (on ? ' ✓' : ' ✕');
+            if (btn.textContent !== label) btn.textContent = label;
+            var col = on ? 'var(--success)' : 'var(--danger)';
+            if (btn.style.color !== col) btn.style.color = col;
+            var bc = on ? 'rgba(0,212,170,0.3)' : 'rgba(248,113,113,0.3)';
+            if (btn.style.borderColor !== bc) btn.style.borderColor = bc;
         }
 
         function highlightClipCard(i) {
@@ -7463,6 +7552,52 @@ start_bridge.bat
         var _clipRowH = 0;              // measured once from a real card
         var _clipRowNeedsMeasure = true, _clipViewH = 0;
         var _clipWin = { from: -1, to: -1, n: -1 };
+        var _clipHtml = null;           // the card markup currently in the DOM
+
+        /* A 320x180 canvas costs a quarter of a megabyte of backing store the
+           moment something is drawn into it, and rewriting the list's innerHTML
+           makes fifteen brand new ones every time the window moves. Scrolling a
+           900-cut list that way is hundreds of allocations a second, and it was
+           the whole remaining cost of scrolling once the redundant painting was
+           gone - the drawing is cheap, the allocating is not.
+           
+           So the canvases outlive their cards. Each is kept against the clip it
+           belongs to and handed straight back when that clip scrolls into view
+           again: the same element, still holding the same picture, so there is
+           nothing to allocate and nothing to repaint. Only the id changes,
+           because the row index moved. The pool is a little larger than the
+           window and evicts oldest-first. */
+        var CV_POOL_MAX = 48;
+        var _cvPool = new Map();
+
+        function cvPoolClear() { _cvPool.clear(); }
+
+        function cvPoolKeep(id, cv) {
+            if (_cvPool.has(id)) _cvPool.delete(id);
+            _cvPool.set(id, cv);
+            while (_cvPool.size > CV_POOL_MAX) _cvPool.delete(_cvPool.keys().next().value);
+        }
+
+        /** Give each freshly written card the canvas its clip already owns. */
+        function adoptCanvases(el, v) {
+            var cards = el.querySelectorAll('.clip-card');
+            for (var q = 0; q < cards.length; q++) {
+                var card = cards[q];
+                var i = parseInt(card.dataset.idx, 10);
+                var c = v.clips[i];
+                if (!c) continue;
+                var fresh = card.querySelector('canvas');
+                if (!fresh) continue;
+                var kept = _cvPool.get(c.id);
+                if (kept && kept !== fresh) {
+                    kept.id = fresh.id;         // same picture, new row number
+                    fresh.replaceWith(kept);
+                    cvPoolKeep(c.id, kept);
+                } else {
+                    cvPoolKeep(c.id, fresh);
+                }
+            }
+        }
         var _clipIdx = [];              // clip indices passing the filter, in order
         var CLIP_OVERSCAN = 4;
 
@@ -7559,6 +7694,8 @@ start_bridge.bat
             if (!list.length) {
                 _clipIdx.length = 0;
                 _clipWin = { from: -1, to: -1, n: -1 };
+                _clipHtml = null;
+                cvPoolClear();
                 el.innerHTML = '<div class="text-center py-10 text-[var(--text-secondary)]">'
                     + '<p class="text-3xl mb-2">✂️</p><p class="text-sm">No clips yet</p>'
                     + '<p class="text-[11px] mt-1 opacity-75">Load a preview, then press '
@@ -7568,7 +7705,13 @@ start_bridge.bat
             }
 
             buildClipIndex(v);
-            _clipWin = { from: -1, to: -1, n: -1 };     // force a rebuild
+            /* This used to force a full rebuild. It does not have to:
+               paintClipWindow now compares the markup it is about to write
+               against the markup already there, so an edit that leaves the
+               visible rows alone touches nothing, and one that changes a
+               single clip replaces a single card. The result is the same DOM
+               either way - the comparison is on the exact strings that would
+               have been written. */
             paintClipWindow();
         }
 
@@ -7584,17 +7727,60 @@ start_bridge.bat
             var first = Math.max(0, Math.floor(g.clipTop / _clipRowH) - CLIP_OVERSCAN);
             var last = Math.min(total, first + per + CLIP_OVERSCAN * 2);
 
-            if (first === _clipWin.from && last === _clipWin.to && total === _clipWin.n) return;
+            var sameWindow = (first === _clipWin.from && last === _clipWin.to && total === _clipWin.n);
+
+            /* Build the markup for the window first, then work out how little
+               of the DOM has to change to become it.
+
+               Rewriting innerHTML throws away every card, and with it fifteen
+               320x180 canvases that then have to be allocated and painted from
+               scratch. That was over half the CPU time in the editor, and
+               almost all of it bought nothing: nudging one clip rebuilt
+               fourteen cards that were already correct. */
+            var cards = sameWindow ? el.querySelectorAll('.clip-card') : null;
+            var reuse = !!(sameWindow && _clipHtml && cards && cards.length === (last - first));
+
+            var html = new Array(last - first);
+            for (var k = first; k < last; k++) {
+                var i = _clipIdx[k];
+                html[k - first] = clipCardHtml(v, list[i], i, list, ext);
+            }
+
+            if (reuse) {
+                var touched = 0;
+                for (var q = 0; q < html.length; q++) {
+                    if (_clipHtml[q] === html[q]) continue;
+                    var slot = document.createElement('div');
+                    slot.innerHTML = html[q];
+                    var node = slot.firstElementChild;
+                    if (!node) { reuse = false; break; }
+                    cards[q].replaceWith(node);
+                    touched++;
+                    var ci = parseInt(node.dataset.idx, 10);
+                    var cc = list[ci];
+                    var ncv = node.querySelector('canvas');
+                    if (cc && ncv) {
+                        var keptC = _cvPool.get(cc.id);
+                        if (keptC && keptC !== ncv) { keptC.id = ncv.id; ncv.replaceWith(keptC); cvPoolKeep(cc.id, keptC); }
+                        else cvPoolKeep(cc.id, ncv);
+                    }
+                }
+                if (reuse) {
+                    _clipHtml = html;
+                    if (touched) { paintCachedThumbs(); scheduleThumbs(); }
+                    return;
+                }
+            }
+
             _clipWin = { from: first, to: last, n: total };
 
             var parts = [];
             if (first > 0) parts.push('<div style="height:' + (first * _clipRowH) + 'px"></div>');
-            for (var k = first; k < last; k++) {
-                var i = _clipIdx[k];
-                parts.push(clipCardHtml(v, list[i], i, list, ext));
-            }
+            for (var q2 = 0; q2 < html.length; q2++) parts.push(html[q2]);
             if (last < total) parts.push('<div style="height:' + ((total - last) * _clipRowH) + 'px"></div>');
             el.innerHTML = parts.join('');
+            _clipHtml = html;
+            adoptCanvases(el, v);
 
             /* Measure a real card once, not on every paint. getBoundingClientRect
                on freshly written DOM forces a synchronous layout, and doing that
@@ -7607,6 +7793,7 @@ start_bridge.bat
                     if (h > 40 && Math.abs(h - _clipRowH) > 2) {
                         _clipRowH = h;
                         _clipWin = { from: -1, to: -1, n: -1 };
+                        _clipHtml = null;
                         return paintClipWindow();
                     }
                 }
@@ -7654,26 +7841,79 @@ start_bridge.bat
             return (best && bestD <= 6) ? best.img : null;
         }
 
+        /* Every clip card owns a 320x180 canvas, and the two functions below
+           were the single most expensive thing in the whole editor - more than
+           half of all CPU time on a 900-cut project. Two reasons, both fixed
+           here, neither of which changes a pixel:
+
+           1. A canvas remembers nothing, so the same picture was drawn into
+              the same canvas over and over. Each one now holds a reference to
+              the bitmap it is showing - a property on the element, so the
+              serialised DOM is untouched - and skips a paint that would
+              change nothing.
+
+           2. The placeholder was drawn command by command every time - a
+              fill, a font assignment and a fillText. Assigning ctx.font parses
+              a CSS font shorthand and resolves the face; doing that a thousand
+              times to write three dots is most of the cost. It is drawn once
+              into an offscreen canvas now and blitted, which is the same
+              pixels by construction because it is the same drawing code. */
+        var _phCache = Object.create(null);
+
+        function placeholderBitmap(text) {
+            var c = _phCache[text];
+            if (c) return c;
+            c = document.createElement('canvas');
+            c.width = 320; c.height = 180;
+            var x = c.getContext('2d', { alpha: false });
+            x.fillStyle = '#0e0e18'; x.fillRect(0, 0, 320, 180);
+            x.fillStyle = 'rgba(255,255,255,0.16)';
+            x.font = '13px Inter'; x.textAlign = 'center';
+            x.fillText(text, 160, 95);
+            return (_phCache[text] = c);
+        }
+
+        /* The cache would otherwise freeze whatever face was available at the
+           moment it was built, so it is thrown away once the real one lands
+           and everything showing a placeholder draws itself again. */
+        if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(function () {
+                _phCache = Object.create(null);
+                try { paintCachedThumbs(); } catch (e) { }
+            }).catch(function () { });
+        }
+
+        /* The guard is the source image itself, not a name for it. A canvas
+           already showing this exact bitmap needs nothing done to it, and the
+           moment the bitmap is replaced - a thumbnail arriving, a relink
+           clearing them, the placeholder cache being rebuilt - identity
+           changes and it repaints. Nothing has to remember to invalidate it. */
         function paintThumb(i, img) {
             var cv = $('clipThumb_' + i);
             if (!cv || !img) return false;
-            try { cv.getContext('2d', { alpha: false }).drawImage(img, 0, 0, 320, 180); return true; }
-            catch (e) { return false; }
+            if (cv._cfSrc === img) return true;
+            try {
+                cv.getContext('2d', { alpha: false }).drawImage(img, 0, 0, 320, 180);
+                cv._cfSrc = img;
+                return true;
+            } catch (e) { return false; }
         }
 
         function paintPlaceholder(i, text) {
             var cv = $('clipThumb_' + i);
             if (!cv) return;
-            var ctx = cv.getContext('2d', { alpha: false });
-            ctx.fillStyle = '#0e0e18'; ctx.fillRect(0, 0, 320, 180);
-            ctx.fillStyle = 'rgba(255,255,255,0.16)';
-            ctx.font = '13px Inter'; ctx.textAlign = 'center';
-            ctx.fillText(text, 160, 95);
+            var bmp = placeholderBitmap(text);
+            if (cv._cfSrc === bmp) return;
+            try {
+                cv.getContext('2d', { alpha: false }).drawImage(bmp, 0, 0);
+                cv._cfSrc = bmp;
+            } catch (e) { }
         }
 
         function paintCachedThumbs() {
             var v = V(); if (!v) return;
             v._thumbs = v._thumbs || {};
+            var ph = canReadFrames() ? '…' : 'needs a proxy copy';
             // only rows that are actually on screen have a canvas to paint
             D.clipsList.querySelectorAll('.clip-card').forEach(function (card) {
                 var i = parseInt(card.dataset.idx, 10);
@@ -7681,7 +7921,7 @@ start_bridge.bat
                 if (paintThumb(i, v._thumbs[c.id])) return;
                 var fs = nearestFilmstripFrame(v, c.start);
                 if (fs && paintThumb(i, fs)) return;
-                paintPlaceholder(i, canReadFrames() ? '…' : 'needs a proxy copy');
+                paintPlaceholder(i, ph);
             });
         }
 
