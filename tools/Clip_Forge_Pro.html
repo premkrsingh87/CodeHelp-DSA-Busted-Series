@@ -3472,6 +3472,21 @@
                         <option value="60">60 ms — safest</option>
                     </select>
                     <p class="text-[10px] text-[var(--text-dim)] mt-1 leading-snug" id="edgeTrimNote">—</p>
+
+                    <div id="ytGuardRow">
+                        <label
+                            class="block text-[10px] text-[var(--text-secondary)] font-semibold uppercase tracking-wider mt-3 mb-1.5">Safety
+                            frames <span class="text-[var(--yt)]">· yt-dlp</span></label>
+                        <select id="ytGuardSelect" class="fs-select w-full !text-[11px]"
+                            onchange="setYtGuard(this.value)"
+                            title="Whole frames given away at each end of every clip. yt-dlp cuts a section out of a network stream and re-wraps it, and that rounds in whole packets — so the boundary can miss by a frame and put the first frame of the next scene at the tail of this one. No sub-frame margin can fix a whole-frame error; not asking for the frames that might be wrong can. FFmpeg cuts exactly on a local file and never uses this.">
+                            <option value="0">Off — trust the cut exactly</option>
+                            <option value="1" selected>1 frame each end — recommended</option>
+                            <option value="2">2 frames each end — safest</option>
+                            <option value="3">3 frames each end</option>
+                        </select>
+                        <p class="text-[10px] text-[var(--text-dim)] mt-1 leading-snug" id="ytGuardNote">—</p>
+                    </div>
                 </div>
                 <div>
                     <label
@@ -3966,6 +3981,34 @@ start_bridge.bat
         var edgeTrimMs = DEFAULT_TRIM_MS;
         var edgeTrimMode = 'half';        // 'half' | 'ms'
 
+        /* SAFETY FRAMES  —  the yt-dlp problem the edge trim cannot solve.
+         *
+         * The edge trim above is a sub-frame margin, and it is exactly right
+         * for a cutter that lands where it is told. FFmpeg on a local file is
+         * one: -ss and -to on a decoded stream put the boundary on the frame
+         * asked for, so a clip comes out clean.
+         *
+         * yt-dlp is not. --download-sections cuts a section out of a stream
+         * arriving over the network, in a container whose timebase is not the
+         * frame grid, and the section is re-wrapped (and, with
+         * --force-keyframes-at-cuts, re-encoded) on the way out. Every one of
+         * those steps rounds, and the rounding is in whole packets, not
+         * fractions of a frame. So the boundary can miss by a frame in either
+         * direction however fine the margin handed to it is - and a miss at
+         * the tail is the first frame of the NEXT scene appearing at the end
+         * of this clip, which is exactly the artefact this is here to kill.
+         *
+         * No sub-frame value can fix a whole-frame error. The only thing that
+         * can is to stop asking for the frames that might be wrong: pull the
+         * start a frame later and the end a frame earlier, so a boundary that
+         * slips by a frame still lands inside the scene. It costs the first
+         * and last frame of each clip - at 30fps, 33ms off a clip that is
+         * usually seconds long - and it buys a clip that never opens or closes
+         * on a frame from somewhere else.
+         *
+         * FFmpeg does not need it and does not get it. */
+        var ytGuardFrames = 1;
+
         var STD_RATES = [23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60, 90, 100, 120];
 
         /* The rate is not needed to place the cut - the trim above is a flat
@@ -4000,6 +4043,7 @@ start_bridge.bat
                 syncEdgeTrimNote();
                 // the rate is what makes frame-exact markers possible
                 if (V() === v && currentMethod === 'custom') syncTimestampsBox(true);
+                if (V() === v) syncYtGuardNote();
                 persist();
             };
             var bail = setTimeout(function () { finish(estimate()); }, 12000);
@@ -4128,20 +4172,79 @@ start_bridge.bat
         function exportRange(v, c) {
             var start = Math.max(0, c.start);
             var end = c.end;
-            // A clip that runs to the end of the video has no next clip to give
-            // a frame to, and shaving it would drop the real final frame.
+
+            // The first and last clip have no neighbour to borrow a frame from,
+            // and shaving them would drop a real first or final frame.
             var atEnd = end >= videoEnd(v) - 0.001;
-            var guard = atEnd ? 0 : frameGuard(v, end);
-            // never trim away a meaningful share of a short clip
-            guard = Math.min(guard, Math.max(0, (end - start) * 0.25));
-            var out = Math.max(start + 0.001, end - guard);
+            var atStart = start <= 0.001;
+
+            var tail = atEnd ? 0 : frameGuard(v, end);
+            var head = 0;
+
+            // whole safety frames, on the engine that needs them
+            var safety = ytSafetySeconds(v);
+            if (safety > 0) {
+                if (!atEnd) tail += safety;
+                if (!atStart) head += safety;
+            }
+
+            /* Never take a meaningful share of a short clip: if the two guards
+               together would, scale both down together so the clip keeps its
+               shape rather than losing one end to the other. */
+            var span = Math.max(0, end - start);
+            var take = head + tail;
+            if (take > span * 0.25 && take > 0) {
+                var k = (span * 0.25) / take;
+                head *= k; tail *= k;
+            }
+
+            var inn = start + head;
+            var out = Math.max(inn + 0.001, end - tail);
             return {
-                start: start,
+                start: inn,
                 end: out,
-                dur: Math.max(0.001, out - start),
+                dur: Math.max(0.001, out - inn),
+                rawStart: start,
                 rawEnd: end,
+                head: inn - start,
                 guard: end - out
             };
+        }
+
+        /** Whole frames shaved off each end, in seconds. Only yt-dlp gets them:
+         *  a local FFmpeg cut lands on the frame it is given. */
+        function ytSafetySeconds(v) {
+            if (engine !== 'ytdlp' || ytGuardFrames <= 0) return 0;
+            return ytGuardFrames * frameSeconds(v);
+        }
+
+        function setYtGuard(n) {
+            ytGuardFrames = clamp(parseInt(n, 10) || 0, 0, 4);
+            try { localStorage.setItem('cf_yt_guard_frames', String(ytGuardFrames)); } catch (e) { }
+            if ($('ytGuardSelect')) $('ytGuardSelect').value = String(ytGuardFrames);
+            regenerateScript();
+            syncYtGuardNote();
+            persist();
+        }
+
+        function syncYtGuardNote() {
+            var el = $('ytGuardNote'); if (!el) return;
+            var row = $('ytGuardRow');
+            if (row) row.style.display = engine === 'ytdlp' ? '' : 'none';
+            if (engine !== 'ytdlp') return;
+            var v = V();
+            var fs = frameSeconds(v);
+            var rate = (v && v.fps) ? v.fps.toFixed(3) + 'fps' : '25fps assumed';
+            if (ytGuardFrames <= 0) {
+                el.innerHTML = '<span style="color:var(--warning)">Off — yt-dlp can miss a boundary by a whole '
+                    + 'frame, so a clip may open or close on a frame from the neighbouring scene.</span>';
+                return;
+            }
+            el.textContent = 'Drops the first and last ' + (ytGuardFrames === 1 ? 'frame' : ytGuardFrames + ' frames')
+                + ' of every clip — ' + (ytGuardFrames * fs * 1000).toFixed(1) + 'ms each end at ' + rate
+                + '. yt-dlp cuts a network stream and can land a frame either side of the mark; giving away '
+                + 'the frames it might get wrong is the only thing that stops the next scene appearing at the '
+                + 'tail. First and last clip keep their outer edge. FFmpeg cuts exactly and is untouched.';
         }
 
         /* Counting clips does not need their export ranges. allClipRows builds
@@ -4681,6 +4784,7 @@ start_bridge.bat
             renderDetectPanel();
             syncEdgeTrimNote();
             if (currentMethod === 'custom') syncTimestampsBox(true);
+            syncYtGuardNote();
             if (canReadFrames()) rebuildFilmstrip();
         }
 
@@ -9390,6 +9494,8 @@ start_bridge.bat
             $('engineHint').textContent = e === 'ytdlp'
                 ? 'Downloads only the exact seconds of each clip, straight from YouTube.'
                 : 'Cuts clips out of a video file you already have on disk.';
+            syncYtGuardNote();
+            syncEdgeTrimNote();
             regenerateScript();
         }
         function setQuality(q) {
@@ -9466,6 +9572,18 @@ start_bridge.bat
                 if (seen[r.video.uid]) return;
                 seen[r.video.uid] = 1; vids.push(r.video);
             });
+            var safety = '';
+            if (engine === 'ytdlp' && ytGuardFrames > 0 && vids.length) {
+                safety = ' Plus ' + ytGuardFrames + ' safety frame' + (ytGuardFrames === 1 ? '' : 's')
+                    + ' given away at each end ('
+                    + vids.slice(0, 4).map(function (v) {
+                        return (ytGuardFrames * frameSeconds(v) * 1000).toFixed(1) + 'ms at '
+                            + (v.fps ? v.fps.toFixed(3) + 'fps' : '25fps assumed');
+                    }).join(', ') + (vids.length > 4 ? ', ...' : '')
+                    + '): yt-dlp cuts a network stream and can miss a boundary by a whole frame, so the'
+                    + ' frames it might get wrong are simply not asked for. The first and last clip keep'
+                    + ' their outer edge.';
+            }
             if (edgeTrimMode === 'half') {
                 var per = vids.slice(0, 4).map(function (v) {
                     return (v.fps ? v.fps.toFixed(3) + 'fps' : 'rate unknown, 25fps assumed')
@@ -9474,11 +9592,11 @@ start_bridge.bat
                 return 'Each clip stops half a frame before its cut (' + per + ') - dead centre between '
                     + 'the last frame it keeps and the first frame of the next clip, so no real frame is '
                     + 'lost and the next scene can never appear at the tail of this one. Each video uses '
-                    + 'its own rate. The next clip still starts exactly on its cut.';
+                    + 'its own rate.' + safety;
             }
             if (edgeTrimMs <= 0) {
                 return 'Edge trim is off: clips end exactly on their cut, so the frame on the cut '
-                    + 'may appear in both clips.';
+                    + 'may appear in both clips.' + safety;
             }
             var g = 'Each clip stops ' + edgeTrimMs + 'ms before its cut, so the next scene can never'
                 + ' appear at the tail of this clip. The next clip still starts exactly on its cut.';
@@ -9492,7 +9610,7 @@ start_bridge.bat
                     + ' of them, so a real frame is dropped. Half a frame would not be.'
                     : ' - the trim is under one frame, so no real frame is lost.');
             }
-            return g;
+            return g + safety;
         }
 
         /** Make arbitrary text safe to put after `echo` in a .bat.
@@ -11029,7 +11147,8 @@ start_bridge.bat
                 settings: {
                     proxyHeight: proxyHeight, engine: engine, quality: quality,
                     container: container, rippleEdges: rippleEdges,
-                    edgeTrim: edgeTrimValue(), edgeTrimMs: edgeTrimMs
+                    edgeTrim: edgeTrimValue(), edgeTrimMs: edgeTrimMs,
+                    ytGuardFrames: ytGuardFrames
                 },
                 cur: cur,
                 videos: videos.map(function (v) {
@@ -11086,6 +11205,7 @@ start_bridge.bat
             } else if (typeof st.edgeTrimMs === 'number') {
                 setEdgeTrim(st.edgeTrimMs);        // a project saved before half-frame existed
             }
+            if (typeof st.ytGuardFrames === 'number') setYtGuard(st.ytGuardFrames);
             cur = -1;
             renderQueue(); updateStats();
             if (videos.length) selectVideo(clamp(data.cur || 0, 0, videos.length - 1));
@@ -11519,6 +11639,12 @@ start_bridge.bat
             } catch (e) { }
             $('edgeTrimSelect').value = edgeTrimValue();
             syncEdgeTrimNote();
+            try {
+                var yg = localStorage.getItem('cf_yt_guard_frames');
+                if (yg !== null) ytGuardFrames = clamp(parseInt(yg, 10) || 0, 0, 4);
+            } catch (e) { }
+            $('ytGuardSelect').value = String(ytGuardFrames);
+            syncYtGuardNote();
 
             $('urlInput').addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') { e.preventDefault(); addFromInput(); }
