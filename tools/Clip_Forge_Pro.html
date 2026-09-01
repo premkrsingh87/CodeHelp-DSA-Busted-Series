@@ -3486,6 +3486,17 @@
                             <option value="3">3 frames each end</option>
                         </select>
                         <p class="text-[10px] text-[var(--text-dim)] mt-1 leading-snug" id="ytGuardNote">—</p>
+
+                        <label class="flex items-start gap-2 mt-2.5 text-[10px] text-[var(--text-secondary)] cursor-pointer"
+                            title="Only tick this if yt-dlp fails with “certificate verify failed: self signed certificate in certificate chain”. That means something on this machine — a corporate proxy, or an antivirus with HTTPS scanning on — is re-signing TLS, and Python does not trust its root. This adds --no-check-certificates, which gets the clips out but stops yt-dlp verifying it is really talking to YouTube. The clean fix is to add that root to the certificate store Python uses, or to turn HTTPS scanning off.">
+                            <input type="checkbox" id="ytCertsToggle" class="accent-[var(--accent)] mt-0.5"
+                                onchange="setIgnoreCerts(this.checked)">
+                            <span>Ignore certificate errors<br>
+                                <span class="text-[var(--text-dim)]">for a machine behind an intercepting proxy or
+                                    antivirus</span></span>
+                        </label>
+
+                        <p class="text-[10px] mt-2 leading-snug" id="shortClipNote" style="display:none"></p>
                     </div>
                 </div>
                 <div>
@@ -4009,6 +4020,23 @@ start_bridge.bat
          * FFmpeg does not need it and does not get it. */
         var ytGuardFrames = 1;
 
+        /* Some machines sit behind something that re-signs TLS on the way past
+           - a corporate proxy, or an antivirus with HTTPS scanning switched on.
+           Python's certificate bundle has never heard of that root, so every
+           yt-dlp request dies with "self signed certificate in certificate
+           chain" and not a single clip comes out. It is not a fault in the
+           clip list and no export setting can route around it; the only two
+           answers are to teach the machine's Python about that root, or to
+           tell yt-dlp to stop checking. The second is a real downgrade, so it
+           is off by default and says what it costs. */
+        var ytIgnoreCerts = false;
+
+        /* Below this, a yt-dlp section download is unreliable: --download-sections
+           asks YouTube for a byte range of a DASH stream, and a fragment of a
+           fifth of a second frequently comes back as something ffmpeg cannot
+           open at all. Worth warning about rather than silently changing. */
+        var SHORT_CLIP_S = 0.4;
+
         var STD_RATES = [23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60, 90, 100, 120];
 
         /* The rate is not needed to place the cut - the trim above is a flat
@@ -4231,7 +4259,7 @@ start_bridge.bat
             var el = $('ytGuardNote'); if (!el) return;
             var row = $('ytGuardRow');
             if (row) row.style.display = engine === 'ytdlp' ? '' : 'none';
-            if (engine !== 'ytdlp') return;
+            if (engine !== 'ytdlp') { var sc = $('shortClipNote'); if (sc) sc.style.display = 'none'; return; }
             var v = V();
             var fs = frameSeconds(v);
             var rate = (v && v.fps) ? v.fps.toFixed(3) + 'fps' : '25fps assumed';
@@ -9560,9 +9588,21 @@ start_bridge.bat
            nearest keyframes, which can hand a clip whole seconds of the
            neighbouring scene. It matters for audio-only extraction too. */
         function ytdlpExtraArgs() {
-            return quality === 'audio'
+            var a = quality === 'audio'
                 ? '--force-keyframes-at-cuts -x --audio-format mp3 --audio-quality 0'
                 : '--force-keyframes-at-cuts --merge-output-format ' + container;
+            if (ytIgnoreCerts) a += ' --no-check-certificates';
+            return a;
+        }
+
+        function setIgnoreCerts(on) {
+            ytIgnoreCerts = !!on;
+            try { localStorage.setItem('cf_yt_nocerts', ytIgnoreCerts ? '1' : '0'); } catch (e) { }
+            var box = $('ytCertsToggle');
+            if (box) box.checked = ytIgnoreCerts;
+            regenerateScript();
+            syncYtGuardNote();
+            persist();
         }
 
         /** One line the generated scripts carry so the trim is auditable. */
@@ -9635,6 +9675,49 @@ start_bridge.bat
                 seen[k].clips.push(r);
             });
             return out;
+        }
+
+        /* When a run fails, the log is a wall of yt-dlp output and the actual
+           cause is one line buried in it. These are the two that account for
+           almost every failure here, and neither is visible from the clip
+           list, so the script says them itself. */
+        /* No double quotes anywhere in here. These lines are echoed from inside
+           a parenthesised cmd block, and an unbalanced quote there makes the
+           parser read the closing bracket as literal text and swallow the rest
+           of the script. */
+        var TROUBLE = [
+            'If clips failed, it is almost always one of these two:',
+            '',
+            '1. certificate verify failed: self signed certificate in certificate chain',
+            '   Something on this machine is re-signing HTTPS - a company proxy, or an',
+            '   antivirus with HTTPS or SSL scanning turned on - and Python does not',
+            '   trust its root certificate. Nothing about the clips is wrong; no request',
+            '   gets out at all. Fix it properly by turning HTTPS scanning off for',
+            '   yt-dlp, or by adding that root to the certificate store Python uses',
+            '   [set SSL_CERT_FILE to a bundle containing it]. To just get the clips',
+            '   out now, tick Ignore certificate errors in ClipForge and download this',
+            '   script again.',
+            '',
+            '2. Invalid data found when processing input, on a very short clip',
+            '   A section shorter than about 0.4s is a fragment of a DASH stream, and it',
+            '   often comes back as something ffmpeg cannot open. Widen or merge those',
+            '   clips in ClipForge, or deselect them. Longer clips are unaffected.'
+        ];
+
+        function troubleBat() {
+            var s = '';
+            TROUBLE.forEach(function (l) {
+                s += l ? 'echo ' + batSafe(l).replace(/"/g, '') + '\r\n' : 'echo.\r\n';
+            });
+            return s;
+        }
+
+        function troubleSh() {
+            var s = '';
+            TROUBLE.forEach(function (l) {
+                s += 'echo "' + String(l).replace(/["\\$`]/g, '') + '"\n';
+            });
+            return s;
         }
 
         function genYtDlpBat(rows) {
@@ -9713,6 +9796,12 @@ start_bridge.bat
             s += 'if !FAILED! gtr 0 echo   (!FAILED! clip^(s^) failed - see the log above)\r\n';
             s += 'echo ==================================================\r\n';
             s += 'echo.\r\n';
+            s += 'if !FAILED! gtr 0 (\r\n';
+            s += 'echo --------------------------------------------------\r\n';
+            s += troubleBat();
+            s += 'echo --------------------------------------------------\r\n';
+            s += 'echo.\r\n';
+            s += ')\r\n';
             s += 'explorer "!CLIPDIR!"\r\n';
             s += 'echo Press any key to exit...\r\n';
             s += 'pause >nul\r\n';
@@ -9748,6 +9837,10 @@ start_bridge.bat
                 });
             });
             s += 'echo "DONE! ' + rows.length + ' clips -> $CLIPDIR  ($FAILED failed)"\n';
+            s += 'if [ "$FAILED" -gt 0 ]; then\n';
+            s += 'echo ""\n';
+            s += troubleSh();
+            s += 'fi\n';
             return s;
         }
 
@@ -10116,6 +10209,31 @@ start_bridge.bat
                 return;
             }
             D.scriptOutput.textContent = buildScript(currentTab, rows);
+            syncShortClipNote(rows);
+        }
+
+        /* A clip too short to survive a section download is worth saying out
+           loud. It is never silently changed - a 0.2s clip is a real cut the
+           user made, and only they can decide whether to widen it, merge it or
+           drop it. Counted here because the exporter has already built every
+           range; nothing on the edit path pays for it. */
+        function syncShortClipNote(rows) {
+            var el = $('shortClipNote'); if (!el) return;
+            if (engine !== 'ytdlp') { el.style.display = 'none'; return; }
+            var short = 0, tiniest = Infinity;
+            for (var i = 0; i < rows.length; i++) {
+                var d = rows[i].out.dur;
+                if (d < SHORT_CLIP_S) { short++; if (d < tiniest) tiniest = d; }
+            }
+            if (!short) { el.style.display = 'none'; return; }
+            el.style.display = '';
+            el.innerHTML = '<span style="color:var(--warning)">⚠ ' + short + ' selected clip'
+                + (short === 1 ? ' is' : 's are') + ' shorter than ' + SHORT_CLIP_S + 's'
+                + (isFinite(tiniest) ? ' (shortest ' + tiniest.toFixed(2) + 's)' : '')
+                + '.</span> <span class="text-[var(--text-dim)]">yt-dlp asks YouTube for a byte range of a DASH '
+                + 'stream, and a fragment that short often comes back as something ffmpeg cannot open — those '
+                + 'clips may fail with "Invalid data found when processing input". Widen or merge them, or '
+                + 'deselect them. FFmpeg on a local file has no such limit.</span>';
         }
 
         function initScriptPanelWatch() {
@@ -11148,7 +11266,7 @@ start_bridge.bat
                     proxyHeight: proxyHeight, engine: engine, quality: quality,
                     container: container, rippleEdges: rippleEdges,
                     edgeTrim: edgeTrimValue(), edgeTrimMs: edgeTrimMs,
-                    ytGuardFrames: ytGuardFrames
+                    ytGuardFrames: ytGuardFrames, ytIgnoreCerts: ytIgnoreCerts
                 },
                 cur: cur,
                 videos: videos.map(function (v) {
@@ -11206,6 +11324,7 @@ start_bridge.bat
                 setEdgeTrim(st.edgeTrimMs);        // a project saved before half-frame existed
             }
             if (typeof st.ytGuardFrames === 'number') setYtGuard(st.ytGuardFrames);
+            if (typeof st.ytIgnoreCerts === 'boolean') setIgnoreCerts(st.ytIgnoreCerts);
             cur = -1;
             renderQueue(); updateStats();
             if (videos.length) selectVideo(clamp(data.cur || 0, 0, videos.length - 1));
@@ -11644,6 +11763,8 @@ start_bridge.bat
                 if (yg !== null) ytGuardFrames = clamp(parseInt(yg, 10) || 0, 0, 4);
             } catch (e) { }
             $('ytGuardSelect').value = String(ytGuardFrames);
+            try { ytIgnoreCerts = localStorage.getItem('cf_yt_nocerts') === '1'; } catch (e) { }
+            $('ytCertsToggle').checked = ytIgnoreCerts;
             syncYtGuardNote();
 
             $('urlInput').addEventListener('keydown', function (e) {
