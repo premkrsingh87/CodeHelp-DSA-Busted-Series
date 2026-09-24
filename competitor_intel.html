@@ -6606,22 +6606,68 @@ document.addEventListener('keydown', e=>{
    them, and stop at Dashboard and Settings rather than wrapping round. A
    listener of its own so every shortcut above is untouched. Like them it stays
    out of the way while you type, while a dialog or menu is open and when a
-   modifier is held. Holding the key moves one tab, not a burst, so a heavy
-   view never has a pile of renders queued up behind it. */
+   modifier is held.
+
+   The sidebar highlight moves the instant you press, and the tab itself is
+   drawn right after it — one press is exactly as quick as a click. The only
+   time it holds back is on the way THROUGH a heavy tab: during a run of quick
+   presses a tab that took over 50ms to draw last time (the Outlier Radar, the
+   swipe file, Analytics on a big catalogue) is skipped unless you stop on it,
+   and a held key glides the highlight and draws once, the moment you let go.
+   So you never sit waiting for tabs you only passed. */
+let _arrowTo = null, _arrowFrom = null, _arrowT = 0, _arrowLast = 0, _arrowHeld = false, _arrowSeq = 0;
+const _arrowCost = new Map();                     // tab → how long it last took to draw here
+function arrowCommit(){
+  clearTimeout(_arrowT); _arrowT = 0; _arrowHeld = false;
+  const to = _arrowTo, from = _arrowFrom;
+  _arrowTo = _arrowFrom = null;
+  if(to && to!==from && S.view===from){           // skipped if a click or shortcut went elsewhere meanwhile
+    const t = performance.now();
+    nav(to);
+    _arrowCost.set(to, performance.now()-t);
+  }
+  requestAnimationFrame(()=>{
+    const b = document.querySelector('#sideNav .navbtn.active');
+    if(b) b.scrollIntoView({block:'nearest'});
+  });
+}
+/* 0 = draw right after the highlight has been painted; otherwise wait that
+   long for another press. Only the latest request stands. */
+function arrowSchedule(ms){
+  clearTimeout(_arrowT); _arrowT = 0;
+  const seq = ++_arrowSeq;
+  if(ms) _arrowT = setTimeout(arrowCommit, ms);
+  else requestAnimationFrame(()=>{ if(seq===_arrowSeq) _arrowT = setTimeout(arrowCommit, 0); });
+}
 document.addEventListener('keydown', e=>{
   if(e.key!=='ArrowUp' && e.key!=='ArrowDown') return;
-  if(e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+  if(e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
   const el = document.activeElement;
   if(el && (el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.tagName==='SELECT'||el.isContentEditable)) return;
   if(document.getElementById('modals').innerHTML || chPickOpen || profMenuOpen) return;
   e.preventDefault();
+  if(_arrowFrom!==null && S.view!==_arrowFrom){ clearTimeout(_arrowT); _arrowT = 0; _arrowSeq++; _arrowTo = _arrowFrom = null; }
   const ids = VIEWS.filter(v=>v.id).map(v=>v.id);
-  const i = Math.max(0, ids.indexOf(S.view));
-  const next = ids[clamp(i+(e.key==='ArrowDown'?1:-1), 0, ids.length-1)];
-  if(next===S.view) return;
-  nav(next);
-  const b = document.querySelector('#sideNav .navbtn.active');
-  if(b) b.scrollIntoView({block:'nearest'});
+  const cur = _arrowTo || S.view;
+  const next = ids[clamp(Math.max(0, ids.indexOf(cur))+(e.key==='ArrowDown'?1:-1), 0, ids.length-1)];
+  /* When the key was pressed, not when this got to run — a press that waited
+     behind a render still counts as part of the same run of presses. */
+  const at = e.timeStamp || performance.now(), burst = at-_arrowLast < 250;
+  _arrowLast = at;
+  if(next===cur) return;
+  if(_arrowFrom===null) _arrowFrom = S.view;
+  _arrowTo = next;
+  const side = document.getElementById('sideNav');
+  const was = side.querySelector('.navbtn.active');
+  if(was) was.classList.remove('active');
+  const b = side.querySelector(`.navbtn[data-nav="${next}"]`);
+  if(b){ b.classList.add('active'); b.scrollIntoView({block:'nearest'}); }
+  if(e.repeat){ _arrowHeld = true; arrowSchedule(150); }            // drawn on release (keyup below)
+  else if(burst && !(_arrowCost.get(next) < 50)) arrowSchedule(120);  // heavy or not yet measured
+  else arrowSchedule(0);
+});
+document.addEventListener('keyup', e=>{
+  if(_arrowHeld && (e.key==='ArrowUp' || e.key==='ArrowDown')) arrowSchedule(0);
 });
 function showShortcuts(){
   const rows = [['S','Sync now (background)'],['D','Deep sync'],['R','Refresh trending'],
