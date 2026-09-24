@@ -6602,13 +6602,34 @@ document.addEventListener('keydown', e=>{
   if(/^[1-9]$/.test(k)){ const v=NAV_KEYS[+k-1]; if(v){ e.preventDefault(); nav(v); } return; }
   if(k==='0'){ e.preventDefault(); nav('settings'); return; }
 });
+/* ↑ / ↓ step to the previous / next tab in the sidebar, in the order it lists
+   them, and stop at Dashboard and Settings rather than wrapping round. A
+   listener of its own so every shortcut above is untouched. Like them it stays
+   out of the way while you type, while a dialog or menu is open and when a
+   modifier is held. Holding the key moves one tab, not a burst, so a heavy
+   view never has a pile of renders queued up behind it. */
+document.addEventListener('keydown', e=>{
+  if(e.key!=='ArrowUp' && e.key!=='ArrowDown') return;
+  if(e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+  const el = document.activeElement;
+  if(el && (el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.tagName==='SELECT'||el.isContentEditable)) return;
+  if(document.getElementById('modals').innerHTML || chPickOpen || profMenuOpen) return;
+  e.preventDefault();
+  const ids = VIEWS.filter(v=>v.id).map(v=>v.id);
+  const i = Math.max(0, ids.indexOf(S.view));
+  const next = ids[clamp(i+(e.key==='ArrowDown'?1:-1), 0, ids.length-1)];
+  if(next===S.view) return;
+  nav(next);
+  const b = document.querySelector('#sideNav .navbtn.active');
+  if(b) b.scrollIntoView({block:'nearest'});
+});
 function showShortcuts(){
   const rows = [['S','Sync now (background)'],['D','Deep sync'],['R','Refresh trending'],
     ['F','Competitor feed'],['T','Thumbnail board'],['C','Calendar'],['W','Swipe file'],
     ['K','Next swipe-file category · ⇧K back · from any view'],
     ['A','Select everything on screen'],
     ['/','Focus the search box'],['[ ]','Previous / next date range'],
-    ['1–9','Jump to view'],['0','Settings'],
+    ['1–9','Jump to view'],['0','Settings'],['↑ ↓','Previous / next tab in the sidebar'],
     ['Esc','Close dialog · clear selection · leave field'],['?','This list']];
   document.getElementById('modals').innerHTML = `
   <div class="mbg"><div class="modal" style="width:420px">
