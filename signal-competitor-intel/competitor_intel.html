@@ -99,38 +99,46 @@ html[data-theme="light"]{
   --scrim:rgba(0,0,0,.22); --kbd-bg:#ffffff;
   --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 9.5l4-4 4 4M8 14.5l4 4 4-4'/%3E%3C/svg%3E");
 }
-/* ─── Dark appearance ─── */
+/* ─── Dark appearance ───
+   Tuned against Apple's Dark Mode guidance: "strive for 7:1, especially in small
+   text". Stock macOS greys (#1c1c1e cards, 60%-alpha secondary labels, grey
+   fills) measured 5.9:1 for metadata and read as a grey wash on non-Apple
+   panels. So: a true-black canvas (the base colour of iOS Dark Mode and
+   apple.com), deep cool cards that separate by a crisp hairline and a faint top
+   highlight rather than by being grey, white-alpha fills instead of grey ones,
+   and every text step pushed up until it clears 7:1 on a card (8.8:1 for the
+   dimmest metadata). */
 html[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#000000; --bg2:#0b0b0d;
-  --glow1:rgba(10,132,255,.14); --glow2:rgba(191,90,242,.09); --glow3:rgba(64,200,224,.06);
-  --panel:#1c1c1e; --panel2:#161618; --panel3:#2c2c2e; --elev:#2c2c2e;
-  --line:rgba(84,84,88,.52); --line2:rgba(99,99,102,.72); --rowline:rgba(84,84,88,.34);
-  --t1:#f5f5f7; --t2:#e5e5ea; --t3:#aeaeb2; --t4:#98989d; --t5:#7c7c80;
-  --hov:rgba(120,120,128,.18); --hov2:rgba(120,120,128,.30); --code:rgba(118,118,128,.14);
-  --fill:rgba(120,120,128,.24); --fill2:rgba(120,120,128,.36);
+  --bg:#000000; --bg2:#07070a;
+  --glow1:rgba(10,132,255,.07); --glow2:rgba(191,90,242,.04); --glow3:rgba(64,200,224,.025);
+  --panel:#101014; --panel2:#0b0b0e; --panel3:#1b1b21; --elev:#17171c;
+  --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.18); --rowline:rgba(255,255,255,.07);
+  --t1:#f5f5f7; --t2:#ebebf0; --t3:#d4d4db; --t4:#b0b0ba; --t5:#8e8e98;
+  --hov:rgba(255,255,255,.06); --hov2:rgba(255,255,255,.11); --code:rgba(255,255,255,.045);
+  --fill:rgba(255,255,255,.075); --fill2:rgba(255,255,255,.13);
   --acc:#409cff; --acc-fill:#0071e3; --acc-fill-h:#0a7df0; --on-acc:#fff;
-  --acc-soft:rgba(10,132,255,.17); --acc-soft2:rgba(10,132,255,.27); --acc2:#5e5ce6;
+  --acc-soft:rgba(10,132,255,.18); --acc-soft2:rgba(10,132,255,.28); --acc2:#5e5ce6;
   --chart:#0a84ff; --heat:#0071e3;
   --ok:#30d158; --ok-fill:#30d158; --ok-soft:rgba(48,209,88,.15);
   --warn:#ff9f0a; --warn-fill:#ff9f0a; --warn-soft:rgba(255,159,10,.15);
   --err:#ff6961; --err-fill:#ff453a; --err-soft:rgba(255,69,58,.16);
   --info:#409cff; --yt:#ff453a; --star:#ffd60a;
-  --trackbg:rgba(120,120,128,.26);
-  --shadow-sm:0 1px 2px rgba(0,0,0,.5),0 0 0 .5px rgba(255,255,255,.04);
-  --shadow-md:0 8px 26px rgba(0,0,0,.55),0 1px 3px rgba(0,0,0,.4);
-  --shadow:0 30px 80px rgba(0,0,0,.7),0 8px 22px rgba(0,0,0,.5);
-  --glass:rgba(28,28,30,.62); --glass-strong:rgba(36,36,39,.9); --glass-bar:rgba(0,0,0,.66);
-  --glass-edge:rgba(255,255,255,.10); --glass-line:rgba(255,255,255,.07);
-  --spec:inset 0 1px 0 rgba(255,255,255,.10),inset 0 0 0 1px rgba(255,255,255,.04);
-  --seg-on:#636366; --seg-on-shadow:0 1px 3px rgba(0,0,0,.4);
-  --scrim:rgba(0,0,0,.5); --kbd-bg:#3a3a3c;
-  --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2398989d' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 9.5l4-4 4 4M8 14.5l4 4 4-4'/%3E%3C/svg%3E");
+  --trackbg:rgba(255,255,255,.10);
+  --shadow-sm:inset 0 1px 0 rgba(255,255,255,.04),0 0 0 1px rgba(255,255,255,.085);
+  --shadow-md:inset 0 1px 0 rgba(255,255,255,.06),0 0 0 1px rgba(255,255,255,.15),0 12px 32px rgba(0,0,0,.7);
+  --shadow:0 30px 80px rgba(0,0,0,.72),0 8px 22px rgba(0,0,0,.5);
+  --glass:rgba(12,12,15,.8); --glass-strong:rgba(24,24,29,.94); --glass-bar:rgba(0,0,0,.74);
+  --glass-edge:rgba(255,255,255,.10); --glass-line:rgba(255,255,255,.08);
+  --spec:inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 0 1px rgba(255,255,255,.035);
+  --seg-on:#2c2c33; --seg-on-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 0 .5px rgba(255,255,255,.12),0 1px 3px rgba(0,0,0,.5);
+  --scrim:rgba(0,0,0,.6); --kbd-bg:#222228;
+  --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b0b0ba' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 9.5l4-4 4 4M8 14.5l4 4 4-4'/%3E%3C/svg%3E");
 }
 /* Increase Contrast — the system setting, honoured the way the HIG asks. */
 @media (prefers-contrast: more){
   html[data-theme="light"]{--line:rgba(60,60,67,.32);--line2:rgba(60,60,67,.5);--rowline:rgba(60,60,67,.22);--t3:#3a3a3c;--t4:#515154;--t5:#6e6e73;--acc:#0040dd}
-  html[data-theme="dark"]{--line:rgba(142,142,147,.6);--line2:rgba(174,174,178,.8);--rowline:rgba(142,142,147,.4);--t3:#d1d1d6;--t4:#c7c7cc;--t5:#aeaeb2;--acc:#70b8ff}
+  html[data-theme="dark"]{--line:rgba(255,255,255,.2);--line2:rgba(255,255,255,.32);--rowline:rgba(255,255,255,.14);--t3:#e5e5ea;--t4:#d1d1d6;--t5:#aeaeb8;--acc:#70b8ff}
 }
 
 /* ═══════════════ BASE ═══════════════ */

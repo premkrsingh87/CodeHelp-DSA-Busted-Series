@@ -115,10 +115,11 @@ The palette uses Apple system colours. Where a colour carries text, the HIG's *a
 
 | Role | Light | Dark | Apple source |
 |---|---|---|---|
-| Canvas | `#f5f5f7` | `#000000` | apple.com / systemBackground |
-| Card | `#ffffff` | `#1c1c1e` | secondarySystemGroupedBackground |
-| Well | `#f2f2f7` | `#2c2c2e` | systemGray6 / tertiarySystemBackground |
-| Label → quaternary | `#1d1d1f` `#333336` `#515154` `#6e6e73` | `#f5f5f7` `#e5e5ea` `#aeaeb2` `#98989d` | label / secondaryLabel family |
+| Canvas | `#f5f5f7` | `#000000` | apple.com / iOS systemBackground (true black) |
+| Card | `#ffffff` | `#101014` + 1px `rgba(255,255,255,.085)` hairline | secondarySystemGroupedBackground, deepened (see below) |
+| Well | `#f2f2f7` | `#1b1b21` | systemGray6 / tertiarySystemBackground, deepened |
+| Fills (chips, buttons, tracks) | `rgba(120,120,128,.12–.20)` | `rgba(255,255,255,.075–.13)` | systemFill family; white-alpha in dark |
+| Label → quaternary | `#1d1d1f` `#333336` `#515154` `#6e6e73` | `#f5f5f7` `#ebebf0` `#d4d4db` `#b0b0ba` | label / secondaryLabel family, pushed brighter in dark |
 | Tint (text, icons) | `#0066cc` | `#409cff` | systemBlue, accessible |
 | Filled button | `#0071e3` | `#0071e3` | apple.com action blue |
 | Green / Orange / Red text | `#1a7f37` `#c93400` `#d70015` | `#30d158` `#ff9f0a` `#ff6961` | system + accessible variants |
@@ -129,15 +130,23 @@ Measured contrast ratios (computed with the WCAG relative-luminance formula; eve
 
 | Pair | Light | Dark |
 |---|---|---|
-| Primary text on card | 16.83 | 15.63 |
-| Secondary text on card | 7.91 | 7.69 |
-| Tertiary text on card | 5.07 | 5.93 |
-| Tertiary text on canvas | 4.66 | 7.31 |
-| Tint text on card | 5.57 | 6.01 |
-| Badge text on its own tint (blue / green / orange / red) | 4.86 / 4.58 / 4.75 / 4.63 | 4.89 / 6.36 / 6.22 / 5.03 |
+| Primary text on card | 16.83 | 17.43 |
+| Secondary text on card | 7.91 | 12.87 |
+| Tertiary text on card | 5.07 | 8.83 |
+| Tertiary text on canvas | 4.66 | 9.77 |
+| Placeholder text on card | 3.62 | 5.85 |
+| Tint text on card | 5.57 | 6.70 |
+| Badge text on its own tint (blue / green / orange / red) | 4.86 / 4.58 / 4.75 / 4.63 | 5.48 / 7.28 / 7.20 / 5.72 |
 | White on filled button | 4.70 | 4.70 |
-| Day number on the darkest calendar tile | 5.26 | 4.93 |
-| Star glyph on card (non-text, needs 3:1) | 3.23 | 12.05 |
+| Day number on the darkest calendar tile | 5.26 | 5.05 |
+| Star glyph on card (non-text, needs 3:1) | 3.23 | 13+ |
+
+**Why dark mode is not stock Apple grey.** Apple's Dark Mode guidance asks for 4.5:1 at minimum and says to *strive for 7:1, especially in small text*. With the stock macOS surfaces (`#1c1c1e` cards, 60%-alpha secondary labels, grey fills), metadata measured only 5.9:1, and the whole screen read as a grey wash, especially on Windows panels. The dark palette therefore follows the depth of iOS Dark Mode and apple.com:
+
+- a true-black canvas;
+- deep cool cards (`#101014`) that separate by a crisp hairline and a faint top highlight instead of by being grey;
+- white-alpha fills in place of grey ones;
+- every text step pushed up until even the dimmest metadata clears 7:1 (8.8:1).
 
 The previous version used light-mode badges with pale pastel text (for example `#4ade80` green on white), which fell far below these minimums.
 
