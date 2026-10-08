@@ -3204,23 +3204,26 @@ function toLite(j){
    else a new profile. */
 async function importLite(j, mode){
   if(!j || j._signal!=='lite' || !Array.isArray(j.p)) throw new Error('Not a profile file');
-  if(mode==='one' && j.p.filter(Boolean).length>1){
+  const isP = x => x && typeof x==='object' && !Array.isArray(x);   // anything else in a file is junk, not a profile
+  if(mode==='one' && j.p.filter(isP).length>1){
     const a = activeProfile(), nm = String(a.name||'').trim().toLowerCase();
     const m = j.p.find(x=>x && x.id===a.id) || j.p.find(x=>x && String(x.n||'').trim().toLowerCase()===nm);
     if(m) j = {...j, p:[m]}; else mode = 'all';
   }
   const touched = [];
+  // a profile another entry in this file owns by id is never borrowed by name
+  const fileIds = new Set(j.p.filter(x=>isP(x) && x.id).map(x=>String(x.id)));
   let made=0, chAdded=0, swAdded=0, swFilled=0;
   for(const src of j.p){
-    if(!src) continue;
+    if(!isP(src)) continue;
     let p = null;
     if(mode==='one') p = activeProfile();
     else {
       const nm = String(src.n||'').trim().toLowerCase();
       p = STORE.profiles.find(x=>src.id && x.id===src.id)
-        || (nm? STORE.profiles.find(x=>String(x.name||'').trim().toLowerCase()===nm) : null);
+        || (nm? STORE.profiles.find(x=>!fileIds.has(x.id) && !touched.includes(x.id) && String(x.name||'').trim().toLowerCase()===nm) : null);
       if(!p){
-        p = { id: (src.id && /^[\w-]{1,40}$/.test(src.id))? String(src.id) : uid(),
+        p = { id: (src.id && /^[\w-]{1,40}$/.test(src.id) && !(String(src.id) in Object.prototype))? String(src.id) : uid(),
               name: String(src.n||'').trim() || 'Imported '+todayPT(),
               color: okColor(src.c)? src.c : PCOLORS[STORE.profiles.length%PCOLORS.length], cfg:{...DEF_CFG} };
         STORE.profiles.push(p); made++;
