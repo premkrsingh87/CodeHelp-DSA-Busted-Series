@@ -1454,7 +1454,7 @@ function wireFlush(){
 /* in-memory mirror for fast rendering */
 const S = { channels:[], staleChannels:[], videos:[], snapshots:[], trending:[], comments:null,
   allChannels:[], allVideos:[], allSnapshots:[],
-  range:'90', view:'dash', sort:{}, filters:{}, page:{}, syncing:false, syncPids:new Set(),
+  range:'30', view:'dash', sort:{}, filters:{}, page:{}, syncing:false, syncPids:new Set(),
   /* Monotonic data version. Every derived cache in the app used to key on
      `S.videos.length`, which is not a fingerprint: a sync that refreshes 200
      videos' view counts without adding any leaves the length identical, so the
@@ -2544,7 +2544,14 @@ function catOf(id){
    fourth place for the two to drift apart. Hues are spread and kept at one
    lightness so they read the same against both themes. */
 const CAT_HUES = [212,266,330,14,40,150,190,240,300,96];
+/* A colour you pick in Manage is stored per profile, by name, and wins; anything
+   you have not picked keeps the automatic colour it always had. */
 function catColor(name){
+  const cc = CFG.swipeCatColors;
+  if(cc && typeof cc==='object' && Object.prototype.hasOwnProperty.call(cc, name) && okColor(cc[name])) return cc[name];
+  return catAutoColor(name);
+}
+function catAutoColor(name){
   let h = 0; const t = String(name||'');
   for(let i=0;i<t.length;i++) h = (h*31 + t.charCodeAt(i)) >>> 0;
   return `hsl(${CAT_HUES[h%CAT_HUES.length]} 70% 62%)`;
@@ -3179,6 +3186,7 @@ function exportLite(all){
     if(Array.isArray(c.channels) && c.channels.length) o.ch = c.channels.slice();
     if(Array.isArray(c.swipe) && c.swipe.length) o.sw = c.swipe.map(liteSwipe);
     if(Array.isArray(c.swipeCats) && c.swipeCats.length) o.sc = c.swipeCats.slice();
+    if(c.swipeCatColors && typeof c.swipeCatColors==='object' && Object.keys(c.swipeCatColors).length) o.cc = {...c.swipeCatColors};
     return o; }) };
   const json = JSON.stringify(pack);
   const nch = pack.p.reduce((n,p)=>n+(p.ch||[]).length,0), nsw = pack.p.reduce((n,p)=>n+(p.sw||[]).length,0);
@@ -3264,6 +3272,14 @@ async function importLite(j, mode){
     for(const c of [...(Array.isArray(src.sc)? src.sc : []), ...list.map(e=>e.g||'')])
       if(c && !cats.includes(String(c))){ cats.push(String(c)); catsChanged = true; }
     if(catsChanged) p.cfg.swipeCats = cats;
+    // chosen category colours: only fill a category that has no colour of its own here
+    if(src.cc && typeof src.cc==='object' && !Array.isArray(src.cc)){
+      const have = (p.cfg.swipeCatColors && typeof p.cfg.swipeCatColors==='object')? p.cfg.swipeCatColors : {};
+      const next = {...have}; let colChanged = false;
+      for(const [k,v] of Object.entries(src.cc))
+        if(cats.includes(k) && okColor(v) && !Object.prototype.hasOwnProperty.call(have, k)){ next[k] = v; colChanged = true; }
+      if(colChanged) p.cfg.swipeCatColors = next;
+    }
     if(!touched.includes(p.id)) touched.push(p.id);
   }
   _swipeVer++; _swipeSet = null;
@@ -5048,13 +5064,19 @@ function assignCat(ids, cat){
   setSwipe(next);
   return missing.length;
 }
+function setCatColors(next){ CFG.swipeCatColors = next; saveCfg(); }
 function renameCat(from, to){
   if(!to || from===to) return;
+  const cc = CFG.swipeCatColors;
+  if(cc && Object.prototype.hasOwnProperty.call(cc, from)){
+    const n = {...cc}; n[to] = n[from]; delete n[from]; setCatColors(n); }
   setSwipe(swipeList().map(e=> e.g===from? {...e, g:to} : e));
   setSwipeCats(swipeCats().map(c=> c===from? to : c));
   if(S.filters.swipeCat===from) S.filters.swipeCat = to;
 }
 function deleteCat(name){
+  const cc = CFG.swipeCatColors;
+  if(cc && Object.prototype.hasOwnProperty.call(cc, name)){ const n = {...cc}; delete n[name]; setCatColors(n); }
   setSwipe(swipeList().map(e=> e.g===name? {...e, g:''} : e));
   setSwipeCats(swipeCats().filter(c=>c!==name));
   if(S.filters.swipeCat===name) S.filters.swipeCat = null;
@@ -5463,24 +5485,46 @@ function applyCat(ids, cat, back, isNew){
     ? `${isNew?'Created ':''}${where} — ${saved} newly saved to your swipe file`
     : `${isNew?'Created ':'Moved to '}${where}`, 'ok');
 }
+let _catColOpen = null;
 function showCatManager(){
   const {m} = catCounts();
+  const cats = swipeCats();
+  const dot = (c, sel) => `width:18px;height:18px;border-radius:50%;flex-shrink:0;background:${c};${sel?`box-shadow:0 0 0 2px var(--panel),0 0 0 4px ${c}`:''}`;
+  const own = c => { const cc = CFG.swipeCatColors; return cc && Object.prototype.hasOwnProperty.call(cc, c) && okColor(cc[c])? cc[c] : ''; };
   document.getElementById('modals').innerHTML = `
-  <div class="mbg"><div class="modal" style="width:460px">
+  <div class="mbg"><div class="modal" style="width:500px">
     <div class="mhead">${ic('cog')}<span class="grow">Manage categories</span>
       <button class="ib" data-close="1">${ic('x')}</button></div>
     <div class="mbody" style="gap:0">
-      ${swipeCats().length? swipeCats().map(c=>`
+      ${cats.length? cats.map((c,i)=>`
         <div class="row" style="gap:9px;padding:10px 0;border-bottom:1px solid var(--rowline)">
+          <span class="row" style="gap:0;flex-shrink:0">
+            <button class="ib" style="width:26px;height:26px${i===0?';opacity:.3':''}" data-catmove="${esc(c)}" data-dir="-1" title="Move up — earlier in the chip row" ${i===0?'disabled':''}>${ic('arrup')}</button>
+            <button class="ib" style="width:26px;height:26px${i===cats.length-1?';opacity:.3':''}" data-catmove="${esc(c)}" data-dir="1" title="Move down — later in the chip row" ${i===cats.length-1?'disabled':''}>${ic('arrdn')}</button></span>
+          <button data-catcolopen="${esc(c)}" title="Choose a colour" style="${dot(catColor(c), _catColOpen===c)}"></button>
           <span class="grow c1" style="font-weight:600;font-size:12.5px">${esc(c)}</span>
           <span class="tag">${nfull(m.get(c)||0)}</span>
           <button class="btn btn-sm btn-o" data-catrename="${esc(c)}">${ic('cog')}Rename</button>
           <button class="btn btn-sm btn-d" data-catdel="${esc(c)}" title="Deletes the category, never the saved videos">${ic('trash')}</button>
-        </div>`).join('') : `<div class="dim" style="font-size:11.5px">No categories yet.</div>`}
+        </div>
+        ${_catColOpen===c? `<div class="row wrapf" style="gap:9px;padding:10px 0 12px 61px;align-items:center;border-bottom:1px solid var(--rowline)">
+          <button data-catcol="${esc(c)}" data-col="" title="Automatic colour" style="${dot(catAutoColor(c), !own(c))};outline:1px dashed var(--t4);outline-offset:3px"></button>
+          ${PCOLORS.map(x=>`<button data-catcol="${esc(c)}" data-col="${x}" title="${x}" style="${dot(x, own(c).toLowerCase()===x)}"></button>`).join('')}
+          <input type="color" data-catcolpick="${esc(c)}" value="${hex6(own(c))}" title="Any colour"
+            style="width:30px;height:24px;padding:0;border:none;background:none;cursor:pointer">
+        </div>`:''}`).join('') : `<div class="dim" style="font-size:11.5px">No categories yet.</div>`}
       <div class="dim" style="font-size:10.5px;margin-top:12px">Deleting a category only removes the label — every video stays in your swipe file, moved to Uncategorised.</div>
     </div>
     <div class="mfoot"><span class="grow"></span><button class="btn btn-sm btn-p" data-close="1">Done</button></div>
   </div></div>`;
+}
+
+function setCatColor(name, col){
+  const cc = {...(CFG.swipeCatColors||{})};
+  if(col && okColor(col)) cc[name] = col; else delete cc[name];   // '' = back to automatic
+  setCatColors(cc);
+  showCatManager();
+  if(S.view==='swipe') renderContentOnly(); else paintCatChips();
 }
 
 /* Thumbnails at a readable size, side by side, with the numbers underneath —
@@ -6399,7 +6443,7 @@ document.addEventListener('click', async e=>{
   let closedPicker=false;
   if(chPickOpen && !e.target.closest('.mpick')){ chPickOpen=false; closedPicker=true; }
 
-  const t = e.target.closest('[data-nav],[data-act],[data-range],[data-thr],[data-toggle],[data-sort],[data-export],[data-cat],[data-chopen],[data-chback],[data-close],[data-brief],[data-copy-brief],[data-dl-brief],[data-pswitch],[data-pact],[data-trendmode],[data-chtab],[data-chexport],[data-chfilter-clear],[data-boardsort],[data-boardsize],[data-tdur],[data-twin],[data-expscope],[data-expthr],[data-minviews],[data-page],[data-perpage],[data-opptab],[data-oppsearch],[data-mpick],[data-chsel],[data-pastemode],[data-restorebak],[data-chpicksort],[data-textsize],[data-vstar],[data-vsel],[data-vopen],[data-vcopy],[data-chdrill],[data-calday],[data-calsort],[data-calsize],[data-calmetric],[data-calmonths],[data-calfeed],[data-calopen],[data-feedview],[data-swipeview],[data-swipesize],[data-swipefilt],[data-swipecat],[data-catset],[data-catnew],[data-catrename],[data-catdel],[data-catfrom],[data-pmove],[data-pcolopen],[data-pcol]');
+  const t = e.target.closest('[data-nav],[data-act],[data-range],[data-thr],[data-toggle],[data-sort],[data-export],[data-cat],[data-chopen],[data-chback],[data-close],[data-brief],[data-copy-brief],[data-dl-brief],[data-pswitch],[data-pact],[data-trendmode],[data-chtab],[data-chexport],[data-chfilter-clear],[data-boardsort],[data-boardsize],[data-tdur],[data-twin],[data-expscope],[data-expthr],[data-minviews],[data-page],[data-perpage],[data-opptab],[data-oppsearch],[data-mpick],[data-chsel],[data-pastemode],[data-restorebak],[data-chpicksort],[data-textsize],[data-vstar],[data-vsel],[data-vopen],[data-vcopy],[data-chdrill],[data-calday],[data-calsort],[data-calsize],[data-calmetric],[data-calmonths],[data-calfeed],[data-calopen],[data-feedview],[data-swipeview],[data-swipesize],[data-swipefilt],[data-swipecat],[data-catset],[data-catnew],[data-catrename],[data-catdel],[data-catfrom],[data-pmove],[data-pcolopen],[data-pcol],[data-catmove],[data-catcolopen],[data-catcol]');
   if(!t){ if(closedPicker) render(); return; }
   const d = t.dataset;
   if(d.page){ const [k,n]=d.page.split('|'); S.page[k]=+n;
@@ -6522,6 +6566,14 @@ document.addEventListener('click', async e=>{
     if(to && to.trim() && to.trim()!==d.catrename){ renameCat(d.catrename, to.trim()); showCatManager();
       if(S.view==='swipe') renderContentOnly(); else paintCatChips(); }
     return; }
+  /* Category order is the chip row's order; colour is yours or automatic. Both
+     repaint exactly what a rename repaints. */
+  if(d.catmove!==undefined){
+    const a = swipeCats().slice(), i = a.indexOf(d.catmove), j = i+(+d.dir||0);
+    if(i>=0 && j>=0 && j<a.length){ [a[i],a[j]] = [a[j],a[i]]; setSwipeCats(a); }
+    showCatManager(); if(S.view==='swipe') renderContentOnly(); return; }
+  if(d.catcolopen!==undefined){ _catColOpen = _catColOpen===d.catcolopen? null : d.catcolopen; showCatManager(); return; }
+  if(d.catcol!==undefined){ setCatColor(d.catcol, d.col||''); return; }
   if(d.catdel!==undefined){
     if(!confirm(`Delete the category “${d.catdel}”?\n\nThe videos in it stay in your swipe file — they just lose the label.`)) return;
     deleteCat(d.catdel); showCatManager();
@@ -6793,6 +6845,10 @@ document.addEventListener('input', e=>{
     const p = STORE.profiles.find(x=>x.id===e.target.dataset.pren), v = e.target.value.trim();
     if(p && v){ p.name = v; profilesChanged(); }
     return; }
+  if(e.target.dataset.catcolpick!==undefined){   // preview while dragging; saved on change
+    const b = document.querySelector(`[data-catcolopen="${CSS.escape(e.target.dataset.catcolpick)}"]`);
+    if(b && okColor(e.target.value)) b.style.background = e.target.value;
+    return; }
   if(e.target.dataset.pcolpick!==undefined){   // preview while dragging; saved on change
     const p = STORE.profiles.find(x=>x.id===e.target.dataset.pcolpick);
     if(p && okColor(e.target.value)){ p.color = e.target.value; renderProfBar();
@@ -6830,6 +6886,7 @@ document.addEventListener('change', e=>{
   /* Custom views / length band. Only the results repaint — the toolbar holding
      these boxes stays put, so Tab moves straight on to the next box. */
   if(e.target.dataset.pcolpick!==undefined){ setProfileColor(e.target.dataset.pcolpick, e.target.value); return; }
+  if(e.target.dataset.catcolpick!==undefined){ setCatColor(e.target.dataset.catcolpick, e.target.value); return; }
   const vf = e.target.dataset.vf;
   if(vf){ CFG[vf] = Math.max(0, +e.target.value||0); S.page={}; saveCfg(); renderContentOnly(); return; }
   const c = e.target.dataset.cfg;
