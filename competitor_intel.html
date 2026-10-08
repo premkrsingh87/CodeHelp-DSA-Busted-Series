@@ -2963,14 +2963,11 @@ function renderProfBar(){
       <button data-pact="new">${ic('plus')}New profile</button>
       <button data-pact="dup">${ic('copy')}Duplicate this profile</button>
       <button data-pact="rename">${ic('cog')}Rename / colour / order</button>
-      <button data-pact="exportOne">${ic('down')}Export this profile</button>
-      <button data-pact="importOne">${ic('up')}Import profile file</button>
-      <button data-pact="liteOne" title="This profile's channel list and swipe file, as one small file">${ic('down')}Export channels + swipe</button>
-      <button data-pact="liteImpOne" title="Add a channels + swipe file into this profile — nothing here is removed">${ic('up')}Import channels + swipe</button>
+      <button data-pact="exportOne" title="This profile's competitor list (in order) + swipe file — no cached videos">${ic('down')}Export this profile</button>
+      <button data-pact="importOne" title="Add a profile file's competitor list + swipe file into this profile — nothing here is removed">${ic('up')}Import into this profile</button>
       <div class="sep"></div>
-      <button data-pact="exportAll">${ic('layers')}Export ALL profiles + data</button>
-      <button data-pact="liteAll" title="Every profile's channel list and swipe file, as one small file">${ic('layers')}Export ALL lists + swipe</button>
-      <button data-pact="liteImpAll" title="Restore every profile's channel list and swipe file — nothing here is removed">${ic('up')}Import ALL lists + swipe</button>
+      <button data-pact="exportAll" title="Every profile's competitor list (in order) + swipe file — no cached videos">${ic('layers')}Export ALL profiles</button>
+      <button data-pact="importAll" title="Put every profile in the file back — same profile, else a new one; nothing here is removed">${ic('up')}Import ALL profiles</button>
       ${STORE.profiles.length>1? `<button data-pact="del" style="color:#f87171">${ic('trash')}Delete this profile</button>`:''}
     </div>`:''}`;
   if(profMenuOpen) anchorPopover(document.getElementById('profMenu'), document.getElementById('profToggle'));
@@ -3024,13 +3021,13 @@ async function profileAction(act){
     invalidateBaselines(); S.filters={}; await loadAll();
     renderProfBar(); renderSideNav(); render(); toast('Profile deleted','ok'); return;
   }
-  if(act==='exportOne') return exportProfile(false);
-  if(act==='exportAll') return exportProfile(true);
-  if(act==='importOne'){ document.getElementById('importFile').click(); return; }
-  if(act==='liteOne') return exportLite(false);
-  if(act==='liteAll') return exportLite(true);
-  if(act==='liteImpOne' || act==='liteImpAll'){
-    _liteMode = act==='liteImpAll'? 'all' : 'one';
+  /* Profile export / import carry only what you authored — the competitor list,
+     in its order, and the swipe file. Cached videos are never written or read:
+     a sync rebuilds them from the list. */
+  if(act==='exportOne') return exportLite(false);
+  if(act==='exportAll') return exportLite(true);
+  if(act==='importOne' || act==='importAll'){
+    _liteMode = act==='importAll'? 'all' : 'one';
     renderProfBar(); document.getElementById('liteFile').click(); return; }
   renderProfBar();
 }
@@ -3189,11 +3186,29 @@ function exportLite(all){
      json, 'application/json');
   toast(`${pack.p.length} profile${pack.p.length===1?'':'s'} · ${nfull(nch)} channels · ${nfull(nsw)} saved videos · ${Math.max(1,Math.round(json.length/1024))} KB`,'ok');
 }
-/* mode 'one' merges everything in the file into the profile you are on; mode
-   'all' puts each profile back where it belongs — same id, else same name, else
-   a new profile. */
+/* An older full backup (every cached video inside) is read for its competitor
+   lists and swipe files only — the cache in it is skipped, never imported. */
+function toLite(j){
+  if(!j || j._signal==='lite') return j;
+  const one = (p, name) => ({ id:p.id, n:p.name||name, c:p.color,
+    ch:p.cfg?.channels||[], sw:p.cfg?.swipe||[], sc:p.cfg?.swipeCats||[] });
+  if(j._signal==='profile-pack' && Array.isArray(j.profiles))
+    return {_signal:'lite', v:1, p:j.profiles.filter(x=>x && x.cfg).map(x=>one(x))};
+  if(j.cfg || j.videos) return {_signal:'lite', v:1, p:[one({cfg:j.cfg||{}}, 'Imported '+todayPT())]};
+  return j;
+}
+/* mode 'one' merges the file into the profile you are on — or, when the file
+   holds several profiles, the one that IS this profile; a file of several
+   profiles none of which is this one is put back profile by profile instead.
+   Mode 'all' puts each profile back where it belongs — same id, else same name,
+   else a new profile. */
 async function importLite(j, mode){
-  if(!j || j._signal!=='lite' || !Array.isArray(j.p)) throw new Error('Not a channels + swipe file');
+  if(!j || j._signal!=='lite' || !Array.isArray(j.p)) throw new Error('Not a profile file');
+  if(mode==='one' && j.p.filter(Boolean).length>1){
+    const a = activeProfile(), nm = String(a.name||'').trim().toLowerCase();
+    const m = j.p.find(x=>x && x.id===a.id) || j.p.find(x=>x && String(x.n||'').trim().toLowerCase()===nm);
+    if(m) j = {...j, p:[m]}; else mode = 'all';
+  }
   const touched = [];
   let made=0, chAdded=0, swAdded=0, swFilled=0;
   for(const src of j.p){
@@ -3216,7 +3231,8 @@ async function importLite(j, mode){
     const cur = Array.isArray(p.cfg.channels)? p.cfg.channels : [];
     const seen = new Set(cur.map(canonCh).filter(Boolean)), add = [];
     for(const line of (Array.isArray(src.ch)? src.ch : [])){
-      const t = String(line).trim(), k = canonCh(t);
+      if(typeof line!=='string') continue;
+      const t = line.trim(), k = canonCh(t);
       if(k && !seen.has(k)){ seen.add(k); add.push(t); }
     }
     if(add.length){ p.cfg.channels = cur.concat(add); chAdded += add.length; }
@@ -6254,12 +6270,12 @@ function vSettings(){
 
       <div class="panel"><div class="phead">${ic('down')}Backup &amp; transfer</div><div class="pad">
         <div class="muted" style="font-size:11.5px;line-height:1.65;margin-bottom:12px">
-          Export writes one JSON containing profiles, settings and every cached video, snapshot and trending record.
-          Import it on any device and you're exactly where you left off — that single file is the whole app state.</div>
+          Export writes one small JSON with each profile's competitor list (in its order) and swipe file — no cached videos.
+          Import it on any device, then sync: the videos are pulled again from the list.</div>
         <div class="row wrapf" style="gap:8px">
-          <button class="btn btn-sm btn-p" data-pact="exportAll">${ic('layers')}Export ALL profiles + data</button>
+          <button class="btn btn-sm btn-p" data-pact="exportAll">${ic('layers')}Export ALL profiles</button>
           <button class="btn btn-sm btn-o" data-pact="exportOne">${ic('down')}Export this profile only</button>
-          <button class="btn btn-sm btn-o" data-act="restore">${ic('up')}Import file</button>
+          <button class="btn btn-sm btn-o" data-pact="importAll">${ic('up')}Import file</button>
         </div>
       </div></div>
 
@@ -6956,10 +6972,9 @@ document.getElementById('liteFile').onchange = e=>{
   r.onload=async()=>{
     try{
       const j = JSON.parse(r.result);
-      // handed one of the other backup files by mistake — restore it the way its own button would
+      // a swipe-only pack goes into this profile's swipe file, as its own button would
       if(j && j._signal==='swipe-pack') importSwipePack(j);
-      else if(j && j._signal==='profile-pack') await importProfilePack(j);
-      else await importLite(j, _liteMode);
+      else await importLite(toLite(j), _liteMode);
     }
     catch(err){ toast('Could not import: '+err.message,'err'); }
     e.target.value='';
@@ -7409,7 +7424,7 @@ async function saveSettings(){
   const removed = await pruneOrphans();
   S.page={};
   if(!ok){
-    toast('Could not write to browser storage — use Export ALL profiles + data now to keep your work','err');
+    toast('Could not write to browser storage — use Export ALL profiles now to keep your channel lists and swipe files','err');
   }else{
     toast(removed? `Saved — ${removed} removed channel${removed===1?'':'s'} cleared from cache`
                  : `Saved — ${fields.map(f=>DRAFT_LABEL[f].toLowerCase()).join(', ')} applied`,'ok');
