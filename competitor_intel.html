@@ -988,6 +988,46 @@ function saveCfg(){
 const DB_NAME='signal_db', DB_VER=2;
 const STORES = {videos:'v2_videos', channels:'v2_channels', snapshots:'v2_snapshots', trending:'v2_trending'};
 const OLD = {videos:'videos', channels:'channels', snapshots:'snapshots', trending:'trending'};
+/* Recently left profiles held in memory, and the per-profile write counters that
+   decide whether a held copy may be used — see SWITCHING PROFILES FAST below. */
+const _pcache = new Map();            // pid -> masters of a profile you recently left
+const PCACHE_MAX = 3, PCACHE_ROWS = 800000;
+const _pidGen = new Map();            // pid -> write counter
+const pidGen = pid => _pidGen.get(pid)||0;
+function bumpGen(pid){ _pidGen.set(pid, pidGen(pid)+1); if(_pcache.has(pid)) pcacheEvict(pid); }
+function pcacheEvict(pid){ _pcache.delete(pid); if(pid!==PID()) _encByPid.delete(pid); }
+function pcacheClear(){ [..._pcache.keys()].forEach(pcacheEvict); }
+const _DATA_STORES = new Set(Object.values(STORES));
+function rowsWritten(store, list, isKeys){
+  const pids = new Set();
+  if(_DATA_STORES.has(store)){
+    for(const x of list){ const pid = isKeys? String(x).split('::')[0] : x && x.pid; if(pid) pids.add(pid); }
+  }else if(store==='misc'){
+    for(const x of list){ const k = String(isKeys? x : x && x.k); if(k.startsWith('comments_')) pids.add(k.slice(9)); }
+  }
+  if(!pids.size) return;
+  pids.forEach(bumpGen);
+  try{ _bc && _bc.postMessage({t:'rows', pids:[...pids], from:TAB_ID}); }catch(e){}
+}
+try{ _bc && _bc.addEventListener('message', e=>{
+  if(e.data && e.data.t==='rows' && e.data.from!==TAB_ID && Array.isArray(e.data.pids)) e.data.pids.forEach(bumpGen);
+}); }catch(e){}
+/* Keep the profile being left. Only a fully loaded one, and only as it stood when
+   read — S._gen is that profile's write counter at read time, so a write that
+   lands after it makes the copy unusable rather than stale. */
+function pcacheKeep(pid){
+  if(!pid || S._snapsPending || S._loadedPid!==pid || !Array.isArray(S.allVideos)) return;
+  _pcache.delete(pid);
+  _pcache.set(pid, {gen:S._gen, allChannels:S.allChannels, allVideos:S.allVideos,
+    allSnapshots:S.allSnapshots, trending:S.trending, comments:S.comments});
+  const live = new Set(STORE.profiles.map(p=>p.id));
+  for(const k of [..._pcache.keys()]) if(!live.has(k)) pcacheEvict(k);
+  const weight = e => (e.allSnapshots||[]).length + 4*(e.allVideos||[]).length;
+  let rows = 0; for(const e of _pcache.values()) rows += weight(e);
+  while(_pcache.size>1 && (_pcache.size>PCACHE_MAX || rows>PCACHE_ROWS)){
+    const k = _pcache.keys().next().value; rows -= weight(_pcache.get(k)); pcacheEvict(k);
+  }
+}
 let _db=null, _dbOpening=null;
 function idb(){
   if(_db) return Promise.resolve(_db);
@@ -1070,6 +1110,7 @@ function rwTx(db, store){
 async function idbPut(store, items){
   const list = Array.isArray(items)?items:[items];
   if(!list.length) return;
+  rowsWritten(store, list, false);
   // Chunked so a huge sync can't build one transaction big enough to be
   // aborted wholesale — a partial failure then costs one chunk, not the lot.
   const CH = 2000;
@@ -1097,6 +1138,7 @@ async function idbClear(store){
 }
 async function idbDelete(store, keys){
   if(!keys || !keys.length) return;
+  rowsWritten(store, keys, true);
   const CH = 2000;
   for(let i=0;i<keys.length;i+=CH){
     const slice = keys.slice(i,i+CH);
@@ -1430,6 +1472,7 @@ function wireCrossTab(){
       if(S.view==='settings') renderDirtyBar();
       return;
     }
+    pcacheClear();
     await loadAll();
     renderProfBar(); renderSideNav();
     if(STORE.active!==wasActive) toast(`Switched to "${activeProfile().name}" in another tab`);
@@ -1495,7 +1538,7 @@ const ago = ts => { const d=(Date.now()-ts)/1000; if(d<60)return'just now'; if(d
 const dstr = ts => FMT.date.format(new Date(ts));
 const todayPT = () => new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'});
 const dur = s => { s=Math.round(s); const h=Math.floor(s/3600), m=Math.floor(s%3600/60), sec=s%60; return h? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}` : `${m}:${String(sec).padStart(2,'0')}`; };
-const median = a => { if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y), m=s.length>>1; return s.length%2? s[m] : (s[m-1]+s[m])/2; };
+const median = a => { if(!a.length) return 0; const s=Float64Array.from(a).sort(), m=s.length>>1; return s.length%2? s[m] : (s[m-1]+s[m])/2; };
 const mean = a => a.length? a.reduce((x,y)=>x+y,0)/a.length : 0;
 const pctile = (a,p) => { if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y); return s[Math.min(s.length-1, Math.floor(p/100*s.length))]; };
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -2065,11 +2108,20 @@ function invalidateBaselines(){
   _baseCache=null; _gapCache=null; _enrichCache=null; _snapIdx=null; _chIdx=null;
   _chMapCache=null; _topicCache=null; _boardCache=null; _momCache.clear();
   _calCache=null; _vidIdx=null;
+  for(const k in _rm) _rm[k].clear();
 }
 /* Identity of the current dataset. Anything memoised over S.videos / S.channels
    / S.snapshots keys on this, so a refresh that changes values but not counts
    still invalidates. */
 const dataKey = () => S.dataVer+':'+PID();
+/* Range-keyed results remember the last few ranges instead of only the last one,
+   so 30 -> 180 -> 30 does not rebuild what 30 already had. Cleared on every data
+   change, exactly like the single-slot caches they sit next to. */
+function lru(size){ const m=new Map(); return {
+  get(k){ const v=m.get(k); if(v!==undefined){ m.delete(k); m.set(k,v); } return v; },
+  set(k,v){ m.delete(k); m.set(k,v); if(m.size>size) m.delete(m.keys().next().value); return v; },
+  clear(){ m.clear(); } }; }
+const _rm = { enrich:lru(12), topics:lru(12), cal:lru(8), mini:lru(8), board:lru(8), dash:lru(10) };
 /* Every view asks for "the enriched videos in the current range". Computing that
    once per render instead of once per call site is the other half of the fix. */
 let _enrichCache=null, _enrichKey='';
@@ -2077,10 +2129,9 @@ function enrichedInRange(r){
   const range = r || S.range;
   const key = [range, CFG.rangeFrom||'', CFG.rangeTo||'', CFG.includeShorts?1:0,
     dataKey(), selSig()].join('|');   // selection is part of the identity
-  if(r && r!==S.range) return enrich(videosInRange(r));   // one-off range, don't pollute the cache
-  if(_enrichCache && _enrichKey===key) return _enrichCache;
-  _enrichCache = enrich(videosInRange(range)); _enrichKey = key;
-  return _enrichCache;
+  const hit = _rm.enrich.get(key);
+  if(hit) return hit;
+  return _rm.enrich.set(key, enrich(videosInRange(range)));
 }
 /* Title anatomy — cheap to compute, and the strongest lever a faceless channel
    actually controls. Every field here is also exported so you can regress on it. */
@@ -2100,7 +2151,7 @@ function titleAnatomy(t){
     tHasColon: t.includes(':'), tHasDash: /—|–|\s-\s/.test(t),
     tHasQuote: /["“”']/.test(t)
   };
-  if(_anat.size>5000) _anat.clear();
+  if(_anat.size>60000) _anat.clear();   // a profile holds ~10K titles; 5000 thrashed
   _anat.set(t,a);
   return a;
 }
@@ -2123,7 +2174,12 @@ function gapMap(){ const k=dataKey();
   _gapCache=uploadGaps(); _gapKey=k; return _gapCache; }
 /* Per-video memo keyed on the inputs that actually affect the result. A sync that
    touches 20 videos then only rebuilds those 20, instead of the whole catalogue. */
-const _encache = new Map();
+/* One memo per profile. A single shared one was cleared wholesale past 20,000
+   entries — two 10K-video profiles filled it, so every switch threw away the
+   other profile's work — and, keyed by video id alone, it could hand one profile
+   a row object built from another profile's copy of the same video. */
+const _encByPid = new Map();
+function encacheFor(pid){ let m = _encByPid.get(pid); if(!m){ m = new Map(); _encByPid.set(pid, m); } return m; }
 let _chMapCache=null;
 function channelMap(){
   if(_chMapCache) return _chMapCache;
@@ -2134,7 +2190,8 @@ const EMPTY_CH = {};
 function enrich(vids){
   const bl = channelBaselines(), gaps = gapMap();
   const chMap = channelMap();   // built once per data change, not once per call
-  if(_encache.size>20000) _encache.clear();
+  const _encache = encacheFor(PID());
+  if(_encache.size>60000) _encache.clear();
   return vids.map(v=>{
     const ch = chMap.get(v.channelId)||EMPTY_CH;
     const b = bl[v.channelId]||EMPTY_CH;
@@ -2200,14 +2257,14 @@ function extractTopics(title){
     out.add(t);
   });
   const arr = [...out];
-  if(_topicMemo.size>5000) _topicMemo.clear();
+  if(_topicMemo.size>60000) _topicMemo.clear();
   _topicMemo.set(title, arr);
   return arr;
 }
 let _topicCache=null, _topicKey='';
 function topicStats(vids){
   const key = vids.length+':'+S.range+':'+dataKey()+':'+selSig();
-  if(_topicCache && _topicKey===key) return _topicCache;
+  const hitT = _rm.topics.get(key); if(hitT) return hitT;
   const now=Date.now(), recentCut=now-7*864e5, priorCut=now-28*864e5;
   const m = new Map();
   for(const v of vids){
@@ -2224,7 +2281,9 @@ function topicStats(vids){
   m.forEach(e=>{
     if(e.vids.length<2) return;
     const outs = e.vids.map(v=>v.outlier);
-    const medOut = median(outs), maxOut = Math.max(...outs);
+    const medOut = median(outs);
+    let maxOut = -Infinity, best = null;
+    for(const v of e.vids){ if(v.outlier>maxOut){ maxOut=v.outlier; } if(best===null || v.outlier>best.outlier) best=v; }
     const medViews = median(e.vids.map(v=>v.views));
     const coverage = e.channels.size;
     // recent share vs prior share, smoothed so a single new video can't spike it
@@ -2235,10 +2294,10 @@ function topicStats(vids){
     rows.push({topic:e.topic, count:e.vids.length, coverage, medOutlier:+medOut.toFixed(2),
       maxOutlier:+maxOut.toFixed(2), medViews:Math.round(medViews),
       recent:e.recent, prior:e.prior, momentum, daysOld, opportunity,
-      best:[...e.vids].sort((a,b)=>b.outlier-a.outlier)[0]});
+      best});
   });
   rows.sort((a,b)=>b.opportunity-a.opportunity);
-  _topicCache=rows; _topicKey=key; return rows;
+  return _rm.topics.set(key, rows);
 }
 /* Breakout score for young videos: how far above the channel's own normal
    pace this one is running, weighted for how early we are and whether the
@@ -2767,9 +2826,12 @@ let _calCache=null, _calKey='';
 function calendarIndex(){
   const key = [dataKey(), S.range, CFG.rangeFrom||'', CFG.rangeTo||'', selSig(),
     S.filters.q||'', CFG.includeShorts?1:0, vfSig()].join('|');
-  if(_calCache && _calKey===key) return _calCache;
+  const hitC = _rm.cal.get(key); if(hitC) return hitC;
+  return _rm.cal.set(key, calAgg(applyQ(enrichedInRange())));
+}
+function calAgg(list){
   const m = new Map();
-  for(const v of applyQ(enrichedInRange())){
+  for(const v of list){
     const k = dayKey(v.publishedTs);
     let e = m.get(k);
     if(!e){ e = {k, n:0, views:0, likes:0, comments:0, outs:[], vids:[]}; m.set(k,e); }
@@ -2782,8 +2844,7 @@ function calendarIndex(){
     e.chans = new Set(e.vids.map(v=>v.channelId)).size;
     e.best = e.vids.reduce((a,b)=>(a && a.outlier>=b.outlier)? a : b, null);
   });
-  _calCache=m; _calKey=key;
-  return _calCache;
+  return m;
 }
 const CAL_METRICS = [
   {k:'uploads', l:'Uploads', get:d=>d.n,        fmt:v=>nfull(v),         word:'uploads',        top:'Busiest day'},
@@ -2983,10 +3044,11 @@ function positionProfMenu(){ if(profMenuOpen) anchorPopover(document.getElementB
 addEventListener('resize', positionProfMenu);
 async function switchProfile(pid){
   if(pid===STORE.active) { profMenuOpen=false; renderProfBar(); return; }
+  pcacheKeep(STORE.active);              // the profile being left stays in memory
   STORE.active = pid; saveCfg();
   invalidateBaselines();
   S.filters={}; S.sort={}; profMenuOpen=false;
-  await loadAll();
+  await loadAll({progressive:true});
   document.documentElement.dataset.density = CFG.density;
   document.documentElement.dataset.text = CFG.textSize||'m';
   renderProfBar(); renderSideNav(); render();
@@ -3482,15 +3544,15 @@ function vDash(){
   const week = vids.filter(v=>v.publishedTs >= Date.now()-7*864e5);
   const hot = vids.filter(v=>v.outlier>=CFG.outlierThreshold).sort((a,b)=>b.outlier-a.outlier);
   const totalViews = vids.reduce((a,v)=>a+v.views,0);
-  const accel = vids.map(v=>({v,m:momentumOf(v.id)})).filter(x=>x.m&&x.m.accel>1.4).length;
   /* Period-over-period: the same window immediately before this one, so every
      headline number carries a direction instead of sitting there context-free. */
   const {from,to} = rangeBounds();
   const span = (to===Infinity? Date.now():to) - from;
   // built from the same predicate as the current period so the delta compares like with like
-  const prevVids = (S.range==='all')? [] : enrich(S.videos.filter(v=>
+  const prevKey = ['prev', dataKey(), S.range, CFG.rangeFrom||'', CFG.rangeTo||'', CFG.includeShorts?1:0, selSig(), Math.floor(Date.now()/6e4)].join('|');
+  const prevVids = (S.range==='all')? [] : (_rm.dash.get(prevKey) || _rm.dash.set(prevKey, enrich(S.videos.filter(v=>
       v.publishedTs>=from-span && v.publishedTs<from
-      && (CFG.includeShorts||!v.isShort) && isSel(v.channelId)));
+      && (CFG.includeShorts||!v.isShort) && isSel(v.channelId)))));
   const delta = (cur, prev) => {
     if(!prev) return '';
     const d = (cur-prev)/prev*100;
@@ -3518,8 +3580,10 @@ function vDash(){
   const topOut = hot.slice(0,8).map(v=>({label:v.title, value:v.outlier, suffix:'×',
     act:'vopen', key:v.id, tip:`${v.title} — open the full breakdown`,
     sub:`${v.channelTitle} · ${nf(v.views)} views · ${nf(v.vpd)}/day · ${v.pubDay} ${v.pubTime} · ${dur(v.durationSec)}`}));
+  const byCh = new Map();
+  for(const v of vids){ let a=byCh.get(v.channelId); if(!a){ a=[]; byCh.set(v.channelId,a); } a.push(v); }
   const byChannel = selectedChannelObjs().map(c=>{
-    const cv = vids.filter(v=>v.channelId===c.id);
+    const cv = byCh.get(c.id)||[];
     const t = channelTrend(c.id);
     const arrow = t? (t.ratio>=1.25?' ▲':t.ratio<=0.75?' ▼':'') : '';
     return {label:c.title+arrow, value:cv.reduce((a,v)=>a+v.views,0),
@@ -3944,6 +4008,10 @@ addEventListener('resize', positionChPick);
 addEventListener('scroll', positionChPick, {capture:true, passive:true});   // passive: never block scrolling
 function channelPicker(){
   const s=selIds();
+  if(!chPickOpen) return `<span class="mpick">
+    <button class="field mpick-btn ${s?'act':''}" data-mpick="1">
+      ${ic('users')}<span class="grow c1 mpick-label">${esc(selLabel())}</span>${ic('layers')}</button>
+    </span>`;
   const counts={}; videosInRange(S.range).forEach(v=>counts[v.channelId]=(counts[v.channelId]||0)+1);
   const by = S.filters.chPickSort||'name';
   const list = S.channels.slice().sort(
@@ -4059,6 +4127,7 @@ function vOutliers(){
 }
 /* ─────────── MOMENTUM ─────────── */
 function vMomentum(){
+  if(S._snapsPending) return `<div class="panel"><div class="pad">${emptyState('bolt','Loading snapshots…','The daily view counts for this profile are being read — this fills in by itself in a moment.')}</div></div>`;
   const days = [...new Set(S.snapshots.map(s=>s.date))].sort();
   if(days.length<2) return `<div class="panel"><div class="pad">${emptyState('bolt','Momentum needs at least two days of snapshots',
     `Every sync writes a daily view-count snapshot for videos published in the last ${CFG.snapshotDays} days. Sync again tomorrow and this fills in — it becomes the one dataset no free tool gives you: the actual shape of view accumulation in your niche.`)}</div></div>`;
@@ -4519,10 +4588,8 @@ function boardRows(){
   const sortBy = S.filters.boardSort||'outlier';
   const key = [dataKey(), S.range, CFG.rangeFrom||'', CFG.rangeTo||'', selSig(),
     S.filters.q||'', CFG.includeShorts?1:0, vfSig(), sortBy].join('|');
-  if(_boardCache && _boardKey===key) return _boardCache;
-  _boardCache = [...applyQ(enrichedInRange())].sort(boardCmp[sortBy]||boardCmp.outlier);
-  _boardKey = key;
-  return _boardCache;
+  const hitB = _rm.board.get(key); if(hitB) return hitB;
+  return _rm.board.set(key, [...applyQ(enrichedInRange())].sort(boardCmp[sortBy]||boardCmp.outlier));
 }
 /* `key` parameterises which pager slot this grid uses, so the Competitor Feed can
    render the very same cards under its own paging without the two views fighting
@@ -4994,9 +5061,11 @@ function repaintCalDay(){
 /* A five-week strip of the same day index, for the dashboard. Cheap: the index
    is already built and memoised for the Calendar view. */
 function miniCalStrip(){
-  const idx = calendarIndex();
   const M = calMetric();
   const start = new Date(); start.setHours(0,0,0,0);
+  const lo = +new Date(+start - 34*864e5) - 864e5;   // a day of slack; dayKey() decides membership
+  const mk = [dataKey(), S.range, CFG.rangeFrom||'', CFG.rangeTo||'', selSig(), S.filters.q||'', CFG.includeShorts?1:0, vfSig(), +start].join('|');
+  const idx = _rm.mini.get(mk) || _rm.mini.set(mk, calAgg(applyQ(enrichedInRange()).filter(v=>v.publishedTs>=lo)));
   const cells=[]; let max=1, any=0;
   const days=[];
   for(let i=34;i>=0;i--){
@@ -5963,7 +6032,7 @@ function buildRows(kind){
       // exports honour the active channel filter and search box exactly as shown on screen
       let rows = applyQ(vids);
       if(kind==='outliers') rows = rows.filter(v=>v.outlier>=CFG.outlierThreshold);
-      return rows.sort((a,b)=>b.outlier-a.outlier).map(v=>({
+      return rows.slice().sort((a,b)=>b.outlier-a.outlier).map(v=>({   // a copy: never reorder the cached range
         title:v.title, channel:v.channelTitle, channel_id:v.channelId,
         published_at:v.publishedAt, published_date:new Date(v.publishedTs).toISOString().slice(0,10),
         published_time_local:v.pubTime, published_day:v.pubDay, published_hour:v.pubHour,
@@ -6043,7 +6112,7 @@ function buildRows(kind){
       days_since_last:t.daysOld, opportunity_score:t.opportunity,
       best_title:t.best.title, best_views:t.best.views, best_outlier:t.best.outlier,
       best_url:'https://youtube.com/watch?v='+t.best.id }));
-    case 'thumbs': return applyQ(vids).sort((a,b)=>b.outlier-a.outlier).slice(0,120).map((v,i)=>({
+    case 'thumbs': return applyQ(vids).slice().sort((a,b)=>b.outlier-a.outlier).slice(0,120).map((v,i)=>({
       rank:i+1, outlier_score:v.outlier, views:v.views, title:v.title, channel:v.channelTitle,
       duration:dur(v.durationSec), is_short:v.isShort, published_at:v.publishedAt,
       thumbnail_maxres:thumbUrl(v,true), thumbnail_medium:thumbUrl(v),
@@ -6446,6 +6515,8 @@ document.addEventListener('click', async e=>{
   const t = e.target.closest('[data-nav],[data-act],[data-range],[data-thr],[data-toggle],[data-sort],[data-export],[data-cat],[data-chopen],[data-chback],[data-close],[data-brief],[data-copy-brief],[data-dl-brief],[data-pswitch],[data-pact],[data-trendmode],[data-chtab],[data-chexport],[data-chfilter-clear],[data-boardsort],[data-boardsize],[data-tdur],[data-twin],[data-expscope],[data-expthr],[data-minviews],[data-page],[data-perpage],[data-opptab],[data-oppsearch],[data-mpick],[data-chsel],[data-pastemode],[data-restorebak],[data-chpicksort],[data-textsize],[data-vstar],[data-vsel],[data-vopen],[data-vcopy],[data-chdrill],[data-calday],[data-calsort],[data-calsize],[data-calmetric],[data-calmonths],[data-calfeed],[data-calopen],[data-feedview],[data-swipeview],[data-swipesize],[data-swipefilt],[data-swipecat],[data-catset],[data-catnew],[data-catrename],[data-catdel],[data-catfrom],[data-pmove],[data-pcolopen],[data-pcol],[data-catmove],[data-catcolopen],[data-catcol]');
   if(!t){ if(closedPicker) render(); return; }
   const d = t.dataset;
+  if(S._snapsPending && (d.export||d.copyBrief||d.dlBrief||d.brief||d.chexport||d.vopen!==undefined
+      || ['exportZip','copyOppBrief','copyCompare','copyThumbUrls'].includes(d.act))) await snapsReady();
   if(d.page){ const [k,n]=d.page.split('|'); S.page[k]=+n;
     // no scrollIntoView — changing page keeps you exactly where you were reading
     if(!fastTableUpdate(k)) render();
@@ -6829,7 +6900,7 @@ ${CFG.titlePatterns}`);
     case 'clearRangeDates': { CFG.rangeFrom=''; CFG.rangeTo=''; S.page={}; saveCfg(); render(); return; }
     case 'clearVf': { CFG.vfCustom=0; CFG.minViews=0; CFG.maxViews=0; CFG.vDurMin=0; CFG.vDurMax=0; S.page={}; saveCfg(); render(); return; }
     case 'copyThumbUrls': {
-      const rows = applyQ(enrichedInRange())
+      const rows = applyQ(enrichedInRange()).slice()
         .sort((a,b)=>b.outlier-a.outlier).slice(0,120);
       copyTxt(rows.map(v=>`${thumbUrl(v,true)}\t${v.outlier}x\t${v.title}`).join('\n')); return;
     }
@@ -7697,29 +7768,92 @@ const mine = rows => rows.filter(r=>r.pid===PID());
    view, every metric, every export — reads S.channels / S.videos and is
    therefore consistent by construction rather than by each call site
    remembering to filter. */
-async function loadAll(){
-  const pid = PID();
-  const [chRows, vidRows, snapRows, trRows, comm] = await Promise.all([
+/* ═══════════════ SWITCHING PROFILES FAST ═══════════════
+   Two things made a switch take a second and a half on a big profile:
+
+   1. Every switch re-read the whole profile from IndexedDB, even one you were
+      looking at a moment ago. The profiles you recently left now stay in memory
+      (a few, bounded by size), so switching back is instant.
+   2. Nothing was drawn until every daily snapshot had been read — on a 10K-video
+      profile ~100K rows, about 90% of the load. Snapshots only feed sparklines,
+      acceleration and breakouts, so a switch now draws as soon as the videos are
+      in and the snapshots follow a moment later; anything that exports or copies
+      them waits for them first.
+
+   A cached copy is only ever used if nothing has been written to that profile
+   since it was read: every write goes through idbPut / idbDelete, which bump the
+   profile's write counter here and tell other tabs to bump theirs. */
+let _loadSeq = 0;
+/* opts.progressive: draw before the snapshots are in (switching, booting). Every
+   other caller still gets a complete load, exactly as before. */
+async function loadAll(opts){
+  const pid = PID(), seq = ++_loadSeq, gen = pidGen(pid);
+  const hit = _pcache.get(pid);
+  if(hit && hit.gen===gen){
+    _pcache.delete(pid);
+    S.allChannels = hit.allChannels; S.allVideos = hit.allVideos; S.allSnapshots = hit.allSnapshots;
+    S.trending = hit.trending; S.comments = hit.comments;
+    S._snapsPending = null; S._loadedPid = pid; S._gen = gen;
+    refilterChannels();
+    return;
+  }
+  /* IndexedDB serves a database's reads in order, so a snapshot read issued
+     first would hold the small reads behind it. Progressive loads ask for the
+     snapshots only once everything needed to draw is in hand. */
+  const progressive = !!(opts && opts.progressive);
+  let snapP = progressive? null : idbByPid(STORES.snapshots, pid);
+  const [chRows, vidRows, trRows, comm] = await Promise.all([
     idbByPid(STORES.channels, pid),
     idbByPid(STORES.videos, pid),
-    idbByPid(STORES.snapshots, pid),
     idbByPid(STORES.trending, pid),
     idbGet('misc', 'comments_'+pid),
   ]);
   // a profile switch that landed while these were in flight must not overwrite
   // the newer profile's state with this one's
-  if(PID() !== pid) return;
+  if(PID() !== pid || seq !== _loadSeq){ if(snapP) snapP.catch(()=>{}); return; }
 
   /* Everything this profile owns, kept as the master copy. The arrays the app
      actually reads are derived from these, so putting a channel back on the
      list is a pure recompute rather than another trip to disk. */
   S.allChannels = chRows;
   S.allVideos = vidRows;
-  S.allSnapshots = snapRows;
   S.trending = trRows.sort((a,b)=>a.ts-b.ts);
   S.comments = comm? comm.v : null;
+  S._loadedPid = pid; S._gen = gen;
+  if(!progressive){
+    S.allSnapshots = await snapP;
+    if(PID() !== pid || seq !== _loadSeq) return;
+    S._snapsPending = null;
+    refilterChannels();
+    return;
+  }
+  // never show the previous profile's snapshots against this one's videos
+  S.allSnapshots = [];
+  // opts.after: at boot, hold the big read until the first screen is drawn, so
+  // the integrity checks boot runs alongside are not queued behind it
+  snapP = Promise.resolve(opts.after).then(()=> (PID()===pid && seq===_loadSeq)? idbByPid(STORES.snapshots, pid) : []);
+  const pending = snapP.then(rows=>{
+    if(PID() !== pid || seq !== _loadSeq) return;
+    S.allSnapshots = rows;
+    S._snapsPending = null;
+    snapshotsArrived();
+  }, err=>{ if(seq===_loadSeq){ S._snapsPending = null; } console.warn('[signal] snapshot read failed', err); });
+  S._snapsPending = pending;
   refilterChannels();
 }
+/* Only the snapshot-derived caches are reset — baselines, enrichment, topics and
+   the calendar do not depend on snapshots, and rebuilding them would cost a full
+   recompute for nothing. Then repaint only the views that show snapshot data. */
+function snapshotsArrived(){
+  const dropped = new Set((S.staleChannels||[]).map(c=>c.id));
+  S.snapshots = dropped.size? S.allSnapshots.filter(s=>!dropped.has(s.channelId)) : S.allSnapshots;
+  _snapIdx = null; _momCache.clear();
+  const show = ['dash','feed','outliers','momentum','opps','channels','swipe','settings','export'];
+  if(show.includes(S.view)) renderContentOnly();
+}
+/* Anything that exports, copies or opens figures built from snapshots waits for
+   them — a download made in the second after a switch is never missing data. */
+const snapsReady = () => S._snapsPending || Promise.resolve();
 /* Applies the one filter that decides what counts, as a view over the masters.
    Editing the list changes every number immediately — the numbers can never
    describe a different set of channels than the list on screen, which is what
@@ -7736,6 +7870,22 @@ function refilterChannels(){
   S.snapshots = dropped.size? (S.allSnapshots||[]).filter(s=>!dropped.has(s.channelId)) : (S.allSnapshots||[]);
   if((CFG.chOff||[]).length) S.filters.chSel = undefined;   // re-derive the saved ticks over the new channel set
   invalidateBaselines();
+  preEnrichIdle();
+}
+/* Enrich the whole catalogue in idle slices after a load, so the first visit to
+   3 / 6 / 12 months only pays the cache-hit path. Abandoned if the data changes. */
+let _preTok = 0;
+function preEnrichIdle(){
+  const tok = ++_preTok, key = dataKey();
+  const ric = window.requestIdleCallback || (cb=>setTimeout(()=>cb({timeRemaining:()=>6}), 16));
+  let i = 0;
+  const step = dl => {
+    if(tok!==_preTok || dataKey()!==key) return;
+    const vids = S.videos;
+    while(i < vids.length && dl.timeRemaining() > 3){ enrich(vids.slice(i, i+200)); i += 200; }
+    if(i < vids.length) ric(step, {timeout:3000});
+  };
+  ric(step, {timeout:3000});
 }
 async function boot(){
   document.documentElement.dataset.theme = CFG.theme;
@@ -7759,14 +7909,15 @@ async function boot(){
      profile is active, or a v1 migration brings rows in, the read is simply
      redone — which only happens on the rare recovery path. */
   const optimisticPid = STORE._provisional? null : PID();
-  const loadP = optimisticPid? loadAll().catch(()=>null) : null;
+  let painted; const firstPaint = Promise.race([new Promise(r=>painted=r), new Promise(r=>setTimeout(r,4000))]);
+  const loadP = optimisticPid? loadAll({progressive:true, after:firstPaint}).catch(()=>null) : null;
 
   const notes = await reconcileStore();
   const moved = await migrateV1();
   if(moved) notes.push(...await healChannelLists());
 
   if(loadP) await loadP;
-  if(!optimisticPid || PID()!==optimisticPid || moved) await loadAll();
+  if(!optimisticPid || PID()!==optimisticPid || moved) await loadAll({progressive:true, after:firstPaint});
   else if(notes.length) refilterChannels();   // a rebuilt list changes what counts
 
   document.documentElement.dataset.theme = CFG.theme;
@@ -7784,6 +7935,7 @@ async function boot(){
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
   }
   render();
+  painted();
   /* Say it out loud when something was repaired. A silent recovery is
      indistinguishable from the bug it just fixed. */
   if(notes.length){
