@@ -3457,6 +3457,7 @@ function restoreFocus(f){
   el.scrollTop = f.scroll;
 }
 function renderContentOnly(){
+  if(_contentTimer!==null){ clearTimeout(_contentTimer); _contentTimer=null; }
   const f = captureFocus();
   const c = document.getElementById('content');
   const fn = VIEW_FN[S.view];
@@ -3944,11 +3945,47 @@ function syncPickerDom(){
   }
   return true;
 }
-let _contentQueued=false;
+/* While the channel menu is open the tick flips at once and the page behind it
+   refreshes once you pause — a refresh after every tick blocked the next click.
+   Closing the menu, or any other repaint, brings it up to date immediately. */
+let _contentTimer=null;
 function scheduleContentUpdate(){
-  if(_contentQueued) return;
-  _contentQueued=true;
-  requestAnimationFrame(()=>{ _contentQueued=false; renderContentOnly(); });
+  clearTimeout(_contentTimer);
+  _contentTimer = setTimeout(flushContentUpdate, 150);
+}
+function flushContentUpdate(){
+  if(_contentTimer===null) return;
+  clearTimeout(_contentTimer); _contentTimer=null;
+  renderContentOnly();
+}
+/* The channel menu lives in the toolbar; opening or closing it only needs the
+   toolbar redrawn, not the whole page under it. */
+function repaintSubrow(){
+  document.getElementById('subrow').innerHTML = subrow();
+  positionChPick();
+}
+/* Opening or closing the menu: add or remove just the menu panel. It is fixed-
+   position, so nothing else in the toolbar or the page needs laying out again. */
+function repaintPicker(){
+  const host = document.querySelector('#subrow .mpick');
+  if(!host) return repaintSubrow();
+  const tpl = document.createElement('template');
+  tpl.innerHTML = channelPicker();
+  const fresh = tpl.content.querySelector('.mpick');
+  const oldMenu = host.querySelector('#chPickMenu'), newMenu = fresh && fresh.querySelector('#chPickMenu');
+  if(oldMenu) oldMenu.remove();
+  if(newMenu) host.appendChild(newMenu);
+  positionChPick();
+}
+/* Acknowledge a click in the very next frame, then do the work: the button you
+   pressed lights up at once and the new content follows straight after, instead
+   of everything freezing until the whole page is rebuilt. State changes
+   immediately; only the redraw waits, and a newer click supersedes an older
+   pending redraw. */
+let _ackTok = 0;
+function afterPaint(fn){
+  const tok = ++_ackTok;
+  requestAnimationFrame(()=>setTimeout(()=>{ if(tok===_ackTok) fn(); }, 0));
 }
 /* Channel selection is no longer applied here — videosInRange() already did it
    for every consumer. This now only layers on the view-level search box and
@@ -6513,7 +6550,7 @@ document.addEventListener('click', async e=>{
   if(chPickOpen && !e.target.closest('.mpick')){ chPickOpen=false; closedPicker=true; }
 
   const t = e.target.closest('[data-nav],[data-act],[data-range],[data-thr],[data-toggle],[data-sort],[data-export],[data-cat],[data-chopen],[data-chback],[data-close],[data-brief],[data-copy-brief],[data-dl-brief],[data-pswitch],[data-pact],[data-trendmode],[data-chtab],[data-chexport],[data-chfilter-clear],[data-boardsort],[data-boardsize],[data-tdur],[data-twin],[data-expscope],[data-expthr],[data-minviews],[data-page],[data-perpage],[data-opptab],[data-oppsearch],[data-mpick],[data-chsel],[data-pastemode],[data-restorebak],[data-chpicksort],[data-textsize],[data-vstar],[data-vsel],[data-vopen],[data-vcopy],[data-chdrill],[data-calday],[data-calsort],[data-calsize],[data-calmetric],[data-calmonths],[data-calfeed],[data-calopen],[data-feedview],[data-swipeview],[data-swipesize],[data-swipefilt],[data-swipecat],[data-catset],[data-catnew],[data-catrename],[data-catdel],[data-catfrom],[data-pmove],[data-pcolopen],[data-pcol],[data-catmove],[data-catcolopen],[data-catcol]');
-  if(!t){ if(closedPicker) render(); return; }
+  if(!t){ if(closedPicker){ flushContentUpdate(); repaintPicker(); } return; }
   const d = t.dataset;
   if(S._snapsPending && (d.export||d.copyBrief||d.dlBrief||d.brief||d.chexport||d.vopen!==undefined
       || ['exportZip','copyOppBrief','copyCompare','copyThumbUrls'].includes(d.act))) await snapsReady();
@@ -6532,7 +6569,7 @@ document.addEventListener('click', async e=>{
   if(d.pcol){ const [id,c] = d.pcol.split('|'); setProfileColor(id, c); return; }
   if(d.trendmode){ CFG.trendMode=d.trendmode; saveCfg(); render(); return; }
   if(d.chtab){ S.filters.chTab=d.chtab; render(); return; }
-  if(d.mpick!==undefined){ chPickOpen=!chPickOpen; render(); return; }
+  if(d.mpick!==undefined){ chPickOpen=!chPickOpen; if(!chPickOpen) flushContentUpdate(); repaintPicker(); return; }
   if(d.textsize){ CFG.textSize=d.textsize; document.documentElement.dataset.text=d.textsize;
     saveCfg(); render(); return; }
   if(d.chpicksort){ S.filters.chPickSort=d.chpicksort; renderContentOnly(); positionChPick();
@@ -6657,14 +6694,21 @@ document.addEventListener('click', async e=>{
     document.querySelectorAll('[data-feedview]').forEach(x=>
       x.classList.toggle('on', x.dataset.feedview===CFG.feedView));
     return; }
-  if(d.nav) return nav(d.nav);
+  if(d.nav){
+    const id = d.nav;
+    document.querySelectorAll('#sideNav .navbtn').forEach(b=>b.classList.toggle('active', b.dataset.nav===id));
+    afterPaint(()=>nav(id)); return; }
   if(d.close) { document.getElementById('modals').innerHTML=''; return; }
-  if(d.range){ S.range=d.range; S.page={}; renderSideNav(); render(); return; }
+  if(d.range){ S.range=d.range; S.page={};
+    document.querySelectorAll('[data-range]').forEach(b=>b.classList.toggle('on', b.dataset.range===S.range));
+    afterPaint(()=>{ renderSideNav(); render(); }); return; }
   if(d.thr){ CFG.outlierThreshold=+d.thr; S.page={}; saveCfg(); renderSideNav(); render(); return; }
   if(d.toggle){
     if(d.toggle==='density'){ CFG.density = CFG.density==='compact'?'normal':'compact'; document.documentElement.dataset.density=CFG.density; }
     else CFG[d.toggle] = !CFG[d.toggle];
-    saveCfg(); render(); return;
+    saveCfg();
+    if(d.toggle==='includeShorts'){ t.classList.toggle('on', CFG.includeShorts); t.textContent = CFG.includeShorts?'Shorts included':'Shorts excluded'; }
+    afterPaint(render); return;
   }
   if(d.cat){ const c=+d.cat; CFG.trendCats = CFG.trendCats.includes(c)? CFG.trendCats.filter(x=>x!==c) : [...CFG.trendCats,c]; saveCfg(); render(); return; }
   if(d.sort){ const [key,col]=d.sort.split('|'); const cur=S.sort[key]||{c:'',d:-1};
@@ -6964,8 +7008,8 @@ document.addEventListener('change', e=>{
   if(c==='minViews' && e.target.tagName==='SELECT'){
     if(e.target.value==='custom') CFG.vfCustom=1;
     else { CFG.vfCustom=0; CFG.minViews=+e.target.value||0; }
-    S.page={}; saveCfg(); render();
-    if(CFG.vfCustom){ const b=document.querySelector('[data-vf="minViews"]'); if(b) b.focus(); }
+    S.page={}; saveCfg();
+    afterPaint(()=>{ render(); if(CFG.vfCustom){ const b=document.querySelector('[data-vf="minViews"]'); if(b) b.focus(); } });
     return; }
   if(c){
     const v=e.target.value;
