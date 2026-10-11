@@ -93,8 +93,8 @@ export function buildKai() {
   const eyes = [-1, 1].map((side) => {
     const g = new THREE.Group(); face(g, side * 0.4, -0.02, HEAD_R * 0.93); head.add(g);
     const ball = mesh(new THREE.IcosahedronGeometry(0.03, 1), M.eye(), false); ball.scale.set(0.82, 1.15, 0.5); g.add(ball);
-    const gl = mesh(new THREE.IcosahedronGeometry(0.009, 0), M.glint(), false); gl.position.set(-0.008, 0.013, 0.016); g.add(gl);
-    const gl2 = mesh(new THREE.IcosahedronGeometry(0.005, 0), M.glint(), false); gl2.position.set(0.009, -0.012, 0.016); g.add(gl2);
+    const gl = mesh(new THREE.IcosahedronGeometry(0.008, 0), M.glintSoft(), false); gl.position.set(-0.008, 0.013, 0.016); g.add(gl);
+    const gl2 = mesh(new THREE.IcosahedronGeometry(0.0045, 0), M.glintSoft(), false); gl2.position.set(0.009, -0.012, 0.016); g.add(gl2);
     const smile = mesh(new THREE.TorusGeometry(0.024, 0.007, 4, 8, Math.PI), M.eye(), false); smile.position.z = 0.008; g.add(smile);
     const lid = mesh(new THREE.IcosahedronGeometry(0.033, 1), M.skin(), false); lid.scale.set(0.95, 0.7, 0.55); lid.position.set(0, 0.03, 0.004); g.add(lid);
     const browPivot = new THREE.Group(); face(browPivot, side * 0.4, 0.2, HEAD_R * 0.99); head.add(browPivot);
@@ -192,7 +192,7 @@ export function poseKai(root, o = {}) {
   u.smileArc.visible = talk < 0.08;
   u.smileArc.scale.set(expr === 'smile' ? 1.15 : 0.9, curve, 1);
   u.open.visible = talk >= 0.08;
-  u.open.scale.set(1.0, 0.25 + talk * 0.75, 0.35);
+  u.open.scale.set(1.35, 0.2 + talk * 0.5, 0.3);
 
   for (const a of u.arms) {
     const p = a.side < 0 ? armL : armR;

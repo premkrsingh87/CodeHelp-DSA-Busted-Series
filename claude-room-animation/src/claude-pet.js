@@ -12,15 +12,16 @@ export function buildClaude() {
   const turn = new THREE.Group(); root.add(turn);          // yaw
   const hop = new THREE.Group(); turn.add(hop);            // vertical hop
   const squash = new THREE.Group(); squash.position.y = 0; hop.add(squash);
+  const bodyMat = M.clay().clone();   // own copy so its inner glow can pulse while it speaks
 
   // legs: staggered so all four read from the front
   const legGeo = new RoundedBoxGeometry(0.052, LEG + 0.03, 0.052, 1, 0.012);
   for (const [x, z] of [[-0.15, 0.055], [-0.055, -0.055], [0.055, -0.055], [0.15, 0.055]]) {
-    const l = mesh(legGeo, M.clay()); l.position.set(x, (LEG + 0.03) / 2, z); squash.add(l);
+    const l = mesh(legGeo, bodyMat); l.position.set(x, (LEG + 0.03) / 2, z); squash.add(l);
   }
 
   const bodyPivot = new THREE.Group(); bodyPivot.position.y = LEG; squash.add(bodyPivot);
-  const body = mesh(new RoundedBoxGeometry(W, H, D, 2, 0.04), M.clay());
+  const body = mesh(new RoundedBoxGeometry(W, H, D, 2, 0.04), bodyMat);
   body.position.y = H / 2; bodyPivot.add(body);
 
   // eyes: three shapes per eye, toggled by expression
@@ -44,12 +45,12 @@ export function buildClaude() {
   // arm nubs on pivots at the body sides
   const arms = [-1, 1].map((side) => {
     const pivot = new THREE.Group(); pivot.position.set(side * W / 2, -0.02, 0); body.add(pivot);
-    const a = mesh(new RoundedBoxGeometry(0.075, 0.08, 0.08, 1, 0.016), M.clay());
+    const a = mesh(new RoundedBoxGeometry(0.075, 0.08, 0.08, 1, 0.016), bodyMat);
     a.position.x = side * 0.034; pivot.add(a);
     return { side, pivot };
   });
 
-  root.userData = { turn, hop, squash, bodyPivot, body, face, eyes, arms };
+  root.userData = { turn, hop, squash, bodyPivot, body, face, eyes, arms, bodyMat };
   return root;
 }
 
@@ -58,10 +59,11 @@ export function poseClaude(root, o = {}) {
   const u = root.userData;
   const {
     yaw = 0, expr = 'neutral', blink = 0, lookX = 0, lookY = 0, squash = 0, hop = 0,
-    armL = 0, armR = 0, reachL = 0, reachR = 0, blush = 0, lean = 0, tilt = 0,
+    armL = 0, armR = 0, reachL = 0, reachR = 0, blush = 0, lean = 0, tilt = 0, glow = 0,
   } = o;
   u.turn.rotation.y = yaw;
   u.hop.position.y = hop;
+  u.bodyMat.emissiveIntensity = 0.06 + glow * 0.55;
   u.squash.scale.set(1 + squash * 0.07, 1 - squash * 0.1, 1 + squash * 0.07);
   u.bodyPivot.rotation.x = lean;
   u.bodyPivot.rotation.z = tilt;

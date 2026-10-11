@@ -61,7 +61,7 @@ export function buildLamp() {
   a2.position.set(0.0, 0.38, 0); a2.rotation.z = -1.0; g.add(a2);
   const head = new THREE.Group(); head.position.set(0.11, 0.44, 0); head.rotation.z = 0.55; g.add(head);
   const shade = mesh(new THREE.ConeGeometry(0.085, 0.12, 8, 1, true), M.ember()); shade.material.side = THREE.DoubleSide; head.add(shade);
-  const bulb = mesh(new THREE.IcosahedronGeometry(0.035, 1), M.emberGlow(), false); bulb.position.y = -0.04; head.add(bulb);
+  const bulb = mesh(new THREE.IcosahedronGeometry(0.03, 1), new THREE.MeshPhysicalMaterial({ color: P.ember, emissive: P.ember, emissiveIntensity: 1.9, flatShading: true }), false); bulb.position.y = -0.04; head.add(bulb);
   g.userData = { head, bulb };
   return g;
 }
