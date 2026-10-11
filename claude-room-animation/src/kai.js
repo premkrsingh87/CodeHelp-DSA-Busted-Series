@@ -1,418 +1,203 @@
-// Kai, 12: oversized moss hoodie, headphones round his neck, messy dark hair.
-// yaw: 0 front, +PI/2 faces screen-right, PI back. Origin = floor between feet.
-import { P, S, LINE } from './palette.js';
-import { rrect } from './claude-pet.js';
+// Kai, 12, low-poly 3D: faceted head, spiky glossy hair, moss hoodie, glowing headphones round his neck.
+// Origin = floor between the feet. Faces +Z. Units are metres.
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { M, mesh } from './materials.js';
 
-const R = 62;                // head radius
-const TOR_W = 128, TOR_HEM = 148, TOR_D = 78;
-const SHOULDER_Y = -282, HEM_Y = -150;
-const HEAD_Y = -350;
-const UPPER = 70, FORE = 60, SLEEVE = 30, HAND = 15;
+const HEAD_R = 0.16;
+const HIP_Y = 0.62, THIGH = 0.28, SHIN = 0.27;
+const SHOULDER_Y = 1.03, UPPER = 0.24, FORE = 0.22;
+const Z = new THREE.Vector3(0, 0, 1);
 
-export function drawKai(ctx, o = {}) {
-  const {
-    x = 0, y = 0, s = 1, yaw = 0, pose = 'stand', expr = 'neutral',
-    blink = 0, lookX = 0, lookY = 0, talk = 0, headYaw = 0, headTilt = 0,
-    headNod = 0, lean = 0, blush = 0, line = LINE, rim = 0,
-    armL = { sh: -0.1, el: 0.06 }, armR = { sh: 0.1, el: -0.06 },
-    armsFront = false, holding = null, breathe = 0,
-  } = o;
-  const c = Math.cos(yaw), sn = Math.sin(yaw);
-  const px = (lx, lz) => lx * c + lz * sn;
-  const dep = (lx, lz) => -lx * sn + lz * c;
-  const lw = line / s;
-  const sit = pose === 'sit';
-  const dy = sit ? 26 : 0;   // upper body sits lower
+// point on the head sphere: a = yaw angle around Y (0 = front), b = elevation
+function onHead(a, b, r = HEAD_R) {
+  return new THREE.Vector3(r * Math.sin(a) * Math.cos(b), r * Math.sin(b), r * Math.cos(a) * Math.cos(b));
+}
+function face(m, a, b, r = HEAD_R) {
+  const p = onHead(a, b, r); m.position.copy(p);
+  m.quaternion.setFromUnitVectors(Z, p.clone().normalize());
+  return m;
+}
 
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(s, s);
-  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-  ctx.strokeStyle = P.ink; ctx.lineWidth = lw;
+function limb(r0, r1, len, mat, seg = 6) {
+  const g = new THREE.CylinderGeometry(r0, r1, len, seg, 1);
+  g.translate(0, -len / 2, 0);              // hangs down from its pivot
+  return mesh(g, mat);
+}
 
-  // floor shadow
-  ctx.fillStyle = 'rgba(27,26,46,0.28)';
-  ctx.beginPath(); ctx.ellipse(sit ? sn * 60 : 0, 2, 90, 12, 0, 0, Math.PI * 2); ctx.fill();
+export function buildKai() {
+  const root = new THREE.Group(); root.name = 'kai';
+  const turn = new THREE.Group(); root.add(turn);
+  const lower = new THREE.Group(); turn.add(lower);   // moves down when sitting
 
   // ---- legs
-  const legs = [-1, 1].map((side) => ({ side, lx: side * 28, d: dep(side * 28, 0) })).sort((a, b) => a.d - b.d);
-  for (const L of legs) drawLeg(ctx, L, px, sit, sn, c, lw, dy);
-
-  // ---- upper body (lean rotates about the hip)
-  const hipY = HEM_Y + dy + 10;
-  ctx.save();
-  ctx.translate(0, hipY); ctx.rotate(lean); ctx.translate(0, -hipY);
-  ctx.translate(0, dy - breathe * 2);
-
-  const shoulderX = (side) => px(side * (TOR_W / 2 - 6), 0);
-  const armList = [
-    { side: -1, a: armL, d: dep(-TOR_W / 2, 0) },
-    { side: 1, a: armR, d: dep(TOR_W / 2, 0) },
-  ];
-  const back = (A) => !armsFront && A.d < -2;
-  for (const A of armList) if (back(A)) drawArm(ctx, shoulderX(A.side), A, lw, true);
-
-  // hood behind the neck when facing us
-  const hoodFront = c < 0;
-  if (!hoodFront) drawHood(ctx, px, c, lw);
-
-  // torso
-  const sw = Math.abs(TOR_W * c) + Math.abs(TOR_D * sn);
-  const hw = Math.abs(TOR_HEM * c) + Math.abs((TOR_D + 10) * sn);
-  const cx0 = 0;
-  ctx.beginPath();
-  ctx.moveTo(cx0 - sw / 2 + 14, SHOULDER_Y);
-  ctx.quadraticCurveTo(cx0 - sw / 2 - 4, SHOULDER_Y + 2, cx0 - sw / 2 - 6, SHOULDER_Y + 30);
-  ctx.lineTo(cx0 - hw / 2, HEM_Y - 14);
-  ctx.quadraticCurveTo(cx0 - hw / 2, HEM_Y, cx0 - hw / 2 + 14, HEM_Y);
-  ctx.lineTo(cx0 + hw / 2 - 14, HEM_Y);
-  ctx.quadraticCurveTo(cx0 + hw / 2, HEM_Y, cx0 + hw / 2, HEM_Y - 14);
-  ctx.lineTo(cx0 + sw / 2 + 6, SHOULDER_Y + 30);
-  ctx.quadraticCurveTo(cx0 + sw / 2 + 4, SHOULDER_Y + 2, cx0 + sw / 2 - 14, SHOULDER_Y);
-  ctx.closePath();
-  ctx.fillStyle = P.moss; ctx.fill();
-  ctx.save(); ctx.clip();
-  // shadow on the side away from the lamp
-  ctx.fillStyle = S.mossShadow;
-  const shadeFrom = sn < -0.15 ? px(TOR_W / 2, TOR_D / 2) : (sn > 0.15 ? px(TOR_W / 2, -TOR_D / 2) : sw * 0.22);
-  ctx.fillRect(Math.min(shadeFrom, sw * 0.3), SHOULDER_Y - 10, 200, 200);
-  // hem band
-  ctx.fillStyle = 'rgba(27,26,46,0.18)';
-  ctx.fillRect(-200, HEM_Y - 16, 400, 16);
-  if (rim > 0) {
-    ctx.globalAlpha = rim; ctx.strokeStyle = P.teal; ctx.lineWidth = lw * 1.5;
-    ctx.beginPath(); ctx.moveTo(hw / 2 - 3, HEM_Y - 18); ctx.lineTo(sw / 2 + 2, SHOULDER_Y + 26); ctx.stroke();
-    ctx.globalAlpha = 1; ctx.strokeStyle = P.ink; ctx.lineWidth = lw;
-  }
-  // front details: pocket + drawstrings
-  if (c > 0.15) {
-    const pz = TOR_D / 2;
-    ctx.lineWidth = lw * 0.7;
-    ctx.beginPath();
-    ctx.moveTo(px(-44, pz), HEM_Y - 14); ctx.lineTo(px(-34, pz), HEM_Y - 58);
-    ctx.lineTo(px(34, pz), HEM_Y - 58); ctx.lineTo(px(44, pz), HEM_Y - 14);
-    ctx.stroke();
-    ctx.lineWidth = lw * 0.55; ctx.strokeStyle = P.paper;
-    for (const sx of [-14, 14]) {
-      ctx.beginPath(); ctx.moveTo(px(sx, pz), SHOULDER_Y + 14); ctx.lineTo(px(sx * 1.15, pz), SHOULDER_Y + 58); ctx.stroke();
-    }
-    ctx.strokeStyle = P.ink;
-  }
-  ctx.restore();
-  ctx.lineWidth = lw; ctx.stroke();
-
-  // neck
-  ctx.fillStyle = S.skinShadow;
-  rrect(ctx, -15, SHOULDER_Y - 26, 30, 34, 8); ctx.fill(); ctx.stroke();
-
-  // headphones resting round the neck
-  drawHeadphones(ctx, yaw, lw, 'back');
-  if (hoodFront) drawHood(ctx, px, c, lw);
-
-  // head
-  ctx.save();
-  ctx.translate(0, SHOULDER_Y - 18);
-  ctx.rotate(headTilt);
-  ctx.translate(0, HEAD_Y - SHOULDER_Y + 18 + headNod * 8);
-  drawHead(ctx, yaw + headYaw, expr, blink, lookX, lookY, talk, blush, lw, rim);
-  ctx.restore();
-
-  drawHeadphones(ctx, yaw, lw, 'front');
-
-  for (const A of armList) if (!back(A)) drawArm(ctx, shoulderX(A.side), A, lw, false);
-  if (holding === 'controller') {
-    const hands = armList.map((A) => armEnd(shoulderX(A.side), A.a));
-    const hx = (hands[0][0] + hands[1][0]) / 2, hy = (hands[0][1] + hands[1][1]) / 2;
-    drawController(ctx, hx, hy + 4, 0.8, lw, Math.abs(c) < 0.5 ? 0.45 : 1);
-    for (const h of hands) { ctx.fillStyle = P.paper; drawHand(ctx, h[0], h[1], lw); }
-  }
-  ctx.restore();
-  ctx.restore();
-}
-
-function drawLeg(ctx, L, px, sit, sn, c, lw, dy) {
-  const hipX = px(L.lx, 0), hipY = HEM_Y + dy - 4;
-  const shade = L.d < -5;
-  ctx.fillStyle = shade ? S.denimShadow : S.denim;
-  ctx.lineWidth = lw;
-  if (!sit) {
-    rrect(ctx, hipX - 21, hipY - 10, 42, -HEM_Y - 14, 12); ctx.fill(); ctx.stroke();
-    drawShoe(ctx, hipX, -2, sn, c, lw, shade);
-  } else {
-    // thigh forward (toward facing dir), shin down to the floor
-    const fwd = sn * 92;
-    const kx = hipX + fwd, ky = hipY + 6 + (1 - Math.abs(sn)) * 30;
-    ctx.beginPath();
-    ctx.moveTo(hipX, hipY - 18); ctx.lineTo(kx, ky - 20);
-    ctx.lineTo(kx, ky + 22); ctx.lineTo(hipX, hipY + 22);
-    ctx.lineTo(hipX, hipY - 18);
-    ctx.lineWidth = 0;
-    ctx.save(); ctx.lineWidth = 44; ctx.strokeStyle = shade ? S.denimShadow : S.denim;
-    ctx.beginPath(); ctx.moveTo(hipX, hipY); ctx.lineTo(kx, ky); ctx.lineTo(kx + sn * 6, -24); ctx.stroke();
-    ctx.restore();
-    // outline the leg as a thick path
-    ctx.save(); ctx.globalCompositeOperation = 'destination-over';
-    ctx.lineWidth = 44 + lw * 2; ctx.strokeStyle = P.ink;
-    ctx.beginPath(); ctx.moveTo(hipX, hipY); ctx.lineTo(kx, ky); ctx.lineTo(kx + sn * 6, -24); ctx.stroke();
-    ctx.restore();
-    drawShoe(ctx, kx + sn * 6, -2, sn, c, lw, shade);
-  }
-}
-
-function drawShoe(ctx, x, y, sn, c, lw, shade) {
-  const len = 30 + Math.abs(sn) * 30;
-  const off = sn * 16;
-  ctx.fillStyle = shade ? S.clayShadow : P.paper;
-  rrect(ctx, x - len / 2 + off, y - 24, len, 24, 10); ctx.fill(); ctx.lineWidth = lw; ctx.stroke();
-  ctx.fillStyle = P.clay;
-  ctx.fillRect(x - len / 2 + off + 3, y - 9, len - 6, 5);
-}
-
-function armEnd(sx, a) {
-  const ex = sx + Math.sin(a.sh) * UPPER, ey = SHOULDER_Y + 14 + Math.cos(a.sh) * UPPER;
-  const a2 = a.sh + a.el;
-  return [ex + Math.sin(a2) * FORE, ey + Math.cos(a2) * FORE, ex, ey];
-}
-
-function drawArm(ctx, sx, A, lw, far) {
-  const [hx, hy, ex, ey] = armEnd(sx, A.a);
-  const sy = SHOULDER_Y + 14;
-  const col = far ? S.mossShadow : P.moss;
-  ctx.save();
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  ctx.strokeStyle = P.ink; ctx.lineWidth = SLEEVE + lw * 2;
-  ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();
-  ctx.strokeStyle = col; ctx.lineWidth = SLEEVE;
-  ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();
-  ctx.restore();
-  if (A.a.point) drawPointHand(ctx, hx, hy, A.a.sh + A.a.el, lw);
-  else drawHand(ctx, hx, hy, lw);
-}
-
-function drawHand(ctx, x, y, lw) {
-  ctx.fillStyle = S.skin; ctx.lineWidth = lw;
-  ctx.beginPath(); ctx.arc(x, y, HAND, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-}
-
-function drawPointHand(ctx, x, y, ang, lw) {
-  drawHand(ctx, x, y, lw);
-  // extended index finger
-  const fx = x + Math.sin(ang) * 26, fy = y + Math.cos(ang) * 26;
-  ctx.save(); ctx.lineCap = 'round';
-  ctx.strokeStyle = P.ink; ctx.lineWidth = 11 + lw * 2;
-  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(fx, fy); ctx.stroke();
-  ctx.strokeStyle = S.skin; ctx.lineWidth = 11;
-  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(fx, fy); ctx.stroke();
-  ctx.restore();
-  ctx.fillStyle = S.skin; ctx.beginPath(); ctx.arc(x, y, HAND - lw / 2, 0, Math.PI * 2); ctx.fill();
-}
-
-function drawHood(ctx, px, c, lw) {
-  ctx.fillStyle = S.mossShadow; ctx.lineWidth = lw;
-  const w = 104 * (0.55 + 0.45 * Math.abs(c));
-  const y0 = SHOULDER_Y - 28;
-  ctx.beginPath();
-  if (c >= 0) {
-    // collar ring peeking behind the neck
-    ctx.ellipse(0, SHOULDER_Y - 4, w / 2, 24, 0, Math.PI, 0);
-    ctx.closePath();
-  } else {
-    rrect(ctx, -w / 2, y0 + 6, w, 82, 30);
-  }
-  ctx.fill(); ctx.stroke();
-}
-
-function drawHeadphones(ctx, yaw, lw, layer) {
-  const r = 46, y = SHOULDER_Y - 6;
-  const cups = [-1, 1].map((side) => {
-    const a = side * 1.15 + yaw;
-    return { x: r * Math.sin(a), d: Math.cos(a) };
+  const legs = [-1, 1].map((side) => {
+    const hip = new THREE.Group(); hip.position.set(side * 0.075, HIP_Y, 0); lower.add(hip);
+    hip.add(limb(0.064, 0.056, THIGH, M.denim()));
+    const knee = new THREE.Group(); knee.position.y = -THIGH; hip.add(knee);
+    knee.add(limb(0.056, 0.05, SHIN, M.denim()));
+    const kneeCap = mesh(new THREE.IcosahedronGeometry(0.058, 0), M.denim()); knee.add(kneeCap);
+    const ankle = new THREE.Group(); ankle.position.y = -SHIN; knee.add(ankle);
+    const shoe = mesh(new RoundedBoxGeometry(0.1, 0.075, 0.19, 1, 0.025), M.paper());
+    shoe.position.set(0, -0.035, 0.035); ankle.add(shoe);
+    const sole = mesh(new THREE.BoxGeometry(0.104, 0.018, 0.192), M.clay());
+    sole.position.set(0, -0.066, 0.035); ankle.add(sole);
+    return { hip, knee, ankle };
   });
-  if (layer === 'back') {
-    // band loops behind the neck
-    ctx.strokeStyle = P.ink; ctx.lineWidth = 10;
-    ctx.beginPath(); ctx.ellipse(0, y - 4, r * 0.98, 16, 0, Math.PI, 0); ctx.stroke();
-    ctx.strokeStyle = P.teal; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.ellipse(0, y - 4, r * 0.98, 16, 0, Math.PI, 0); ctx.stroke();
-  }
-  for (const cp of cups) {
-    if ((layer === 'front') !== (cp.d >= -0.1)) continue;
-    const w = 16 + 12 * Math.abs(cp.d);
-    ctx.fillStyle = P.ink;
-    rrect(ctx, cp.x - w / 2, y - 4, w, 34, 9); ctx.fill();
-    ctx.fillStyle = P.teal;
-    rrect(ctx, cp.x - w / 2 + 4, y + 2, w - 8, 22, 5); ctx.fill();
-    ctx.strokeStyle = P.ink; ctx.lineWidth = lw;
-    rrect(ctx, cp.x - w / 2, y - 4, w, 34, 9); ctx.stroke();
-  }
-}
 
-function drawHead(ctx, yaw, expr, blink, lookX, lookY, talk, blush, lw, rim) {
-  const vis = (a) => Math.cos(a + yaw);
-  const sx = (a, r = R) => r * Math.sin(a + yaw);
+  // ---- upper body (lean pivots at the hips)
+  const spine = new THREE.Group(); spine.position.y = HIP_Y - 0.02; lower.add(spine);
+  const chest = new THREE.Group(); spine.add(chest);
 
-  ctx.strokeStyle = P.ink; ctx.lineWidth = lw;
-  const ear = (side) => {
-    const a = side * Math.PI / 2, v = vis(a);
-    ctx.fillStyle = v > 0.3 ? S.skin : S.skinShadow;
-    ctx.beginPath(); ctx.ellipse(sx(a, R * (v > 0.3 ? 0.86 : 0.98)), 16, 8 + 6 * Math.abs(v), 15, 0, 0, Math.PI * 2);
-    ctx.fill(); ctx.lineWidth = lw; ctx.stroke();
-  };
-  // far ears peek out behind the skull
-  for (const side of [-1, 1]) { const v = vis(side * Math.PI / 2); if (v > -0.35 && v <= 0.3) ear(side); }
-  // skull
-  ctx.fillStyle = S.skin;
-  ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
-  ctx.save(); ctx.clip();
-  ctx.fillStyle = S.skinShadow;
-  ctx.beginPath(); ctx.arc(R * 0.55, R * 0.25, R * 0.95, -0.4, 1.9); ctx.fill();
-  if (rim > 0) {
-    ctx.globalAlpha = rim; ctx.strokeStyle = P.teal; ctx.lineWidth = lw * 1.5;
-    ctx.beginPath(); ctx.arc(0, 0, R - lw * 0.8, -0.9, 0.9); ctx.stroke(); ctx.globalAlpha = 1;
+  const torsoGeo = new THREE.CylinderGeometry(0.15, 0.185, 0.46, 7, 2);
+  const torso = mesh(torsoGeo, M.moss()); torso.scale.z = 0.7; torso.position.y = 0.23; chest.add(torso);
+  const hem = mesh(new THREE.CylinderGeometry(0.188, 0.188, 0.05, 7, 1), M.mossDark()); hem.scale.z = 0.71; hem.position.y = 0.02; chest.add(hem);
+  const pocket = mesh(new RoundedBoxGeometry(0.2, 0.1, 0.03, 1, 0.01), M.mossDark());
+  pocket.position.set(0, 0.12, 0.118); pocket.rotation.x = -0.08; chest.add(pocket);
+  for (const sx of [-0.035, 0.035]) {
+    const str = mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.13, 4), M.paper());
+    str.position.set(sx, 0.36, 0.105); str.rotation.x = -0.15; chest.add(str);
+    const tip = mesh(new THREE.OctahedronGeometry(0.011), M.paper()); tip.position.set(sx, 0.295, 0.115); chest.add(tip);
   }
-  ctx.restore();
+  const hood = mesh(new THREE.TorusGeometry(0.105, 0.05, 5, 9), M.mossDark());
+  hood.rotation.x = Math.PI / 2 - 0.25; hood.position.set(0, 0.45, -0.025); chest.add(hood);
+  const hoodBack = mesh(new THREE.IcosahedronGeometry(0.11, 0), M.mossDark());
+  hoodBack.scale.set(1.15, 0.9, 0.55); hoodBack.position.set(0, 0.38, -0.115); chest.add(hoodBack);
 
-  // side-on: a soft nose bump on the silhouette
-  if (Math.abs(Math.sin(yaw)) > 0.6 && vis(0) > -0.1) {
-    const dir = Math.sign(Math.sin(yaw));
-    ctx.fillStyle = S.skin;
-    ctx.beginPath();
-    if (dir > 0) ctx.arc(R - 4, 26, 9, -Math.PI / 2, Math.PI / 2); else ctx.arc(-R + 4, 26, 9, Math.PI / 2, Math.PI * 1.5);
-    ctx.fill(); ctx.stroke();
-  }
-  // face features (only on the visible hemisphere)
-  const faceVis = vis(0);
-  if (faceVis > -0.2) drawFace(ctx, yaw, expr, blink, lookX, lookY, talk, blush, lw);
-
-  // hair: dome over the top + hairline that drops lower at the back
-  ctx.fillStyle = S.hair;
-  const hairline = (a) => R * (-0.28 + 0.92 * (1 - Math.cos(a)) / 2);
-  const pts = [];
-  const a0 = -Math.PI / 2 - yaw, a1 = Math.PI / 2 - yaw;
-  for (let i = 0; i <= 40; i++) {
-    const a = a1 + (a0 - a1) * (i / 40);
-    pts.push([R * Math.sin(a + yaw) * 1.04, hairline(a)]);
-  }
-  ctx.beginPath();
-  ctx.moveTo(pts[0][0], pts[0][1]);
-  for (const p of pts) ctx.lineTo(p[0], p[1]);
-  ctx.arc(0, 0, R + 6, Math.PI - 0.15, 0.15, false);
-  ctx.closePath();
-  ctx.fill(); ctx.lineWidth = lw; ctx.stroke();
-  // near ears sit on top of the hair edge
-  for (const side of [-1, 1]) { if (vis(side * Math.PI / 2) > 0.3) ear(side); }
-  ctx.fillStyle = S.hair;
-  // fringe tufts across the front
-  for (let i = 0; i < 5; i++) {
-    const a = -0.85 + i * 0.42, v = vis(a);
-    if (v < 0.05) continue;
-    const bx = sx(a, R * 1.02), by = hairline(a) - 2;
-    const w = 22 * v;
-    ctx.beginPath();
-    ctx.moveTo(bx - w, by - 6);
-    ctx.quadraticCurveTo(bx + w * 0.2, by + 4, bx + w * 0.35, by + 18 + (i % 2) * 6);
-    ctx.quadraticCurveTo(bx + w * 0.7, by + 2, bx + w, by - 6);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-  }
-  // crown tufts
-  ctx.beginPath();
-  ctx.moveTo(-18, -R - 2); ctx.quadraticCurveTo(-4, -R - 26, 6, -R - 18);
-  ctx.quadraticCurveTo(14, -R - 30, 26, -R - 4);
-  ctx.fill(); ctx.stroke();
-}
-
-function drawFace(ctx, yaw, expr, blink, lookX, lookY, talk, blush, lw) {
-  const vis = (a) => Math.cos(a + yaw);
-  const sx = (a, r = R) => r * Math.sin(a + yaw);
-  const eyeY = 12 + lookY * 3;
-  const open = 1 - blink;
+  // headphones resting round the neck (glowing rings)
+  const phones = new THREE.Group(); phones.position.set(0, 0.47, 0.01); chest.add(phones);
+  const band = mesh(new THREE.TorusGeometry(0.12, 0.016, 5, 14, Math.PI), M.rubber());
+  band.rotation.x = Math.PI / 2; band.rotation.z = Math.PI; phones.add(band);
   for (const side of [-1, 1]) {
-    const a = side * 0.42, v = vis(a);
-    if (v < 0.12) continue;
-    const ex = sx(a) + lookX * 4 * v;
-    const w = 13 * v, h = 19;
-    // brows
-    let bTilt = 0, bLift = 0;
-    if (expr === 'worried' || expr === 'wistful') { bTilt = side * 0.28; bLift = 3; }
-    if (expr === 'hopeful') bLift = 6;
-    ctx.save();
-    ctx.translate(sx(a, R * 0.98), eyeY - 25 - bLift);
-    ctx.rotate(-bTilt);
-    ctx.strokeStyle = S.hair; ctx.lineWidth = 6;
-    ctx.beginPath(); ctx.moveTo(-11 * v, 0); ctx.lineTo(11 * v, 0); ctx.stroke();
-    ctx.restore();
+    const cup = new THREE.Group(); cup.position.set(side * 0.115, -0.025, 0.035); cup.rotation.z = side * 0.35; cup.rotation.y = side * 0.5; phones.add(cup);
+    const shell = mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.04, 8), M.rubber()); shell.rotation.z = Math.PI / 2; cup.add(shell);
+    const ring = mesh(new THREE.TorusGeometry(0.04, 0.008, 4, 10), M.tealGlow(), false);
+    ring.rotation.y = Math.PI / 2; ring.position.x = side * 0.022; cup.add(ring);
+  }
 
-    ctx.fillStyle = P.ink;
-    if (expr === 'smile') {
-      ctx.strokeStyle = P.ink; ctx.lineWidth = 6;
-      ctx.beginPath(); ctx.moveTo(ex - w, eyeY + 3); ctx.quadraticCurveTo(ex, eyeY - 10, ex + w, eyeY + 3); ctx.stroke();
-      continue;
-    }
-    const hh = h * Math.max(0.1, open);
-    ctx.beginPath(); ctx.ellipse(ex, eyeY, w, hh / 2 + 2, 0, 0, Math.PI * 2); ctx.fill();
-    if (open > 0.4) {
-      ctx.fillStyle = P.paper;
-      ctx.beginPath(); ctx.arc(ex - w * 0.3, eyeY - 4, 3.5, 0, Math.PI * 2); ctx.fill();
-      if (expr === 'hopeful' || expr === 'worried') {
-        ctx.beginPath(); ctx.arc(ex + w * 0.35, eyeY + 4, 2, 0, Math.PI * 2); ctx.fill();
-      }
-    }
-    if (expr === 'wistful' && open > 0.3) {
-      // heavy upper lid
-      ctx.fillStyle = S.skin;
-      ctx.fillRect(ex - w - 3, eyeY - hh / 2 - 4, w * 2 + 6, hh * 0.38 + 4);
-      ctx.strokeStyle = P.ink; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.moveTo(ex - w - 2, eyeY - hh * 0.1); ctx.quadraticCurveTo(ex, eyeY - hh * 0.2, ex + w + 2, eyeY - hh * 0.1); ctx.stroke();
-    }
+  // ---- neck + head
+  const neck = mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.1, 6), M.skin()); neck.position.y = 0.5; chest.add(neck);
+  const headPivot = new THREE.Group(); headPivot.position.y = 0.53; chest.add(headPivot);
+  const head = new THREE.Group(); head.position.y = 0.15; headPivot.add(head);
+  const skull = mesh(new THREE.IcosahedronGeometry(HEAD_R, 1), M.skin()); skull.scale.set(1, 1.0, 0.94); head.add(skull);
+  const jaw = mesh(new THREE.IcosahedronGeometry(HEAD_R * 0.78, 1), M.skin()); jaw.position.set(0, -0.045, 0.02); jaw.scale.set(1, 0.85, 0.95); head.add(jaw);
+
+  for (const side of [-1, 1]) {
+    const ear = mesh(new THREE.IcosahedronGeometry(0.04, 0), M.skin());
+    ear.scale.set(0.5, 1, 0.8); ear.position.set(side * HEAD_R * 0.98, -0.005, -0.01); head.add(ear);
   }
-  // blush
-  if (blush > 0) {
-    ctx.fillStyle = P.rose; ctx.globalAlpha = 0.75 * blush;
-    for (const side of [-1, 1]) {
-      const a = side * 0.62, v = vis(a);
-      if (v > 0.15) { ctx.beginPath(); ctx.ellipse(sx(a), 34, 11 * v, 6, 0, 0, Math.PI * 2); ctx.fill(); }
-    }
-    ctx.globalAlpha = 1;
+  const nose = mesh(new THREE.TetrahedronGeometry(0.022), M.skin());
+  face(nose, 0, -0.17, HEAD_R * 0.98); nose.rotateX(0.4); head.add(nose);
+
+  // eyes, brows, mouth
+  const eyes = [-1, 1].map((side) => {
+    const g = new THREE.Group(); face(g, side * 0.4, -0.02, HEAD_R * 0.93); head.add(g);
+    const ball = mesh(new THREE.IcosahedronGeometry(0.03, 1), M.eye(), false); ball.scale.set(0.82, 1.15, 0.5); g.add(ball);
+    const gl = mesh(new THREE.IcosahedronGeometry(0.009, 0), M.glint(), false); gl.position.set(-0.008, 0.013, 0.016); g.add(gl);
+    const gl2 = mesh(new THREE.IcosahedronGeometry(0.005, 0), M.glint(), false); gl2.position.set(0.009, -0.012, 0.016); g.add(gl2);
+    const smile = mesh(new THREE.TorusGeometry(0.024, 0.007, 4, 8, Math.PI), M.eye(), false); smile.position.z = 0.008; g.add(smile);
+    const lid = mesh(new THREE.IcosahedronGeometry(0.033, 1), M.skin(), false); lid.scale.set(0.95, 0.7, 0.55); lid.position.set(0, 0.03, 0.004); g.add(lid);
+    const browPivot = new THREE.Group(); face(browPivot, side * 0.4, 0.2, HEAD_R * 0.99); head.add(browPivot);
+    const brow = mesh(new RoundedBoxGeometry(0.058, 0.014, 0.014, 1, 0.005), M.hair(), false); browPivot.add(brow);
+    const blush = mesh(new THREE.IcosahedronGeometry(0.025, 0), M.blush(), false);
+    face(blush, side * 0.62, -0.2, HEAD_R * 0.95); blush.scale.set(1.2, 0.65, 0.3); head.add(blush);
+    return { side, g, ball, gl, gl2, smile, lid, browPivot, brow, blush };
+  });
+  const mouthG = new THREE.Group(); face(mouthG, 0, -0.42, HEAD_R * 0.95); head.add(mouthG);
+  const smileArc = mesh(new THREE.TorusGeometry(0.028, 0.0065, 4, 8, Math.PI), M.mouth(), false);
+  smileArc.rotation.z = Math.PI; mouthG.add(smileArc);
+  const open = mesh(new THREE.IcosahedronGeometry(0.024, 1), M.mouth(), false); open.scale.set(1.1, 0.6, 0.35); mouthG.add(open);
+
+  // hair: faceted cap + spikes + fringe
+  const hair = new THREE.Group(); head.add(hair);
+  const cap = mesh(new THREE.SphereGeometry(HEAD_R * 1.08, 9, 6, 0, Math.PI * 2, 0, 1.95), M.hair());
+  cap.rotation.x = -0.75; cap.position.set(0, 0.01, -0.01); hair.add(cap);
+  const spikeGeo = new THREE.ConeGeometry(0.05, 0.13, 4);
+  const spikes = [
+    [0, 1.25, 1.0], [0.6, 1.0, 0.95], [-0.6, 1.05, 1.0], [1.4, 0.7, 0.85], [-1.4, 0.75, 0.9],
+    [2.3, 0.6, 0.9], [-2.3, 0.65, 0.85], [3.1, 0.55, 1.0], [2.8, 0.2, 0.8], [-2.8, 0.25, 0.8], [3.14, -0.1, 0.75],
+  ];
+  for (const [a, b, s] of spikes) {
+    const sp = mesh(spikeGeo, M.hair());
+    const p = onHead(a, b, HEAD_R * 1.02); sp.position.copy(p);
+    sp.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), p.clone().normalize());
+    sp.scale.setScalar(s); hair.add(sp);
   }
-  // nose
-  const nv = vis(0);
-  if (nv > 0.1) {
-    ctx.strokeStyle = S.skinShadow; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.moveTo(sx(0.08, R * 1.02), 22); ctx.lineTo(sx(0.12, R * 1.04), 30); ctx.stroke();
+  // fringe: cones pointing down over the forehead
+  for (const [a, len] of [[-0.62, 0.9], [-0.3, 1.1], [0.02, 0.95], [0.34, 1.15], [0.64, 0.85]]) {
+    const f = mesh(spikeGeo, M.hair());
+    f.position.copy(onHead(a, 0.42, HEAD_R * 1.05));
+    f.rotation.set(Math.PI - 0.55, a, 0, 'YXZ');
+    f.scale.set(0.85, len, 0.6); hair.add(f);
   }
-  // mouth
-  if (nv > 0.05) {
-    const mx = sx(0, R * 0.98), my = 44;
-    const mw = 12 * nv;
-    ctx.strokeStyle = P.ink; ctx.lineWidth = 4.5; ctx.fillStyle = mix2();
-    if (talk > 0.05) {
-      ctx.beginPath(); ctx.ellipse(mx, my + 1, mw * 0.8, 2 + talk * 7, 0, 0, Math.PI * 2);
-      ctx.fillStyle = '#5a2b33'; ctx.fill(); ctx.stroke();
-    } else {
-      let curve = 3;
-      if (expr === 'smile') curve = 8;
-      if (expr === 'hopeful') curve = 6;
-      if (expr === 'worried') curve = -4;
-      if (expr === 'wistful') curve = 0.5;
-      ctx.beginPath(); ctx.moveTo(mx - mw, my); ctx.quadraticCurveTo(mx, my + curve, mx + mw, my); ctx.stroke();
-    }
+
+  // ---- arms
+  const arms = [-1, 1].map((side) => {
+    const shoulder = new THREE.Group(); shoulder.position.set(side * 0.17, SHOULDER_Y - HIP_Y + 0.02, 0); spine.add(shoulder);
+    const cap = mesh(new THREE.IcosahedronGeometry(0.06, 0), M.moss()); shoulder.add(cap);
+    shoulder.add(limb(0.056, 0.05, UPPER, M.moss()));
+    const elbow = new THREE.Group(); elbow.position.y = -UPPER; shoulder.add(elbow);
+    elbow.add(mesh(new THREE.IcosahedronGeometry(0.05, 0), M.moss()));
+    elbow.add(limb(0.05, 0.052, FORE, M.moss()));
+    const cuff = mesh(new THREE.CylinderGeometry(0.054, 0.054, 0.04, 6), M.mossDark()); cuff.position.y = -FORE + 0.01; elbow.add(cuff);
+    const hand = mesh(new THREE.IcosahedronGeometry(0.045, 1), M.skin()); hand.position.y = -FORE - 0.04; elbow.add(hand);
+    const finger = mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.07, 5), M.skin());
+    finger.position.y = -FORE - 0.1; finger.visible = false; elbow.add(finger);
+    const tip = mesh(new THREE.IcosahedronGeometry(0.013, 0), M.skin()); tip.position.y = -0.035; finger.add(tip);
+    return { side, shoulder, elbow, hand, finger };
+  });
+
+  root.userData = { turn, lower, legs, spine, chest, headPivot, head, eyes, mouthG, smileArc, open, arms };
+  return root;
+}
+
+// arm: { fwd, out, bend, twist, point } in radians; fwd swings the arm forward, out lifts it sideways
+export function poseKai(root, o = {}) {
+  const u = root.userData;
+  const {
+    yaw = 0, pose = 'stand', expr = 'neutral', blink = 0, lookX = 0, lookY = 0, talk = 0,
+    headYaw = 0, headTilt = 0, headNod = 0, lean = 0, blush = 0, breathe = 0,
+    armL = { fwd: 0.05, out: 0.12, bend: 0.12 }, armR = { fwd: 0.05, out: 0.12, bend: 0.12 },
+  } = o;
+  u.turn.rotation.y = yaw;
+  const sit = pose === 'sit';
+  u.lower.position.y = sit ? -(THIGH - 0.06) : 0;
+  for (const L of u.legs) {
+    L.hip.rotation.x = sit ? -Math.PI / 2 + 0.08 : 0;
+    L.knee.rotation.x = sit ? Math.PI / 2 - 0.02 : 0;
+    L.ankle.rotation.x = 0;
+    L.hip.rotation.z = sit ? (L.hip.position.x > 0 ? -0.05 : 0.05) : 0;
+  }
+  u.spine.rotation.x = lean;
+  u.chest.scale.set(1 + breathe * 0.012, 1 + breathe * 0.01, 1 + breathe * 0.02);
+  u.headPivot.rotation.set(headNod * 0.25 + lookY * 0.06, headYaw, headTilt, 'YXZ');
+
+  const lids = { neutral: 0, smile: 0, wistful: 0.55, worried: 0.05, hopeful: 0 }[expr] ?? 0;
+  const brow = { neutral: [0, 0], smile: [0.005, 0], wistful: [0.004, 0.3], worried: [0.008, 0.38], hopeful: [0.012, -0.05] }[expr] ?? [0, 0];
+  for (const e of u.eyes) {
+    const smiling = expr === 'smile';
+    e.ball.visible = !smiling; e.gl.visible = !smiling && blink < 0.5; e.gl2.visible = (expr === 'hopeful' || expr === 'worried') && blink < 0.5;
+    e.smile.visible = smiling;
+    const shut = Math.max(lids, blink);
+    e.lid.visible = shut > 0.02 && !smiling;
+    e.lid.scale.set(0.95, 0.7, 0.55);
+    e.lid.position.y = 0.03 - shut * 0.034;
+    e.ball.position.set(lookX * 0.006, lookY * 0.006 - (expr === 'wistful' ? 0.004 : 0), 0);
+    e.ball.scale.set(0.82, 1.15 * (expr === 'hopeful' ? 1.08 : 1), 0.5);
+    e.brow.position.y = brow[0];
+    e.brow.rotation.z = -e.side * brow[1];
+    e.blush.visible = blush > 0.02; e.blush.scale.set(1.2 * blush, 0.65 * blush, 0.3);
+  }
+  const curve = { neutral: 0.35, smile: 1, wistful: 0.15, worried: -0.55, hopeful: 0.75 }[expr] ?? 0.3;
+  u.smileArc.visible = talk < 0.08;
+  u.smileArc.scale.set(expr === 'smile' ? 1.15 : 0.9, curve, 1);
+  u.open.visible = talk >= 0.08;
+  u.open.scale.set(1.0, 0.25 + talk * 0.75, 0.35);
+
+  for (const a of u.arms) {
+    const p = a.side < 0 ? armL : armR;
+    a.shoulder.rotation.set(-(p.fwd || 0), p.twist || 0, a.side * (p.out || 0), 'XYZ');
+    a.elbow.rotation.set(-(p.bend || 0), 0, 0);
+    a.finger.visible = !!p.point;
   }
 }
-function mix2() { return '#5a2b33'; }
-
-export function drawController(ctx, x, y, s, lw, flat = 1) {
-  ctx.save(); ctx.translate(x, y); ctx.scale(s, s * (0.55 + 0.45 * flat));
-  ctx.fillStyle = mixInk(); ctx.strokeStyle = P.ink; ctx.lineWidth = lw / s;
-  ctx.beginPath();
-  ctx.moveTo(-40, -14); ctx.lineTo(40, -14);
-  ctx.quadraticCurveTo(62, -14, 62, 10); ctx.quadraticCurveTo(62, 30, 46, 26);
-  ctx.lineTo(28, 10); ctx.lineTo(-28, 10); ctx.lineTo(-46, 26);
-  ctx.quadraticCurveTo(-62, 30, -62, 10); ctx.quadraticCurveTo(-62, -14, -40, -14);
-  ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = P.teal;
-  ctx.fillRect(-42, -4, 18, 5); ctx.fillRect(-35.5, -10.5, 5, 18);
-  ctx.fillStyle = P.clay; ctx.beginPath(); ctx.arc(36, -5, 4.5, 0, 7); ctx.fill();
-  ctx.fillStyle = P.ember; ctx.beginPath(); ctx.arc(46, 3, 4.5, 0, 7); ctx.fill();
-  ctx.restore();
-}
-function mixInk() { return '#2c2a44'; }

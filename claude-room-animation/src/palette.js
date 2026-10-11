@@ -33,4 +33,4 @@ export const S = {
   denimShadow: mix(P.plum, P.ink, 0.35),
 };
 
-export const LINE = 5; // outline weight at 1080p, scale 1
+

@@ -22,12 +22,16 @@ function fontCSS() {
 }
 
 export async function openPage({ width = 1920, height = 1080, module = 'film.js' } = {}) {
-  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || undefined });
+  const browser = await chromium.launch({
+    executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+    args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+  });
   const page = await browser.newPage();
   await page.route('http://film.local/**', (route) => {
     const p = new URL(route.request().url()).pathname;
     if (p === '/') {
       return route.fulfill({ contentType: 'text/html', body: `<!doctype html><html><head><style>${fontCSS()} body{margin:0}</style></head>
+ <script type="importmap">{"imports":{"three":"/three/build/three.module.js","three/addons/":"/three/examples/jsm/"}}</script>
 <body><canvas id="c" width="${width}" height="${height}"></canvas>
 <script type="module">
   import * as M from '/${module}';
@@ -38,7 +42,7 @@ export async function openPage({ width = 1920, height = 1080, module = 'film.js'
   Promise.all(probe.map(f => document.fonts.load(f))).then(() => { window.ready = true; });
 </script></body></html>` });
     }
-    const file = path.join(ROOT, 'src', p);
+    const file = p.startsWith('/three/') ? path.join(ROOT, 'node_modules', p) : path.join(ROOT, 'src', p);
     if (!fs.existsSync(file)) return route.fulfill({ status: 404, body: 'nf' });
     return route.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(file) });
   });
